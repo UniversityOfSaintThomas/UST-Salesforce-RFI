@@ -1,0 +1,24 @@
+minimum_cumulusci_version: '4.6.0'
+project:
+    name: UST-RFI
+    package:
+        name: UST-RFI
+        api_version: '63.0'
+    git:
+    source_format: sfdx
+
+tasks:
+    robot:
+        options:
+            suites: robot/UST-RFI/tests
+            options:
+                outputdir: robot/UST-RFI/results
+
+    robot_testdoc:
+        options:
+            path: robot/UST-RFI/tests
+            output: robot/UST-RFI/doc/UST-RFI_tests.html
+
+    run_tests:
+        options:
+            required_org_code_coverage_percent: 75
