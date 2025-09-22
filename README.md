@@ -1,7 +1,6 @@
-# UST-RFI
+# UST Salesforce RFI
 
-Add a brief description of this project here, in Markdown format.                                                                                                                                                                                     
-It will be shown on the main page of the project's GitHub repository.
+This project provides a Lightning Web Component (LWC) for collecting Requests for Information (RFI) from potential applicants. User input is captured and used to create Salesforce Lead records. The questions presented in the RFI are managed through a custom Salesforce object, `RFI_Controller__c`.
 
 ## Development
 
