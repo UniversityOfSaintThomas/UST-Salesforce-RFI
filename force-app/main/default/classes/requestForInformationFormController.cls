@@ -55,8 +55,8 @@ public without sharing class requestForInformationFormController {
             }
             Database.DMLOptions dml = new Database.DMLOptions();
             dml.duplicateRuleHeader.allowSave = false;
-            System.debug('Lead object for insert: ');
-            System.debug(JSON.serializePretty(sobj));
+            //System.debug('Lead object for insert: ');
+            //System.debug(JSON.serializePretty(sobj));
             Database.SaveResult result = Database.insert(sobj, dml);
             if (result.isSuccess() == false) {
                 String context = 'Creation of lead failed on insert. \n Error: ' + result.getErrors();
@@ -64,7 +64,6 @@ public without sharing class requestForInformationFormController {
             }
         } catch (Exception e) {
             String context = 'Creation of lead failed because of caught exception in requestForInformationFormController.createLead(). \n Error: ' + e.getMessage();
-            System.debug(context);
             insertErrorRecord(rfiController, record, context);
             throw new AuraHandledException('Error creating lead: ' + e.getMessage());
         }
@@ -291,10 +290,10 @@ public without sharing class requestForInformationFormController {
     public static Id getRecruitmentProgram(String academic_level, String citizenship_type, String admit_type, String major_id, String school_name) {
         String program_name = '';
         String program_code = 'AS_UN_BA';
-        System.debug('SCHOOL_NAME: ' + school_name);
-        System.debug('ACADEMIC_LEVEL: ' + academic_level);
-        System.debug('MAJOR ID: ' + major_id);
-        System.debug('CITIZENSHIP TYPE: ' + citizenship_type);
+        //.debug('SCHOOL_NAME: ' + school_name);
+        //System.debug('ACADEMIC_LEVEL: ' + academic_level);
+        //System.debug('MAJOR ID: ' + major_id);
+        //System.debug('CITIZENSHIP TYPE: ' + citizenship_type);
         if (academic_level == 'U' || academic_level == 'Undergraduate') {
             if (admit_type == 'Transfer') {
                 if (citizenship_type == 'International') {

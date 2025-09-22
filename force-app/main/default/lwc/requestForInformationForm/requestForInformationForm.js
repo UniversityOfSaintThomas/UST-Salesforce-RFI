@@ -709,7 +709,6 @@ export default class RequestForInformationForm extends LightningElement {
                     break;
                 case this.field_labels.academic_interest_label:
                     let academic_value = event.detail.value.toString();
-                    console.log('Academic Value: ' + academic_value);
                     //if the multi select pills groupable finds undecided it will append it to the front of the id
                     if (academic_value.toLowerCase().includes("undecided|")) {
                         academic_value = academic_value.replace("undecided|", "");
@@ -899,9 +898,6 @@ export default class RequestForInformationForm extends LightningElement {
             this.record_input.fields.Major_Program__c = this.single_selected_program;
             count = 1;
         }
-
-        console.log('Academic Interest ID List: ' + this.academic_interest_id_list);
-
         for (const program_id of this.academic_interest_id_list) {
             //If undecided is selected assign to recruitment program (Major_Program__c)
             if (count === 0) {
