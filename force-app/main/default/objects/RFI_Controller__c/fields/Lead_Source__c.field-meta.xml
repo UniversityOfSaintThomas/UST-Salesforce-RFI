@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Lead_Source__c</fullName>
+    <description>The way in which the Lead or Contact&apos;s information was first received.</description>
+    <inlineHelpText>Indicate the initial source of this data.</inlineHelpText>
+    <label>Lead Source</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>true</sorted>
+            <value>
+                <fullName>Alumni Referral Program</fullName>
+                <default>false</default>
+                <label>Alumni Referral Program</label>
+            </value>
+            <value>
+                <fullName>Chatbot</fullName>
+                <default>false</default>
+                <label>Chatbot</label>
+            </value>
+            <value>
+                <fullName>Faculty Staff Referral</fullName>
+                <default>false</default>
+                <label>Faculty Staff Referral</label>
+            </value>
+            <value>
+                <fullName>GHR Fellows and Schulze Scholarship Programs</fullName>
+                <default>false</default>
+                <label>GHR Fellows and Schulze Scholarship Programs</label>
+            </value>
+            <value>
+                <fullName>GHR Fellows RFI</fullName>
+                <default>false</default>
+                <label>GHR Fellows RFI</label>
+            </value>
+            <value>
+                <fullName>Graduate RFI Page</fullName>
+                <default>false</default>
+                <label>Graduate RFI Page</label>
+            </value>
+            <value>
+                <fullName>Landing Page</fullName>
+                <default>false</default>
+                <label>Landing Page</label>
+            </value>
+            <value>
+                <fullName>Undergraduate RFI Page</fullName>
+                <default>false</default>
+                <label>Undergraduate RFI Page</label>
+            </value>
+            <value>
+                <fullName>Undergraduate Schulze</fullName>
+                <default>false</default>
+                <label>Undergraduate Schulze</label>
+            </value>
+            <value>
+                <fullName>Virtual Tour RFI</fullName>
+                <default>false</default>
+                <label>Virtual Tour RFI</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
