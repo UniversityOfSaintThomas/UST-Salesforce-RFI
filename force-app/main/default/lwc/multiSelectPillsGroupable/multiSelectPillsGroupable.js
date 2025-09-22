@@ -90,25 +90,19 @@ export default class MultiSelectPillsGroupable extends LightningElement {
 
     //private called by getter of 'value'
     selectedValues() {
-        let values = [];
-
-        //if no options set yet or invalid, just return value
+        // If no options set yet or invalid, just return value
         if (this.options_.length < 1) {
             return this.value_;
         }
 
-        this.options_.forEach(function (option) {
-            //check the option label for 'undecided' keyword in lower case apply to value if found
-            if (option.selected === true) {
-                if (option.label.toLowerCase().includes('undecided')) {
-                    values.push('undecided|' + option.value);
-                } else {
-                    values.push(option.value);
-                }
-            }
-
-        });
-        return values;
+        return this.options_
+            .filter(option => option.selected === true)
+            .sort((a, b) => a.selectedAt - b.selectedAt)
+            .map(option =>
+                option.label.toLowerCase().includes('undecided')
+                    ? 'undecided|' + option.value
+                    : option.value
+            );
     }
 
     get labelStyle() {

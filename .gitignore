@@ -98,3 +98,5 @@ ehthumbs.db
 .idea
 .project
 .settings
+
+*.iml

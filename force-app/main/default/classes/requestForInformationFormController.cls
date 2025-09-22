@@ -221,10 +221,10 @@ public without sharing class requestForInformationFormController {
     @AuraEnabled(Cacheable=true)
     public static Map<String, String> getCountries() {
         Map<String, String> mapCountryCodeString = new Map<String, String>();
-        Schema.sObjectType objType = Contact.getSObjectType();
+        Schema.SObjectType objType = Contact.getSObjectType();
         Schema.DescribeSObjectResult objDescribe = objType.getDescribe();
         Map<String, Schema.SObjectField> fieldMap = objDescribe.fields.getMap();
-        List<Schema.PicklistEntry> values = fieldMap.get('MailingCountryCode').getDescribe().getPickListValues();
+        List<Schema.PicklistEntry> values = fieldMap.get('MailingCountryCode').getDescribe().getPicklistValues();
         for (Schema.PicklistEntry a : values) {
             mapCountryCodeString.put(a.getLabel(), a.getValue());
         }
