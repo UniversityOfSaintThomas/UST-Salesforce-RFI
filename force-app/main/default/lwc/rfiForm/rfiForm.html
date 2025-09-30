@@ -1,0 +1,120 @@
+<!--
+ - Created by Thad-PC-2019 on 9/23/2025.
+ -->
+
+<!-- RFI Form -->
+<template>
+    <lightning-card>
+        <div class="slds-grid slds-wrap slds-gutters_medium slds-m-around_xx-small" style="min-height:100px;">
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-2">
+                {state}
+                <!-- Loading state -->
+                <template if:false={hasData}>
+                    <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </template>
+
+                <template if:true={hasData}>
+                    <div class="slds-p-vertical_small">
+                        <template for:each={fields} for:item="f" for:index="index">
+                            <div key={f.key} class="slds-m-vertical_x-small">
+                                <!-- Address with optional Google lookup -->
+                                <template if:true={f.isAddress}>
+                                    <div class="slds-m-bottom_x-small slds-form-element">
+                                        <lightning-input-address
+                                                address-label={f.fieldLabel}
+                                                street-label="Street"
+                                                city-label="City"
+                                                province-label="State/Province"
+                                                postal-code-label="Zip/Postal Code"
+                                                country-label="Country"
+                                                street={f.value.street}
+                                                city={f.value.city}
+                                                province={f.value.province}
+                                                postal-code={f.value.postalCode}
+                                                country={f.value.country}
+                                                country-options={country}
+                                                province-options={state}
+                                                required={f.isRequired}
+                                                data-field-name={f.name}
+                                                onchange={handleAddressChange}>
+                                        </lightning-input-address>
+                                    </div>
+                                </template>
+
+                                <!-- Multi-select (custom) -->
+                                <template if:true={f.isMultiSelect}>
+                                    <c-multi-select-pills-groupable
+                                            label={f.fieldLabel}
+                                            name={f.name}
+                                            options={f.options}
+                                            value={f.value}
+                                            required={f.isRequired}
+                                            max={f.max}
+                                            onchange={handleMultiSelectChange}
+                                    ></c-multi-select-pills-groupable>
+                                </template>
+
+                                <!-- Textarea -->
+                                <template if:true={f.isTextarea}>
+                                    <lightning-textarea
+                                            label={f.fieldLabel}
+                                            name={f.name}
+                                            value={f.value}
+                                            required={f.isRequired}
+                                            onchange={handleChange}
+                                    ></lightning-textarea>
+                                </template>
+
+                                <!-- Checkbox -->
+                                <template if:true={f.isCheckbox}>
+                                    <lightning-input
+                                            type="checkbox"
+                                            label={f.fieldLabel}
+                                            name={f.name}
+                                            checked={f.value}
+                                            required={f.isRequired}
+                                            onchange={handleChange}
+                                    ></lightning-input>
+                                </template>
+
+                                <!-- Picklist (single-select) -->
+                                <template if:true={f.isPicklist}>
+                                    <lightning-combobox
+                                            label={f.fieldLabel}
+                                            name={f.name}
+                                            value={f.value}
+                                            options={f.options}
+                                            required={f.isRequired}
+                                            onchange={handleChange}>
+                                    </lightning-combobox>
+                                </template>
+
+                                <!-- Default inputs: text, email, tel, date, etc. -->
+                                <template if:false={f.isAddress}>
+                                    <template if:false={f.isMultiSelect}>
+                                        <template if:false={f.isTextarea}>
+                                            <template if:false={f.isCheckbox}>
+                                                <lightning-input
+                                                        type={f.inputType}
+                                                        label={f.fieldLabel}
+                                                        name={f.name}
+                                                        value={f.value}
+                                                        required={f.isRequired}
+                                                        onchange={handleChange}
+                                                ></lightning-input>
+                                            </template>
+                                        </template>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+
+                        <div class="slds-m-top_medium">
+                            <lightning-button variant="brand" label="Submit" onclick={handleSubmit} disabled={saving}></lightning-button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </lightning-card>
+</template>

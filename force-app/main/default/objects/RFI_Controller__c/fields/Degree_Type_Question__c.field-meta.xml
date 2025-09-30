@@ -2,9 +2,9 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Degree_Type_Question__c</fullName>
     <defaultValue>&quot;Please select the degree you are seeking...&quot;</defaultValue>
-    <description>Question label that appears on RFI if Degree Type Display values are selected.</description>
+    <description>Question label that appears on RFI if Degree Types Display values are selected.</description>
     <externalId>false</externalId>
-    <inlineHelpText>Question label that appears on RFI if Degree Type Display values are selected.</inlineHelpText>
+    <inlineHelpText>Question label that appears on RFI if Degree Types Display values are selected.</inlineHelpText>
     <label>Degree Type Question</label>
     <length>255</length>
     <required>false</required>

@@ -150,7 +150,7 @@ export default class RequestForInformationForm extends LightningElement {
 
     //If a recordId is found we can assume we are on a record page and we can get the RFI controller name from the record
     @wire(getRecord, {recordId: "$recordId", fields: RFI_CONTROLLER_FIELDS})
-    rfiController({error, data}) {
+    rfiControllerInfo({error, data}) {
         if (error) {
             console.log(error);
         } else if (data) {
