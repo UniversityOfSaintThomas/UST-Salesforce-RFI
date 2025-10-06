@@ -70,6 +70,8 @@ public with sharing class rfiFormController {
                 LIMIT 1
         ];
 
+
+
         leadAndRfiFields leadAndRfi = new leadAndRfiFields();
         leadAndRfi.leadRecord = new Lead();
         // Prefill sensible defaults

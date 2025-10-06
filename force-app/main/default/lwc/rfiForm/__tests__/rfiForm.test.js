@@ -104,4 +104,40 @@ describe('c-rfi-form', () => {
         expect(payload.PostalCode).toBe('55105');
         expect(payload.Country).toBe('United States');
     });
+
+    it('maps selected school lookup into Lead before submit', async () => {
+        // include a school lookup field in the wrapper
+        const wrapperWithSchool = JSON.parse(JSON.stringify(MOCK_WRAPPER));
+        wrapperWithSchool.rfiFieldList.push({ fieldLabel: 'School', fieldLeadAPIName: 'High_School_or_College__c', fieldType: 'school-lookup', isRequired: false });
+
+        getRFIForm.mockResolvedValue(wrapperWithSchool);
+        submitRFILead.mockResolvedValue('00Qxx0000000003AAA');
+        const el = createElement('c-rfi-form', { is: RfiForm });
+        el.rfiControllerName = 'RFI Controller 0000';
+        document.body.appendChild(el);
+        await flushPromises();
+
+        // find the reusable lookup child and simulate selection
+        const lookup = el.shadowRoot.querySelector('c-reusable-lookup');
+        expect(lookup).not.toBeNull();
+        // The component emits 'valueselected' with detail containing id
+        lookup.dispatchEvent(new CustomEvent('valueselected', { detail: { id: '001xx000003DGbYAAW', mainField: 'Some School', subField: 'Some City' } }));
+
+        // fill required base inputs so validation passes
+        const inputs = el.shadowRoot.querySelectorAll('lightning-input');
+        const firstName = Array.from(inputs).find(i => i.label === 'First Name');
+        firstName.value = 'Ada';
+        firstName.dispatchEvent(new CustomEvent('change', { detail: { value: 'Ada' } }));
+        const email = Array.from(inputs).find(i => i.label === 'Email');
+        email.value = 'ada@example.com';
+        email.dispatchEvent(new CustomEvent('change', { detail: { value: 'ada@example.com' } }));
+
+        const btn = el.shadowRoot.querySelector('lightning-button');
+        btn.click();
+        await flushPromises();
+
+        expect(submitRFILead).toHaveBeenCalledTimes(1);
+        const payload = submitRFILead.mock.calls[0][0].leadRecord;
+        expect(payload.High_School_or_College__c).toBe('001xx000003DGbYAAW');
+    });
 });

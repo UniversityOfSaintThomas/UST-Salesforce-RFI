@@ -11,10 +11,9 @@
         <target>lightningCommunity__Page</target>
     </targets>
     <targetConfigs>
-        <targetConfig targets="lightning__RecordPage, lightning__HomePage">
+        <targetConfig targets="lightning__RecordPage, lightning__HomePage, lightningCommunity__Default">
             <property label="RFI Controller Name" name="rfiControllerName" type="String" description="Override RFI Controller Name when not on a record page"/>
             <property label="Google Places API Key" name="googleApiKey" type="String" description="Optional: enable address autocomplete via Google Places"/>
         </targetConfig>
-        <!-- No design-time properties for community targets to avoid unsupported tags -->
     </targetConfigs>
 </LightningComponentBundle>

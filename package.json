@@ -1,0 +1,12 @@
+{
+  "name": "ust-salesforce-rfi",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "sfdx-lwc-jest"
+  },
+  "devDependencies": {
+    "@salesforce/sfdx-lwc-jest": "^0.20.0"
+  }
+}
+

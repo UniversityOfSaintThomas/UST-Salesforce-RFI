@@ -7,7 +7,6 @@
     <lightning-card>
         <div class="slds-grid slds-wrap slds-gutters_medium slds-m-around_xx-small" style="min-height:100px;">
             <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-2">
-                {state}
                 <!-- Loading state -->
                 <template if:false={hasData}>
                     <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
@@ -21,6 +20,8 @@
                                 <template if:true={f.isAddress}>
                                     <div class="slds-m-bottom_x-small slds-form-element">
                                         <lightning-input-address
+                                                show-address-lookup="true"
+                                                address-lookup-label="Address Lookup"
                                                 address-label={f.fieldLabel}
                                                 street-label="Street"
                                                 city-label="City"
@@ -38,6 +39,24 @@
                                                 data-field-name={f.name}
                                                 onchange={handleAddressChange}>
                                         </lightning-input-address>
+                                    </div>
+                                </template>
+
+                                <!-- School lookup using reusable lookup component -->
+                                <template if:true={f.isSchoolLookup}>
+                                    <div class="slds-m-bottom_x-small slds-form-element">
+                                        <c-reusable-lookup
+                                                label={f.fieldLabel}
+                                                selected-icon-name="standard:account"
+                                                object-label=""
+                                                object-api-name="Account"
+                                                field-api-name="Name"
+                                                other-field-api-name="BillingCity,BillingState,billingPostalCode"
+                                                placeholder="Search schools"
+                                                required={f.isRequired}
+                                                record-type-name='Educational Institution'
+                                                onvalueselected={handleSchoolSelect}
+                                        ></c-reusable-lookup>
                                     </div>
                                 </template>
 

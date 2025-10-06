@@ -2,12 +2,12 @@
  * Created by Thad-PC-2019 on 9/23/2025.
  */
 
-import { api, LightningElement, wire } from 'lwc';
-import { getFieldValue, getRecord } from 'lightning/uiRecordApi';
+import {api, LightningElement, wire} from 'lwc';
+import {getFieldValue, getRecord} from 'lightning/uiRecordApi';
 import getRFIForm from '@salesforce/apex/rfiFormController.getRFIForm';
 import submitRFILead from '@salesforce/apex/rfiFormController.submitRFILead';
-import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import { NavigationMixin } from 'lightning/navigation';
+import {ShowToastEvent} from 'lightning/platformShowToastEvent';
+import {NavigationMixin} from 'lightning/navigation';
 import RFI_CONTROLLER_NAME from '@salesforce/schema/RFI_Controller__c.Name';
 import RFI_CONTROLLER_ID from '@salesforce/schema/RFI_Controller__c.Id';
 
@@ -26,26 +26,25 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     countryOptions = [];
     stateOptions = [];
     saving = false;
-    placesLoaded = false;
 
     connectedCallback() {
         this.controllerName = this.rfiControllerName;
     }
 
-    @wire(getRecord, { recordId: '$recordId', fields: RFI_CONTROLLER_FIELDS })
-    wiredRecord({ data }) {
+    @wire(getRecord, {recordId: '$recordId', fields: RFI_CONTROLLER_FIELDS})
+    wiredRecord({data}) {
         if (data) {
             this.controllerName = getFieldValue(data, RFI_CONTROLLER_NAME);
         }
     }
 
-    @wire(getRFIForm, { rfiControllerName: '$controllerName' })
+    @wire(getRFIForm, {rfiControllerName: '$controllerName'})
     wiredForm(result) {
-        const { data, error } = result;
+        const {data, error} = result;
         if (data) {
             this.rfiData = JSON.parse(JSON.stringify(data));
             // hydrate lead from wrapper (may be empty new Lead())
-            this.lead = { ...(this.rfiData.leadRecord || {}) };
+            this.lead = {...(this.rfiData.leadRecord || {})};
             this.countryOptions = this.rfiData.country;
             this.stateOptions = this.rfiData.state;
             this.normalizeFields();
@@ -66,7 +65,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             const name = key;
             // detect special school lookup field
             const isSchoolLookup = apiName === 'High_School_or_College__c';
-
             const type = f.fieldType || (isSchoolLookup ? 'school-lookup' : 'text');
             const isCheckbox = type === 'checkbox';
             const isTextarea = type === 'textarea';
@@ -102,9 +100,11 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 isTextarea,
                 isMultiSelect,
                 isAddress,
+                isSchoolLookup,
                 value: initial,
+                selectedLabel: '',
                 options: isMultiSelect && Array.isArray(f.picklistValues)
-                    ? f.picklistValues.map(v => ({ label: v, value: v }))
+                    ? f.picklistValues.map(v => ({label: v, value: v}))
                     : undefined
             };
             values[name] = initial;
@@ -113,9 +113,75 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this.values = values;
     }
 
+    // Handler for the reusable lookup component's custom event 'valueselected'
+    handleSchoolSelect = (event) => {
+        // the lookup component may communicate the target field name in a few ways.
+        // Try event.detail.fieldName first, then dataset on currentTarget/target.
+        let name = event.detail?.fieldName || event.currentTarget?.dataset?.fieldName || event.target?.dataset?.fieldName;
+        const detail = event.detail || {};
+        const selectedId = detail.id || '';
+        const display = detail.mainField ? (detail.mainField + (detail.subField ? ' - ' + detail.subField : '')) : '';
+
+        // fallback: if name is still not found, pick the first field marked as isSchoolLookup
+        if (!name) {
+            const fallbackIdx = this.fields.findIndex(f => f.isSchoolLookup);
+            if (fallbackIdx > -1) {
+                name = this.fields[fallbackIdx].name;
+            }
+        }
+
+        if (!name) {
+            // nothing we can do
+            return;
+        }
+
+        // update values map
+        this.values = {...this.values, [name]: selectedId};
+
+        // find field and update its value and the lead SObject mapping
+        const idx = this.fields.findIndex(f => f.name === name);
+        if (idx > -1) {
+            const field = this.fields[idx];
+            const api = (field.fieldLeadAPIName || '').trim();
+            const updated = {...field, value: selectedId, selectedLabel: display};
+            this.fields = [
+                ...this.fields.slice(0, idx),
+                updated,
+                ...this.fields.slice(idx + 1)
+            ];
+            if (api) {
+                this.lead = {...this.lead, [api]: selectedId};
+            }
+        }
+    }
+
+    // Clear the selected school for a given field (triggered by a small clear button)
+    handleSchoolClear(event) {
+        const name = event.currentTarget?.dataset?.fieldName;
+        if (!name) return;
+        // clear values
+        this.values = {...this.values, [name]: ''};
+        const idx = this.fields.findIndex(f => f.name === name);
+        if (idx > -1) {
+            const field = this.fields[idx];
+            const api = (field.fieldLeadAPIName || '').trim();
+            const updated = {...field, value: '', selectedLabel: ''};
+            this.fields = [
+                ...this.fields.slice(0, idx),
+                updated,
+                ...this.fields.slice(idx + 1)
+            ];
+            if (api) {
+                // remove mapping from lead
+                const {[api]: _, ...rest} = this.lead;
+                this.lead = {...rest};
+            }
+        }
+    }
+
     // change handlers
     handleChange = (event) => {
-        const { name, type } = event.target;
+        const {name, type} = event.target;
         let value;
         if (type === 'checkbox') {
             value = event.target.checked;
@@ -123,13 +189,13 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             value = event.detail?.value ?? event.target.value;
         }
         // update state
-        this.values = { ...this.values, [name]: value };
+        this.values = {...this.values, [name]: value};
         const idx = this.fields.findIndex(f => f.name === name);
         if (idx > -1) {
             const field = this.fields[idx];
             const api = (field.fieldLeadAPIName || '').trim();
             // mirror UI field value
-            const updated = { ...field, value };
+            const updated = {...field, value};
             this.fields = [
                 ...this.fields.slice(0, idx),
                 updated,
@@ -137,7 +203,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             ];
             // sync into lead record by API name
             if (api) {
-                this.lead = { ...this.lead, [api]: value };
+                this.lead = {...this.lead, [api]: value};
             }
         }
     }
@@ -146,19 +212,19 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         const name = event.target.name;
         const arr = Array.isArray(event.detail?.value) ? event.detail.value : [];
         const value = arr.join(';');
-        this.values = { ...this.values, [name]: value };
+        this.values = {...this.values, [name]: value};
         const idx = this.fields.findIndex(f => f.name === name);
         if (idx > -1) {
             const field = this.fields[idx];
             const api = (field.fieldLeadAPIName || '').trim();
-            const updated = { ...field, value };
+            const updated = {...field, value};
             this.fields = [
                 ...this.fields.slice(0, idx),
                 updated,
                 ...this.fields.slice(idx + 1)
             ];
             if (api) {
-                this.lead = { ...this.lead, [api]: value };
+                this.lead = {...this.lead, [api]: value};
             }
         }
     }
@@ -173,11 +239,11 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             postalCode: detail.postalCode || '',
             country: detail.country || ''
         };
-        this.values = { ...this.values, [name]: value };
+        this.values = {...this.values, [name]: value};
         const idx = this.fields.findIndex(f => f.name === name);
         if (idx > -1) {
             const field = this.fields[idx];
-            const updated = { ...field, value };
+            const updated = {...field, value};
             this.fields = [
                 ...this.fields.slice(0, idx),
                 updated,
@@ -202,8 +268,11 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         // validate custom multi-select
         const multiSelects = [...this.template.querySelectorAll('c-multi-select-pills-groupable')];
         const msValid = multiSelects.reduce((acc, c) => (typeof c.checkValidity === 'function' ? c.checkValidity() : true) && acc, true);
+        // validate reusable lookup components
+        const reusableLookups = [...this.template.querySelectorAll('c-reusable-lookup')];
+        const rlValid = reusableLookups.reduce((acc, c) => (typeof c.checkValidity === 'function' ? c.checkValidity() : true) && acc, true);
 
-        if (!baseValid || !msValid) {
+        if (!baseValid || !msValid || !rlValid) {
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Fix validation errors',
                 message: 'Please correct the highlighted fields and try again.',
@@ -214,7 +283,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
         this.saving = true;
         try {
-            const id = await submitRFILead({ leadRecord: this.lead });
+            const id = await submitRFILead({leadRecord: this.lead});
             this.dispatchEvent(new ShowToastEvent({
                 title: 'Submitted',
                 message: `Lead created: ${id}`,
