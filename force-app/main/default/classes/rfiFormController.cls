@@ -7,19 +7,44 @@ public with sharing class rfiFormController {
     public class leadAndRfiFields {
         @AuraEnabled public Lead leadRecord { get; set; }
         @AuraEnabled public List<rfiField> rfiFieldList { get; set; }
-        @AuraEnabled public List<String> countries { get; set; }
+        @AuraEnabled public List<picklistOption> countryOptions { get; set; }
         @AuraEnabled public List<String> states { get; set; }
     }
 
     public class rfiField {
         @AuraEnabled public String fieldLabel { get; set; }
         @AuraEnabled public String fieldLeadAPIName { get; set; }
-        @AuraEnabled public String fieldType { get; set; }
-        @AuraEnabled public List<String> picklistValues { get; set; }
+        @AuraEnabled public List<picklistOption> picklistValues { get; set; }
+        @AuraEnabled public List<programValues> programValues { get; set; }
+        @AuraEnabled public String inputType { get; set; }
         @AuraEnabled public Boolean isVisible { get; set; }
         @AuraEnabled public Boolean isRequired { get; set; }
         @AuraEnabled public Boolean isSelected { get; set; }
         @AuraEnabled public Integer max { get; set; }
+        @AuraEnabled public Boolean isCheckbox { get; set; }
+        @AuraEnabled public Boolean isEmail { get; set; }
+        @AuraEnabled public Boolean isTel { get; set; }
+        @AuraEnabled public Boolean isDate { get; set; }
+        @AuraEnabled public Boolean isTextarea { get; set; }
+        @AuraEnabled public Boolean isMultiSelect { get; set; }
+        @AuraEnabled public Boolean isPicklist { get; set; }
+        @AuraEnabled public Boolean isAddress { get; set; }
+        @AuraEnabled public Boolean isStaticContent { get; set; }
+        @AuraEnabled public Boolean isSchoolLookup { get; set; }
+        @AuraEnabled public Boolean isProgramLookup { get; set; }
+        @AuraEnabled public Boolean isProgramFilter { get; set; }
+    }
+
+    public class programValues {
+        @AuraEnabled public String label { get; set; }
+        @AuraEnabled public String value { get; set; }
+        @AuraEnabled public String description { get; set; }
+        @AuraEnabled public Boolean is_group { get; set; }
+    }
+
+    public class picklistOption {
+        @AuraEnabled public String label { get; set; }
+        @AuraEnabled public String value { get; set; }
     }
 
     @AuraEnabled(Cacheable=true)
@@ -71,14 +96,65 @@ public with sharing class rfiFormController {
         ];
 
 
-
         leadAndRfiFields leadAndRfi = new leadAndRfiFields();
         leadAndRfi.leadRecord = new Lead();
+
+        List<picklistOption> countries = new List<picklistOption>();
+        List<Schema.PicklistEntry> countryValues = Lead.CountryCode.getDescribe().getPicklistValues();
+        for (Schema.PicklistEntry v : countryValues) {
+            if (v.isActive()) {
+                picklistOption option = new picklistOption();
+                option.label = v.getLabel();
+                option.value = v.getValue();
+                countries.add(option);
+            }
+        }
+        leadAndRfi.countryOptions = countries;
+
         // Prefill sensible defaults
         if (String.isBlank(leadAndRfi.leadRecord.Country)) {
             leadAndRfi.leadRecord.Country = 'United States';
         }
         leadAndRfi.rfiFieldList = new List<rfiField>();
+
+        //Get field information for all pre-filters for programs
+        Map<String, String> mapFilterFields = new Map<String, String>{
+                'School_College_To_Display__c' => 'School_College_Question__c',
+                'Citizen_Types_To_Display__c' => 'Citizen_Type_Question__c',
+                'Degree_Types_To_Display__c' => 'Degree_Type_Question__c',
+                'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2_Question__c',
+                'Generic_Filter_3_To_Display__c' => 'Generic_Filter_3_Question__c',
+                'Generic_Filter_4_To_Display__c' => 'Generic_Filter_4_Question__c',
+                'Generic_Filter_6_To_Display__c' => 'Generic_Filter_6_Question__c',
+                'Generic_Filter_7_To_Display__c' => 'Generic_Filter_7_Question__c',
+                'Generic_Filter_8_To_Display__c' => 'Generic_Filter_8_Question__c',
+                'Student_Types_To_Display__c' => 'Student_Type_Question__c',
+                'Delivery_Types_To_Display__c' => 'Delivery_Type_Question__c',
+                'Program_Types_To_Display__c' => 'Program_Type_Question__c'
+        };
+
+        //Create rfiField entries for each valid filter field configured on the controller
+        for (String key : mapFilterFields.keySet()) {
+            if (String.isNotBlank((String) rfiController.get(key))) {
+                // valid filter field
+                String questionField = mapFilterFields.get(key);
+                String questionText = (String) rfiController.get(questionField);
+                if (!String.isBlank(questionText)) {
+                    rfiField newField = new rfiField();
+                    newField.fieldLabel = questionText;
+                    //newField.fieldLeadAPIName = key.replace('_To_Display__c', '__c');
+                    newField.isPicklist = true;
+                    newField.isVisible = true;
+                    newField.isSelected = false;
+                    newField.isRequired = false;
+                    newField.isProgramFilter = true;
+                    newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
+                    leadAndRfi.rfiFieldList.add(newField);
+                }
+
+            }
+        }
+
 
         List<String> fieldsToDisplay = rfiController.Fields_to_Display__c != null
                 ? rfiController.Fields_to_Display__c.split(';')
@@ -103,21 +179,19 @@ public with sharing class rfiFormController {
         // Lead field describes for dynamic picklist detection
         Map<String, Schema.SObjectField> leadFieldMap = Schema.SObjectType.Lead.fields.getMap();
 
+
         for (String fieldName : fieldsToDisplay) {
             rfiField newField = new rfiField();
             // default visibility/selection
             newField.isVisible = true;
             newField.isSelected = false;
-            // sensible default type
-            newField.fieldType = 'text';
+            newField.max = 4;
             switch on fieldName {
                 when 'Academic Interest' {
                     newField.fieldLabel = 'Academic Interest (Max 4)';
                     newField.fieldLeadAPIName = 'Academic_Interests__c';
-                    newField.fieldType = 'multi-select';
-                    newField.picklistValues = rfiController.Academic_Interests_To_Display__c != null
-                            ? rfiController.Academic_Interests_To_Display__c.split(';')
-                            : new List<String>();
+                    newField.isProgramLookup = true;
+                    newField.programValues = getPrograms(rfiController.Academic_Level__c, rfiController.School_College__c, rfiController.Academic_Interests_To_Display__c, rfiController.Multi_Select_Display_Type__c == 'Standard Multi-Select', '');
                     if (rfiController.Academic_Interest_Max_Selection__c != null) {
                         try {
                             newField.max = Integer.valueOf(rfiController.Academic_Interest_Max_Selection__c);
@@ -130,7 +204,7 @@ public with sharing class rfiFormController {
                     if (!addressAdded) {
                         newField.fieldLabel = 'Address';
                         newField.fieldLeadAPIName = 'Address';
-                        newField.fieldType = 'address';
+                        newField.isAddress = true;
                         addressAdded = true;
                         // mark required if present in Required_Fields__c using any of the address tokens
                         newField.isRequired = requiredFields.contains('Address 1') || requiredFields.contains('City') ||
@@ -142,7 +216,8 @@ public with sharing class rfiFormController {
                 when 'Birthdate' {
                     newField.fieldLabel = 'Birthday (MM/DD/YYYY)';
                     newField.fieldLeadAPIName = 'Birthdate';
-                    newField.fieldType = 'date';
+                    newField.inputType = 'date';
+                    newField.isDate = true;
                 }
                 when 'Citizenship' {
                     newField.fieldLabel = 'Citizenship';
@@ -151,7 +226,8 @@ public with sharing class rfiFormController {
                 when 'Email' {
                     newField.fieldLabel = 'Email';
                     newField.fieldLeadAPIName = 'Email';
-                    newField.fieldType = 'email';
+                    newField.isEmail = true;
+                    newField.inputType = 'email';
                 }
                 when 'Employer' {
                     newField.fieldLabel = 'Employer';
@@ -164,6 +240,7 @@ public with sharing class rfiFormController {
                 when 'High School Attended' {
                     newField.fieldLabel = 'High School Attended';
                     newField.fieldLeadAPIName = 'High_School_or_College__c';
+                    newField.isSchoolLookup = true;
                 }
                 when 'High School Graduation Year' {
                     newField.fieldLabel = 'High School Graduation (YYYY)';
@@ -176,7 +253,7 @@ public with sharing class rfiFormController {
                 when 'I have a question' {
                     newField.fieldLabel = 'I have a question';
                     newField.fieldLeadAPIName = 'Has_Question__c';
-                    newField.fieldType = 'checkbox';
+                    newField.isCheckbox = true;
                 }
                 when 'I will apply to St Thomas as a' {
                     newField.fieldLabel = 'I will apply to St. Thomas as a';
@@ -185,16 +262,17 @@ public with sharing class rfiFormController {
                 when 'I would like program information to be mailed to me' {
                     newField.fieldLabel = 'I would like program information to be mailed to me';
                     newField.fieldLeadAPIName = 'Mail_Information__c';
-                    newField.fieldType = 'checkbox';
+                    newField.isCheckbox = true;
                 }
                 when 'I would like to receive text messages' {
                     newField.fieldLabel = 'I would like to receive text messages';
-                    newField.fieldType = 'checkbox';
+                    newField.isCheckbox = true;
                 }
                 when 'Phone', 'Home and Mobile Phone', 'Mobile Phone' {
                     newField.fieldLabel = 'Phone';
                     newField.fieldLeadAPIName = 'Phone';
-                    newField.fieldType = 'tel';
+                    newField.isTel = true;
+                    newField.inputType = 'tel';
                 }
                 when 'First Name' {
                     newField.fieldLabel = 'First Name';
@@ -219,7 +297,7 @@ public with sharing class rfiFormController {
                 when 'Tell us about yourself' {
                     newField.fieldLabel = 'Tell us about yourself and why you are interested in this program. (150 words or less)';
                     newField.fieldLeadAPIName = 'Description';
-                    newField.fieldType = 'textarea';
+                    newField.isTextarea = true;
                 }
                 when 'Timeline to Enrollment' {
                     newField.fieldLabel = 'Timeline to Enrollment';
@@ -236,6 +314,7 @@ public with sharing class rfiFormController {
                 when else {
                     newField.fieldLabel = 'Field Label Not Found';
                     newField.fieldLeadAPIName = 'Description';
+                    newField.isTextarea = true;
                 }
             }
 
@@ -243,41 +322,22 @@ public with sharing class rfiFormController {
             // If this maps to a real Lead field, detect picklist/multipicklist and populate options
             if (!String.isBlank(newField.fieldLeadAPIName) && newField.fieldLeadAPIName != 'Address' && leadFieldMap.containsKey(newField.fieldLeadAPIName)) {
                 Schema.DescribeFieldResult d = leadFieldMap.get(newField.fieldLeadAPIName).getDescribe();
-                if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
-                    newField.fieldType = 'multi-select';
-                    List<String> opts = new List<String>();
-                    for (Schema.PicklistEntry e : d.getPicklistValues()) {
-                        if (e.isActive()) opts.add(String.valueOf(e.getValue()));
+                if (d.getType() == Schema.DisplayType.MULTIPICKLIST || d.getType() == Schema.DisplayType.PICKLIST) {
+                    System.debug('Picklist detected: ' + newField.fieldLeadAPIName);
+                    newField.picklistValues = getPicklistOptions(d);
+                    if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
+                        newField.isMultiSelect = true;
+                        newField.max = 4;
+                    } else {
+                        newField.isPicklist = true;
                     }
-                    newField.picklistValues = opts;
-                } else if (d.getType() == Schema.DisplayType.PICKLIST) {
-                    newField.fieldType = 'picklist';
-                    List<String> opts = new List<String>();
-                    for (Schema.PicklistEntry e : d.getPicklistValues()) {
-                        if (e.isActive()) opts.add(String.valueOf(e.getValue()));
-                    }
-                    newField.picklistValues = opts;
                 }
             }
 
-            //Get states and countries for picklist values from lead
-            leadAndRfi.countries = new List<String>();
-            for (Schema.PicklistEntry e : leadFieldMap.get('Country').getDescribe().getPicklistValues()) {
-                if (e.isActive()) leadAndRfi.countries.add(String.valueOf(e.getValue()));
-            }
+            Boolean forceRequired = (newField.fieldLeadAPIName == 'FirstName' || newField.fieldLeadAPIName == 'LastName');
+            newField.isRequired = forceRequired || requiredFields.contains(fieldName);
+            leadAndRfi.rfiFieldList.add(newField);
 
-            leadAndRfi.states = new List<String>();
-            for (Schema.PicklistEntry e : leadFieldMap.get('State').getDescribe().getPicklistValues()) {
-                if (e.isActive()) leadAndRfi.states.add(String.valueOf(e.getValue()));
-            }
-
-
-            // mark required if present in Required_Fields__c
-            if (newField.fieldLeadAPIName != 'Address') {
-                Boolean forceRequired = (newField.fieldLeadAPIName == 'FirstName' || newField.fieldLeadAPIName == 'LastName');
-                newField.isRequired = forceRequired || requiredFields.contains(fieldName);
-                leadAndRfi.rfiFieldList.add(newField);
-            }
         }
 
         // Additional Questions
@@ -298,20 +358,17 @@ public with sharing class rfiFormController {
                     newField.isRequired = qMap.containsKey('isRequired') ? (Boolean) qMap.get('isRequired') : false;
                     // Determine field type
                     if (qMap.containsKey('isPicklist') && (Boolean) qMap.get('isPicklist')) {
-                        newField.fieldType = 'picklist';
-                        newField.picklistValues = qMap.get('valuesFlat').toString().split(';');
-                        System.debug('Picklist values: ' + newField.picklistValues);
+                        newField.isPicklist = true;
+                        newField.picklistValues = getOptionsFromDelineatedString((String) qMap.get('valuesFlat'));
                     } else if (qMap.containsKey('isTextarea') && (Boolean) qMap.get('isTextarea')) {
-                        newField.fieldType = 'textarea';
+                        newField.isTextarea = true;
                     } else if (qMap.containsKey('isRichText') && (Boolean) qMap.get('isRichText')) {
-                        newField.fieldType = 'richtext';
+                        newField.isStaticContent = true;
                     } else if (qMap.containsKey('isEmail') && (Boolean) qMap.get('isEmail')) {
-                        newField.fieldType = 'email';
+                        newField.isEmail = true;
+                        newField.inputType = 'email';
                     } else if (qMap.containsKey('isTextBox') && (Boolean) qMap.get('isTextBox')) {
-                        newField.fieldType = 'text';
-                    } else {
-                        // default to text
-                        newField.fieldType = 'text';
+                        newField.isTextarea = true;
                     }
                     //if position is top add to the start of leadAndRfi.rfiFieldList
                     if (qMap.containsKey('position') && String.valueOf(qMap.get('position')).toLowerCase() == 'top') {
@@ -340,11 +397,23 @@ public with sharing class rfiFormController {
         return leadAndRfi;
     }
 
+    @AuraEnabled(Cacheable=true)
+    public static List<picklistOption> getStateProvince(String countryCode) {
+        List<PicklistOption> stateOptions = new List<PicklistOption>();
+/*        Schema.DescribeFieldResult fieldResult = Account.MailingStateCode.getDescribe();
+        List<Schema.PicklistEntry> stateEntries = fieldResult.getPicklistValues();
+
+        for (Schema.PicklistEntry entry : stateEntries) {
+            if (entry.getValidFor() != null && entry.getValidFor().contains(countryCode)) { // Simplified check
+                stateOptions.add(new PicklistOption(entry.getLabel(), entry.getValue()));
+            }
+        }*/
+        return stateOptions;
+    }
+
     @AuraEnabled
     public static Id submitRFI(String rfiControllerName, Map<String, Object> fieldValues) {
-        // touch parameter to avoid unused warnings
-        Boolean unusedParam = String.isBlank(rfiControllerName);
-        // create a lead and set fields dynamically; only set fields that exist on Lead
+        // intentionally do not use rfiControllerName here; parameter kept for compatibility
         Lead l = new Lead();
         Map<String, Schema.SObjectField> leadFields = Schema.SObjectType.Lead.fields.getMap();
         for (String apiName : fieldValues.keySet()) {
@@ -378,5 +447,112 @@ public with sharing class rfiFormController {
         }
         insert toInsert;
         return toInsert.Id;
+    }
+
+    public static List<picklistOption> getPicklistOptions(Schema.DescribeFieldResult d) {
+        List<picklistOption> opts = new List<picklistOption>();
+        for (Schema.PicklistEntry e : d.getPicklistValues()) {
+            if (e.isActive()) {
+                System.debug('Adding picklist option: ' + e.getLabel() + ' / ' + e.getValue());
+                picklistOption po = new picklistOption();
+                po.label = String.valueOf(e.getLabel());
+                po.value = String.valueOf(e.getValue());
+                opts.add(po);
+            }
+        }
+        return opts;
+    }
+
+    public static List<picklistOption> getOptionsFromDelineatedString(String delimited) {
+        List<picklistOption> opts = new List<picklistOption>();
+        for (String val : delimited.split(';')) {
+            picklistOption po = new picklistOption();
+            po.label = val;
+            po.value = val;
+            opts.add(po);
+        }
+        return opts;
+    }
+
+    @AuraEnabled(Cacheable=true)
+    public static List<programValues> getPrograms(String academic_level, String school_college, String academic_interest_codes, Boolean multi_select_standard, String filters) {
+        // reference filters to avoid compiler unused-parameter warning
+        Boolean unusedFilters = String.isBlank(filters);
+
+        String query_string =
+                //Student type buckets
+                'SELECT ' +
+                        'Id, ' +
+                        'Name, ' +
+                        'Program_Name_on_Application__c, ' +
+                        'Student_Type__c, ' +
+                        'Degree__c, ' +
+                        'Program_Major_Concentration__c ' +
+                        'FROM Program__c ' +
+                        'WHERE RecordType.DeveloperName = \'Recruitment_Program\' ' +
+                        'AND Program_Display__c INCLUDES (\'RFI\') ' +
+                        'AND Active__c = true ';
+        if (academic_level == 'U' || academic_level == 'Undergraduate') {
+            query_string += ' AND (Academic_Level__c = \'Undergraduate\' OR Academic_Level__c = \'U\') ';
+            query_string += ' AND (Program_Type__c INCLUDES (\'Major\') OR Program_Type__c INCLUDES (\'Pre-Professional\') OR Program_Type__c INCLUDES (\'Major Concentration\') OR Program_Type__c INCLUDES (\'Co-Major\')) ';
+        } else {
+            query_string += ' AND (Academic_Level__c = \'Graduate\' OR Academic_Level__c = \'G\')  ';
+            if (!String.isBlank(school_college)) {
+                query_string += ' AND Associated_Schools__c INCLUDES (\'' + school_college + '\')';
+                if (school_college == 'School of Law') {
+                    query_string += ' AND Banner_Program_Code__c LIKE \'LW_%\'';
+                }
+            }
+        }
+
+        if (String.isNotBlank(academic_interest_codes)) {
+            academic_interest_codes = academic_interest_codes.escapeHtml4();
+            List<String> academicCodes = academic_interest_codes.split(';');
+            query_string += ' AND Program_Major_Concentration__c IN :academicCodes ';
+        }
+        if (multi_select_standard) {
+            query_string += ' ORDER BY Program_Name_on_Application__c ';
+        } else {
+            query_string += ' ORDER BY Degree__c, Program_Name_on_Application__c ';
+        }
+
+        List<Program__c> programs = Database.query(query_string);
+
+        List<programValues> results = new List<programValues>();
+        if (!programs.isEmpty()) {
+            Map<String, List<programValues>> degreeMap = new Map<String, List<programValues>>();
+            for (Program__c p : programs) {
+                programValues pv = new programValues();
+                pv.label = p.Program_Name_on_Application__c;
+                pv.value = String.valueOf(p.Id);
+                pv.description = (p.Degree__c != null ? p.Degree__c + ' - ' : '') + (p.Program_Major_Concentration__c != null ? p.Program_Major_Concentration__c : '');
+                pv.is_group = false;
+                if (multi_select_standard) {
+                    results.add(pv);
+                } else {
+                    // Group by Degree
+                    String degreeKey = p.Degree__c != null ? p.Degree__c : 'Other Programs';
+                    if (!degreeMap.containsKey(degreeKey)) {
+                        degreeMap.put(degreeKey, new List<programValues>());
+                    }
+                    degreeMap.get(degreeKey).add(pv);
+                }
+            }
+            if (!multi_select_standard) {
+                // Flatten the map into results with group headers
+                List<String> sortedDegrees = new List<String>(degreeMap.keySet());
+                sortedDegrees.sort();
+                for (String degree : sortedDegrees) {
+                    programValues header = new programValues();
+                    header.label = degree;
+                    header.value = degree;
+                    header.is_group = true;
+                    results.add(header);
+                    results.addAll(degreeMap.get(degree));
+                }
+            }
+
+        }
+        return results;
     }
 }

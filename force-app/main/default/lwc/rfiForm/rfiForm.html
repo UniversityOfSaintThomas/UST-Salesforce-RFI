@@ -16,8 +16,8 @@
                     <div class="slds-p-vertical_small">
                         <template for:each={fields} for:item="f" for:index="index">
                             <div key={f.key} class="slds-m-vertical_x-small">
-                                <!-- Address with optional Google lookup -->
-                                <template if:true={f.isAddress}>
+                                <!-- Address -->
+                                <template lwc:if={f.isAddress}>
                                     <div class="slds-m-bottom_x-small slds-form-element">
                                         <lightning-input-address
                                                 show-address-lookup="true"
@@ -28,22 +28,17 @@
                                                 province-label="State/Province"
                                                 postal-code-label="Zip/Postal Code"
                                                 country-label="Country"
-                                                street={f.value.street}
-                                                city={f.value.city}
-                                                province={f.value.province}
-                                                postal-code={f.value.postalCode}
-                                                country={f.value.country}
-                                                country-options={country}
-                                                province-options={state}
                                                 required={f.isRequired}
                                                 data-field-name={f.name}
+                                                country-options={countryOptions}
+                                                province-options={stateOptions}
                                                 onchange={handleAddressChange}>
                                         </lightning-input-address>
                                     </div>
                                 </template>
 
                                 <!-- School lookup using reusable lookup component -->
-                                <template if:true={f.isSchoolLookup}>
+                                <template lwc:elseif={f.isSchoolLookup}>
                                     <div class="slds-m-bottom_x-small slds-form-element">
                                         <c-reusable-lookup
                                                 label={f.fieldLabel}
@@ -60,12 +55,37 @@
                                     </div>
                                 </template>
 
-                                <!-- Multi-select (custom) -->
-                                <template if:true={f.isMultiSelect}>
+                                <!-- Picklist Program Lookup -->
+                                <template lwc:elseif={f.isProgramLookup}>
                                     <c-multi-select-pills-groupable
                                             label={f.fieldLabel}
                                             name={f.name}
-                                            options={f.options}
+                                            options={f.programValues}
+                                            value={f.value}
+                                            required={f.isRequired}
+                                            max={f.max}
+                                            onchange={handleMultiSelectChange}
+                                    ></c-multi-select-pills-groupable>
+                                </template>
+
+                                <!-- Picklist (single-select) -->
+                                <template lwc:elseif={f.isPicklist}>
+                                    <lightning-combobox
+                                            label={f.fieldLabel}
+                                            name={f.name}
+                                            value={f.value}
+                                            options={f.picklistValues}
+                                            required={f.isRequired}
+                                            onchange={handleChange}>
+                                    </lightning-combobox>
+                                </template>
+
+                                <!-- Multi-select (custom) -->
+                                <template lwc:elseif={f.isMultiSelect}>
+                                    <c-multi-select-pills-groupable
+                                            label={f.fieldLabel}
+                                            name={f.name}
+                                            options={f.picklistValues}
                                             value={f.value}
                                             required={f.isRequired}
                                             max={f.max}
@@ -74,7 +94,7 @@
                                 </template>
 
                                 <!-- Textarea -->
-                                <template if:true={f.isTextarea}>
+                                <template lwc:elseif={f.isTextarea}>
                                     <lightning-textarea
                                             label={f.fieldLabel}
                                             name={f.name}
@@ -85,7 +105,7 @@
                                 </template>
 
                                 <!-- Checkbox -->
-                                <template if:true={f.isCheckbox}>
+                                <template lwc:elseif={f.isCheckbox}>
                                     <lightning-input
                                             type="checkbox"
                                             label={f.fieldLabel}
@@ -96,34 +116,42 @@
                                     ></lightning-input>
                                 </template>
 
-                                <!-- Picklist (single-select) -->
-                                <template if:true={f.isPicklist}>
-                                    <lightning-combobox
+                                <template lwc:elseif={f.isTel}>
+                                    <lightning-input
+                                            type="tel"
+                                            pattern="^\+?(\d{1,3})?[\-.\s]?\(?\d{1,4}\)?[\-.\s]?\d{1,4}[\-.\s]?\d{1,9}$"
+                                            message-when-pattern-mismatch="Please enter a valid phone number (e.g., (123)456-7890, +1234567890, 123-456-7890)."
                                             label={f.fieldLabel}
                                             name={f.name}
                                             value={f.value}
-                                            options={f.options}
                                             required={f.isRequired}
                                             onchange={handleChange}>
-                                    </lightning-combobox>
+                                    </lightning-input>
                                 </template>
 
-                                <!-- Default inputs: text, email, tel, date, etc. -->
-                                <template if:false={f.isAddress}>
-                                    <template if:false={f.isMultiSelect}>
-                                        <template if:false={f.isTextarea}>
-                                            <template if:false={f.isCheckbox}>
-                                                <lightning-input
-                                                        type={f.inputType}
-                                                        label={f.fieldLabel}
-                                                        name={f.name}
-                                                        value={f.value}
-                                                        required={f.isRequired}
-                                                        onchange={handleChange}
-                                                ></lightning-input>
-                                            </template>
-                                        </template>
-                                    </template>
+                                <template lwc:elseif={f.isEmail}>
+                                    <lightning-input
+                                            type="email"
+                                            pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$"
+                                            message-when-pattern-mismatch="Please enter a valid email add."
+                                            label={f.fieldLabel}
+                                            name={f.name}
+                                            value={f.value}
+                                            required={f.isRequired}
+                                            onchange={handleChange}>
+                                    </lightning-input>
+                                </template>
+
+                                <!-- Default inputs: text, date, etc. -->
+                                <template lwc:else>
+                                    <lightning-input
+                                            type={f.inputType}
+                                            label={f.fieldLabel}
+                                            name={f.name}
+                                            value={f.value}
+                                            required={f.isRequired}
+                                            onchange={handleChange}>
+                                    </lightning-input>
                                 </template>
                             </div>
                         </template>

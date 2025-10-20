@@ -2,10 +2,11 @@
  * Created by Thad-PC-2019 on 9/23/2025.
  */
 
-import {api, LightningElement, wire} from 'lwc';
+import {api, LightningElement, track, wire} from 'lwc';
 import {getFieldValue, getRecord} from 'lightning/uiRecordApi';
 import getRFIForm from '@salesforce/apex/rfiFormController.getRFIForm';
 import submitRFILead from '@salesforce/apex/rfiFormController.submitRFILead';
+import getStateProvince from '@salesforce/apex/rfiFormController.getStateProvince';
 import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 import {NavigationMixin} from 'lightning/navigation';
 import RFI_CONTROLLER_NAME from '@salesforce/schema/RFI_Controller__c.Name';
@@ -18,6 +19,8 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @api recordId;
     @api googleApiKey; // optional: enable Google Places lookup for address
 
+    @track academic_interest_picklist_values;
+
     controllerName;
     rfiData;
     fields = [];
@@ -26,9 +29,25 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     countryOptions = [];
     stateOptions = [];
     saving = false;
+    // reactive country used to wire server-side subdivisions
+    selectedCountry = '';
 
     connectedCallback() {
         this.controllerName = this.rfiControllerName;
+    }
+
+    // wire server-side subdivisions for the currently selected country
+    @wire(getStateProvince, {country: '$selectedCountry'})
+    wiredSubdivisions({data, error}) {
+        if (data) {
+            // Apex returns List<picklistOption> with shape {label, value}
+            this.stateOptions = Array.isArray(data) ? data : [];
+            console.log('Fetched subdivisions for', this.selectedCountry, '->', JSON.stringify(this.stateOptions));
+        } else if (error) {
+            // fallback to client-side mapping when server fails
+            this.stateOptions = this._getStateOptions(this.selectedCountry);
+            console.warn('Failed to fetch subdivisions for', this.selectedCountry, '; falling back to client mapping', error);
+        }
     }
 
     @wire(getRecord, {recordId: '$recordId', fields: RFI_CONTROLLER_FIELDS})
@@ -42,12 +61,16 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     wiredForm(result) {
         const {data, error} = result;
         if (data) {
+            console.log('RFI form data', JSON.stringify(data, null, 2));
             this.rfiData = JSON.parse(JSON.stringify(data));
+            this.fields = Array.isArray(this.rfiData?.rfiFieldList) ? this.rfiData.rfiFieldList : [];
             // hydrate lead from wrapper (may be empty new Lead())
             this.lead = {...(this.rfiData.leadRecord || {})};
-            this.countryOptions = this.rfiData.country;
-            this.stateOptions = this.rfiData.state;
-            this.normalizeFields();
+            this.countryOptions = this.rfiData.countryOptions;
+            console.log('Country options', JSON.stringify(this.countryOptions, null, 2));
+            // initialize selectedCountry so the wired Apex method runs and populates stateOptions
+            const initialCountryRaw = this.lead && (this.lead.Country || this.lead.CountryCode) ? (this.lead.Country || this.lead.CountryCode) : '';
+            this.selectedCountry = this._resolveCountryKey(initialCountryRaw);
         } else if (error) {
             this.rfiData = undefined;
             this.fields = [];
@@ -56,62 +79,21 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         }
     }
 
-    normalizeFields() {
-        const list = Array.isArray(this.rfiData?.rfiFieldList) ? this.rfiData.rfiFieldList : [];
-        const values = {};
-        this.fields = list.map((f, i) => {
-            const apiName = (f.fieldLeadAPIName || '').trim();
-            const key = apiName ? `${apiName}__${i}` : `field_${i}`;
-            const name = key;
-            // detect special school lookup field
-            const isSchoolLookup = apiName === 'High_School_or_College__c';
-            const type = f.fieldType || (isSchoolLookup ? 'school-lookup' : 'text');
-            const isCheckbox = type === 'checkbox';
-            const isTextarea = type === 'textarea';
-            const isMultiSelect = type === 'multi-select';
-            const isAddress = type === 'address';
-            const isPicklist = type === 'picklist';
-            const inputType = isCheckbox || isTextarea || isMultiSelect || isAddress || isPicklist || isSchoolLookup ? undefined : type;
-
-            let initial;
-            if (isAddress) {
-                initial = {
-                    street: this.lead.Street || '',
-                    city: this.lead.City || '',
-                    province: this.lead.StateCode || this.lead.State || '',
-                    postalCode: this.lead.PostalCode || '',
-                    country: this.lead.CountryCode || this.lead.Country || ''
-                };
-            } else if (isCheckbox) {
-                initial = Boolean(this.lead[apiName]);
-            } else {
-                const raw = this.lead[apiName];
-                initial = raw === null || raw === undefined ? '' : String(raw);
-            }
-
-            const field = {
-                ...f,
-                index: i,
-                key,
-                name,
-                type,
-                inputType,
-                isCheckbox,
-                isTextarea,
-                isMultiSelect,
-                isAddress,
-                isSchoolLookup,
-                value: initial,
-                selectedLabel: '',
-                options: isMultiSelect && Array.isArray(f.picklistValues)
-                    ? f.picklistValues.map(v => ({label: v, value: v}))
-                    : undefined
-            };
-            values[name] = initial;
-            return field;
-        });
-        this.values = values;
+    // Resolve a raw country string (label or code) to the canonical picklist value from countryOptions if possible.
+    _resolveCountryKey(raw) {
+        if (!raw) return '';
+        const c = String(raw).toLowerCase().trim();
+        if (Array.isArray(this.countryOptions)) {
+            // try exact match on value or label
+            const exact = this.countryOptions.find(o => String(o.value).toLowerCase() === c || String(o.label).toLowerCase() === c);
+            if (exact) return exact.value || exact.label || raw;
+            // try contains match on label
+            const partial = this.countryOptions.find(o => String(o.label).toLowerCase().includes(c));
+            if (partial) return partial.value || partial.label || raw;
+        }
+        return raw;
     }
+
 
     // Handler for the reusable lookup component's custom event 'valueselected'
     handleSchoolSelect = (event) => {
@@ -155,57 +137,34 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         }
     }
 
-    // Clear the selected school for a given field (triggered by a small clear button)
-    handleSchoolClear(event) {
-        const name = event.currentTarget?.dataset?.fieldName;
-        if (!name) return;
-        // clear values
-        this.values = {...this.values, [name]: ''};
-        const idx = this.fields.findIndex(f => f.name === name);
-        if (idx > -1) {
-            const field = this.fields[idx];
-            const api = (field.fieldLeadAPIName || '').trim();
-            const updated = {...field, value: '', selectedLabel: ''};
-            this.fields = [
-                ...this.fields.slice(0, idx),
-                updated,
-                ...this.fields.slice(idx + 1)
-            ];
-            if (api) {
-                // remove mapping from lead
-                const {[api]: _, ...rest} = this.lead;
-                this.lead = {...rest};
-            }
-        }
-    }
 
     // change handlers
     handleChange = (event) => {
-        const {name, type} = event.target;
-        let value;
-        if (type === 'checkbox') {
-            value = event.target.checked;
-        } else {
-            value = event.detail?.value ?? event.target.value;
-        }
-        // update state
-        this.values = {...this.values, [name]: value};
-        const idx = this.fields.findIndex(f => f.name === name);
-        if (idx > -1) {
-            const field = this.fields[idx];
-            const api = (field.fieldLeadAPIName || '').trim();
-            // mirror UI field value
-            const updated = {...field, value};
-            this.fields = [
-                ...this.fields.slice(0, idx),
-                updated,
-                ...this.fields.slice(idx + 1)
-            ];
-            // sync into lead record by API name
-            if (api) {
-                this.lead = {...this.lead, [api]: value};
-            }
-        }
+        /*        const {name, type} = event.target;
+                let value;
+                if (type === 'checkbox') {
+                    value = event.target.checked;
+                } else {
+                    value = event.detail?.value ?? event.target.value;
+                }
+                // update state
+                this.values = {...this.values, [name]: value};
+                const idx = this.fields.findIndex(f => f.name === name);
+                if (idx > -1) {
+                    const field = this.fields[idx];
+                    const api = (field.fieldLeadAPIName || '').trim();
+                    // mirror UI field value
+                    const updated = {...field, value};
+                    this.fields = [
+                        ...this.fields.slice(0, idx),
+                        updated,
+                        ...this.fields.slice(idx + 1)
+                    ];
+                    // sync into lead record by API name
+                    if (api) {
+                        this.lead = {...this.lead, [api]: value};
+                    }
+                }*/
     }
 
     handleMultiSelectChange = (event) => {
@@ -230,86 +189,87 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     handleAddressChange = (event) => {
-        const name = event.target.dataset.fieldName;
-        const detail = event.detail || {};
-        const value = {
-            street: detail.street || '',
-            city: detail.city || '',
-            province: detail.province || '',
-            postalCode: detail.postalCode || '',
-            country: detail.country || ''
-        };
-        this.values = {...this.values, [name]: value};
-        const idx = this.fields.findIndex(f => f.name === name);
-        if (idx > -1) {
-            const field = this.fields[idx];
-            const updated = {...field, value};
-            this.fields = [
-                ...this.fields.slice(0, idx),
-                updated,
-                ...this.fields.slice(idx + 1)
-            ];
-            // sync to Lead SObject fields
-            this.lead = {
-                ...this.lead,
-                Street: value.street,
-                City: value.city,
-                State: value.province,
-                PostalCode: value.postalCode,
-                Country: value.country
-            };
-        }
+        // get field name from dataset on currentTarget or target, or from detail
+        /* const name = event.currentTarget?.dataset?.fieldName || event.target?.dataset?.fieldName || event.detail?.fieldName;
+         const detail = event.detail || {};
+         const value = {
+             street: detail.street || '',
+             city: detail.city || '',
+             province: detail.province || '',
+             postalCode: detail.postalCode || '',
+             country: detail.country || ''
+         };
+
+         // If country changed, set the reactive selectedCountry to trigger the wired Apex call.
+         const selectedCountry = value.country || '';
+         if (selectedCountry !== this.selectedCountry) {
+             // clear province when switching countries to avoid invalid selection
+             value.province = '';
+             // normalize to the picklist value if possible
+             this.selectedCountry = this._resolveCountryKey(selectedCountry);
+             console.log('Country changed to', this.selectedCountry, 'triggering subdivisions wire');
+         }
+
+         this.values = {...this.values, [name]: value};
+         const idx = this.fields.findIndex(f => f.name === name);
+         if (idx > -1) {
+             const field = this.fields[idx];
+             const updated = {...field, value};
+             this.fields = [
+                 ...this.fields.slice(0, idx),
+                 updated,
+                 ...this.fields.slice(idx + 1)
+             ];
+             // sync to Lead SObject fields
+             this.lead = {
+                 ...this.lead,
+                 Street: value.street,
+                 City: value.city,
+                 State: value.province,
+                 PostalCode: value.postalCode,
+                 Country: value.country
+             };
+         }*/
     }
 
     async handleSubmit() {
-        // validate lightning-input, lightning-textarea, and lightning-input-address
-        const baseInputs = [...this.template.querySelectorAll('lightning-input, lightning-textarea, lightning-input-address')];
-        const baseValid = baseInputs.reduce((acc, c) => (typeof c.reportValidity === 'function' ? c.reportValidity() : true) && acc, true);
-        // validate custom multi-select
-        const multiSelects = [...this.template.querySelectorAll('c-multi-select-pills-groupable')];
-        const msValid = multiSelects.reduce((acc, c) => (typeof c.checkValidity === 'function' ? c.checkValidity() : true) && acc, true);
-        // validate reusable lookup components
-        const reusableLookups = [...this.template.querySelectorAll('c-reusable-lookup')];
-        const rlValid = reusableLookups.reduce((acc, c) => (typeof c.checkValidity === 'function' ? c.checkValidity() : true) && acc, true);
 
-        if (!baseValid || !msValid || !rlValid) {
-            this.dispatchEvent(new ShowToastEvent({
-                title: 'Fix validation errors',
-                message: 'Please correct the highlighted fields and try again.',
-                variant: 'error'
-            }));
-            return;
+        //validate the form
+        const allInputs = this.template.querySelectorAll('lightning-input');
+        let isValid = true;
+
+        // Check validity of each input
+        allInputs.forEach(input => {
+            if (!input.checkValidity()) {
+                isValid = false;
+                input.reportValidity(); // Display the error message
+            }
+        });
+
+        if (isValid) {
+            // Proceed with form submission if all fields are valid
+            console.log('Form is valid. Submitting...');
+            // ... your submission logic here ...
+        } else {
+            console.log('Form is invalid. Please correct the errors.');
         }
 
-        this.saving = true;
-        try {
-            const id = await submitRFILead({leadRecord: this.lead});
-            this.dispatchEvent(new ShowToastEvent({
-                title: 'Submitted',
-                message: `Lead created: ${id}`,
-                variant: 'success'
-            }));
-            // navigate to the newly created lead
-            this[NavigationMixin.Navigate]({
-                type: 'standard__recordPage',
-                attributes: {
-                    recordId: id,
-                    objectApiName: 'Lead',
-                    actionName: 'view'
-                }
-            });
-            // optional reset: clear values and lead
-            this.normalizeFields();
-        } catch (e) {
-            this.dispatchEvent(new ShowToastEvent({
-                title: 'Submit failed',
-                message: e?.body?.message || e?.message || 'Unknown error',
-                variant: 'error'
-            }));
-        } finally {
-            this.saving = false;
-        }
+
     }
+
+    // Helper methods for validation
+    _isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    _isValidPhone(phone) {
+        // Basic phone validation - remove non-digits and check length
+        const digitsOnly = phone.replace(/\D/g, '');
+        return digitsOnly.length >= 10 && digitsOnly.length <= 15;
+    }
+
+
 
     get hasData() {
         return Array.isArray(this.fields) && this.fields.length > 0;
