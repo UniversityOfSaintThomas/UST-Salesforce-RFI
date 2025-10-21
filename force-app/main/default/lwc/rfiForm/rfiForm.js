@@ -64,18 +64,13 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             console.log('RFI form data', JSON.stringify(data, null, 2));
             this.rfiData = JSON.parse(JSON.stringify(data));
             this.fields = Array.isArray(this.rfiData?.rfiFieldList) ? this.rfiData.rfiFieldList : [];
-            // hydrate lead from wrapper (may be empty new Lead())
-            this.lead = {...(this.rfiData.leadRecord || {})};
             this.countryOptions = this.rfiData.countryOptions;
-            console.log('Country options', JSON.stringify(this.countryOptions, null, 2));
             // initialize selectedCountry so the wired Apex method runs and populates stateOptions
             const initialCountryRaw = this.lead && (this.lead.Country || this.lead.CountryCode) ? (this.lead.Country || this.lead.CountryCode) : '';
             this.selectedCountry = this._resolveCountryKey(initialCountryRaw);
         } else if (error) {
+            console.error('Failed to fetch RFI form data', error);
             this.rfiData = undefined;
-            this.fields = [];
-            this.values = {};
-            this.lead = {};
         }
     }
 
@@ -140,96 +135,41 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
     // change handlers
     handleChange = (event) => {
-        /*        const {name, type} = event.target;
-                let value;
-                if (type === 'checkbox') {
-                    value = event.target.checked;
-                } else {
-                    value = event.detail?.value ?? event.target.value;
-                }
-                // update state
-                this.values = {...this.values, [name]: value};
-                const idx = this.fields.findIndex(f => f.name === name);
-                if (idx > -1) {
-                    const field = this.fields[idx];
-                    const api = (field.fieldLeadAPIName || '').trim();
-                    // mirror UI field value
-                    const updated = {...field, value};
-                    this.fields = [
-                        ...this.fields.slice(0, idx),
-                        updated,
-                        ...this.fields.slice(idx + 1)
-                    ];
-                    // sync into lead record by API name
-                    if (api) {
-                        this.lead = {...this.lead, [api]: value};
-                    }
+        /*        const name = event.target.name;
+                console.log('handleChange for', name);
+                const rawValue = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+                const field = this.fields.find(f => f.name === name);
+                if (!field) return;
+
+                field.value = rawValue;
+
+                if (field.fieldLeadAPIName) {
+                    this.lead = { ...this.lead, [field.fieldLeadAPIName]: rawValue };
                 }*/
     }
 
     handleMultiSelectChange = (event) => {
         const name = event.target.name;
-        const arr = Array.isArray(event.detail?.value) ? event.detail.value : [];
-        const value = arr.join(';');
-        this.values = {...this.values, [name]: value};
-        const idx = this.fields.findIndex(f => f.name === name);
-        if (idx > -1) {
-            const field = this.fields[idx];
-            const api = (field.fieldLeadAPIName || '').trim();
-            const updated = {...field, value};
-            this.fields = [
-                ...this.fields.slice(0, idx),
-                updated,
-                ...this.fields.slice(idx + 1)
-            ];
-            if (api) {
-                this.lead = {...this.lead, [api]: value};
-            }
+        const value = event.detail?.value ?? event.detail;
+        const field = this.fields.find(f => f.name === name);
+        if (!field) return;
+
+        field.value = value;
+        if (field.fieldLeadAPIName) {
+            this.lead = {...this.lead, [field.fieldLeadAPIName]: value};
         }
     }
 
     handleAddressChange = (event) => {
-        // get field name from dataset on currentTarget or target, or from detail
-        /* const name = event.currentTarget?.dataset?.fieldName || event.target?.dataset?.fieldName || event.detail?.fieldName;
-         const detail = event.detail || {};
-         const value = {
-             street: detail.street || '',
-             city: detail.city || '',
-             province: detail.province || '',
-             postalCode: detail.postalCode || '',
-             country: detail.country || ''
-         };
+        const fieldName = event.target.dataset.fieldName;
+        const field = this.fields.find(f => f.name === fieldName);
+        if (!field) return;
 
-         // If country changed, set the reactive selectedCountry to trigger the wired Apex call.
-         const selectedCountry = value.country || '';
-         if (selectedCountry !== this.selectedCountry) {
-             // clear province when switching countries to avoid invalid selection
-             value.province = '';
-             // normalize to the picklist value if possible
-             this.selectedCountry = this._resolveCountryKey(selectedCountry);
-             console.log('Country changed to', this.selectedCountry, 'triggering subdivisions wire');
-         }
-
-         this.values = {...this.values, [name]: value};
-         const idx = this.fields.findIndex(f => f.name === name);
-         if (idx > -1) {
-             const field = this.fields[idx];
-             const updated = {...field, value};
-             this.fields = [
-                 ...this.fields.slice(0, idx),
-                 updated,
-                 ...this.fields.slice(idx + 1)
-             ];
-             // sync to Lead SObject fields
-             this.lead = {
-                 ...this.lead,
-                 Street: value.street,
-                 City: value.city,
-                 State: value.province,
-                 PostalCode: value.postalCode,
-                 Country: value.country
-             };
-         }*/
+        const addressValue = event.detail; // adapt to event contract
+        field.value = addressValue;
+        if (field.fieldLeadAPIName) {
+            this.lead = {...this.lead, [field.fieldLeadAPIName]: addressValue};
+        }
     }
 
     async handleSubmit() {
@@ -243,33 +183,42 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             if (!input.checkValidity()) {
                 isValid = false;
                 input.reportValidity(); // Display the error message
+            } else {
+                //apply the values to lead object using input name for field api name
+                this.lead[input.name] = input.value; // Update lead object with valid input values
             }
         });
 
         if (isValid) {
-            // Proceed with form submission if all fields are valid
-            console.log('Form is valid. Submitting...');
-            // ... your submission logic here ...
+            //save lead using submitRFILead apex method
+            this.saving = true;
+            await submitRFILead({
+                leadRecord: this.lead
+            }).then((result) => {
+                console.log('Lead submission result:', result);
+                this.dispatchEvent(
+                    new ShowToastEvent({
+                        title: 'Success',
+                        message: 'Your information has been submitted successfully.',
+                        variant: 'success'
+                    })
+                );
+            }).error((error) => {
+                console.error('Error submitting lead:', error);
+                this.dispatchEvent(
+                    new ShowToastEvent({
+                        title: 'Error',
+                        message: 'There was an error submitting your information. Please try again later.',
+                        variant: 'error'
+                    })
+                );
+            }).finally(() => {
+                this.saving = false;
+            });
         } else {
             console.log('Form is invalid. Please correct the errors.');
         }
-
-
     }
-
-    // Helper methods for validation
-    _isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    _isValidPhone(phone) {
-        // Basic phone validation - remove non-digits and check length
-        const digitsOnly = phone.replace(/\D/g, '');
-        return digitsOnly.length >= 10 && digitsOnly.length <= 15;
-    }
-
-
 
     get hasData() {
         return Array.isArray(this.fields) && this.fields.length > 0;

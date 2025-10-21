@@ -112,9 +112,6 @@ public with sharing class rfiFormController {
         leadAndRfi.countryOptions = countries;
 
         // Prefill sensible defaults
-        if (String.isBlank(leadAndRfi.leadRecord.Country)) {
-            leadAndRfi.leadRecord.Country = 'United States';
-        }
         leadAndRfi.rfiFieldList = new List<rfiField>();
 
         //Get field information for all pre-filters for programs
@@ -322,6 +319,7 @@ public with sharing class rfiFormController {
             // If this maps to a real Lead field, detect picklist/multipicklist and populate options
             if (!String.isBlank(newField.fieldLeadAPIName) && newField.fieldLeadAPIName != 'Address' && leadFieldMap.containsKey(newField.fieldLeadAPIName)) {
                 Schema.DescribeFieldResult d = leadFieldMap.get(newField.fieldLeadAPIName).getDescribe();
+                leadAndRfi.leadRecord.put(newField.fieldLeadAPIName, null);
                 if (d.getType() == Schema.DisplayType.MULTIPICKLIST || d.getType() == Schema.DisplayType.PICKLIST) {
                     System.debug('Picklist detected: ' + newField.fieldLeadAPIName);
                     newField.picklistValues = getPicklistOptions(d);
@@ -332,6 +330,8 @@ public with sharing class rfiFormController {
                         newField.isPicklist = true;
                     }
                 }
+            } else {
+
             }
 
             Boolean forceRequired = (newField.fieldLeadAPIName == 'FirstName' || newField.fieldLeadAPIName == 'LastName');
@@ -412,41 +412,12 @@ public with sharing class rfiFormController {
     }
 
     @AuraEnabled
-    public static Id submitRFI(String rfiControllerName, Map<String, Object> fieldValues) {
-        // intentionally do not use rfiControllerName here; parameter kept for compatibility
-        Lead l = new Lead();
-        Map<String, Schema.SObjectField> leadFields = Schema.SObjectType.Lead.fields.getMap();
-        for (String apiName : fieldValues.keySet()) {
-            if (String.isBlank(apiName)) continue;
-            if (!leadFields.containsKey(apiName)) continue;
-            Object val = fieldValues.get(apiName);
-            // Handle boolean strings
-            if (val instanceof String && ((String) val).equalsIgnoreCase('true') || ((String) val).equalsIgnoreCase('false')) {
-                // coerce to boolean for checkbox fields
-                try {
-                    val = ((String) val).equalsIgnoreCase('true');
-                } catch (Exception ex) {
-                }
-            }
-            l.put(apiName, val);
-        }
-        insert l;
-        return l.Id;
-    }
-
-    @AuraEnabled
     public static Id submitRFILead(Lead leadRecord) {
         // Sanitize: copy only valid Lead fields from the incoming record
-        Lead toInsert = new Lead();
-        Map<String, Schema.SObjectField> leadFields = Schema.SObjectType.Lead.fields.getMap();
-        Map<String, Object> incoming = leadRecord != null ? leadRecord.getPopulatedFieldsAsMap() : new Map<String, Object>();
-        for (String apiName : incoming.keySet()) {
-            if (leadFields.containsKey(apiName)) {
-                toInsert.put(apiName, incoming.get(apiName));
-            }
-        }
-        insert toInsert;
-        return toInsert.Id;
+        System.debug('Received Lead Record: ' + JSON.serializePretty(leadRecord));
+        leadRecord.Company = String.isBlank(leadRecord.Company) ? 'No Company' : leadRecord.Company;
+        insert leadRecord;
+        return leadRecord.Id;
     }
 
     public static List<picklistOption> getPicklistOptions(Schema.DescribeFieldResult d) {
