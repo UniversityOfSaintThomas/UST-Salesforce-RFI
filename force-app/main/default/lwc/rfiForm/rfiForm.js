@@ -103,7 +103,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         }
     }
 
-
     handleAcademicInterestChange = (event) => {
         const value = event.detail?.value ?? event.detail;
         //Apply multi select values to Major_Program__c, Major_Program_2__c, Major_Program_3__c, Major_Program_4__c fields
@@ -163,8 +162,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             Country: countryLabel || '',
             CountryCode: address.country || ''
         };
-
-        console.log('Address updated lead:', JSON.stringify(this.lead, null, 2));
     }
 
     async handleSubmit() {
@@ -209,6 +206,8 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 );
             }).finally(() => {
                 this.saving = false;
+                //reset the form for new submission and allow submission again
+                this.lead = {};
             });
         } else {
             console.log('Form is invalid. Please correct the errors.');

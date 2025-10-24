@@ -164,7 +164,7 @@ public with sharing class rfiFormController {
         };
 
         //Map the filter questions to the correct Lead field API names
-        Map<String,String> mapFilterToLeadField = new Map<String,String>{
+        Map<String, String> mapFilterToLeadField = new Map<String, String>{
                 'School_College_To_Display__c' => 'School_College__c',
                 'Citizen_Types_To_Display__c' => 'Citizenship__c',
                 'Degree_Types_To_Display__c' => 'Degree_Type__c',
@@ -237,17 +237,20 @@ public with sharing class rfiFormController {
             newField.max = 4;
             switch on fieldName {
                 when 'Academic Interest' {
-                    newField.fieldLabel = 'Academic Interest (Max 4)';
                     newField.fieldLeadAPIName = 'Major_Program__c';
                     newField.isProgramLookup = true;
                     newField.programValues = getPrograms(rfiController.Academic_Level__c, rfiController.School_College__c, rfiController.Academic_Interests_To_Display__c, rfiController.Multi_Select_Display_Type__c == 'Standard Multi-Select', null);
                     if (rfiController.Academic_Interest_Max_Selection__c != null) {
-                        try {
-                            newField.max = Integer.valueOf(rfiController.Academic_Interest_Max_Selection__c);
-                        } catch (Exception ex) {
-                            // ignore if not numeric
-                        }
+                        newField.max = Integer.valueOf(String.valueOf(rfiController.Academic_Interest_Max_Selection__c));
+                    } else {
+                        newField.max = 4;
                     }
+                    if (newField.max == 1) {
+                        newField.fieldLabel = 'Academic Interest';
+                    } else if (newField.max > 1) {
+                        newField.fieldLabel = 'Academic Interest (Max ' + newField.max + ' selections)';
+                    }
+
                 }
                 when 'Address 1', 'Address 2', 'Address 3', 'City', 'Country', 'State', 'Zipcode' {
                     if (!addressAdded) {
@@ -516,17 +519,6 @@ public with sharing class rfiFormController {
         return (charValue & (1 << bitIndex)) != 0;
     }
 
-    @AuraEnabled
-    public static Id submitRFILead(Lead leadRecord) {
-        // Sanitize: copy only valid Lead fields from the incoming record
-        System.debug('Received Lead Record: ' + JSON.serializePretty(leadRecord));
-        Database.DMLOptions dml = new Database.DMLOptions();
-        //Will create duplicate records if not allowed
-        dml.duplicateRuleHeader.allowSave = true;
-        Database.SaveResult result = Database.insert(leadRecord, dml);
-        return result.id;
-    }
-
     public static List<picklistOption> getPicklistOptions(Schema.DescribeFieldResult d) {
         List<picklistOption> opts = new List<picklistOption>();
         for (Schema.PicklistEntry e : d.getPicklistValues()) {
@@ -645,4 +637,35 @@ public with sharing class rfiFormController {
         }
         return results;
     }
+
+    //Submit the RFI Lead record
+    @AuraEnabled
+    public static Id submitRFILead(Lead leadRecord) {
+        // Sanitize: copy only valid Lead fields from the incoming record
+        System.debug('Received Lead Record: ' + JSON.serializePretty(leadRecord));
+        If (leadRecord == null) {
+            throw new AuraHandledException('No Lead record provided.');
+        }
+        if (String.isNotBlank(leadRecord.Major_Program__c)) {
+            //using major_program__c id find program with the same name that is of the record type academic program
+            List<Program__c> programs = [
+                    SELECT Name, Id
+                    FROM Program__c
+                    WHERE Recruitment_Program__c = :leadRecord.Major_Program__c
+                    AND RecordType.DeveloperName = 'Academic_Program'
+                    LIMIT 1
+            ];
+            if (!programs.isEmpty()) {
+                leadRecord.Recruitment_program__c = programs[0].Id;
+            }
+        }
+        Database.DMLOptions dml = new Database.DMLOptions();
+        //Will create duplicate records if not allowed
+        dml.duplicateRuleHeader.allowSave = true;
+        Database.SaveResult result = Database.insert(leadRecord, dml);
+        return result.id;
+    }
 }
+
+
+
