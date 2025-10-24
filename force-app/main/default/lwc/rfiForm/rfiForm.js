@@ -11,6 +11,7 @@ import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 import {NavigationMixin} from 'lightning/navigation';
 import RFI_CONTROLLER_NAME from '@salesforce/schema/RFI_Controller__c.Name';
 import RFI_CONTROLLER_ID from '@salesforce/schema/RFI_Controller__c.Id';
+import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
 
 const RFI_CONTROLLER_FIELDS = [RFI_CONTROLLER_NAME, RFI_CONTROLLER_ID];
 
@@ -19,16 +20,16 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @api recordId;
     @api googleApiKey; // optional: enable Google Places lookup for address
 
-    @track academic_interest_picklist_values;
     @track lead = {};
     @track selectedCountry = 'US';
     @track stateOptions = [];
+    @track filterValues;
+    @track programValues;
 
     controllerName;
     rfiData;
     fields = [];
     values = {};
-
     countryOptions = [];
     saving = false;
 
@@ -50,10 +51,14 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         if (data) {
             this.rfiData = JSON.parse(JSON.stringify(data));
             this.fields = Array.isArray(this.rfiData?.rfiFieldList) ? this.rfiData.rfiFieldList : [];
-            console.log('RFI form fields loaded:', JSON.stringify(this.fields, null, 2));
+            console.log('RFI fields loaded:', JSON.stringify(this.fields, null, 2));
             this.lead = this.rfiData.leadRecord || {};
             console.log('RFI lead record loaded:', JSON.stringify(this.lead, null, 2));
             this.countryOptions = this.rfiData.countryOptions;
+            this.filterValues = this.rfiData.filterValues;
+            this.programValues = this.rfiData.programValues;
+            console.log('program values:', JSON.stringify(this.programValues, null, 2));
+            console.log('filter values:', JSON.stringify(this.filterValues, null, 2));
             //this.stateOptions = this.rfiData.stateOptions;
         } else if (error) {
             console.error('Failed to fetch RFI form data', error);
@@ -106,7 +111,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     handleAcademicInterestChange = (event) => {
         const value = event.detail?.value ?? event.detail;
         //Apply multi select values to Major_Program__c, Major_Program_2__c, Major_Program_3__c, Major_Program_4__c fields
-        if(!Array.isArray(value)) return;
+        if (!Array.isArray(value)) return;
         if (value.length > 0) {
             //map to Major_Program__c, Major_Program_2__c, Major_Program_3__c, Major_Program_4__c
             this.lead = {
@@ -117,6 +122,29 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 Major_Program_4__c: value[3] || ''
             };
         }
+    }
+
+    handleProgramFilterChange = async (event) => {
+        const value = event.detail?.value ?? event.detail;
+        const name = event.target.name;
+        this.filterValues[name] = value;
+        //check if all filterValues are set
+        const allSet = Object.values(this.filterValues).every(v => v && v.length > 0);
+        if (allSet) {
+            try {
+                this.programValues = await getPrograms({
+                    academic_level: this.rfiData.academicLevel,
+                    school_college: this.rfiData.schoolCollege,
+                    academic_interest_codes: this.rfiData.academicInterestCodes,
+                    filters: this.filterValues
+                });
+                console.log('Program values updated:', JSON.stringify(this.programValues, null, 2));
+            } catch (error) {
+                console.error('Error fetching programs:', error);
+            }
+        }
+        console.log('Updated filterValues:', JSON.stringify(this.filterValues, null, 2));
+
     }
 
     handleMultiSelectChange = (event) => {

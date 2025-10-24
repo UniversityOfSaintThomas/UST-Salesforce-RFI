@@ -10,13 +10,16 @@ public with sharing class rfiFormController {
         @AuraEnabled public List<picklistOption> countryOptions { get; set; }
         @AuraEnabled public List<picklistOption> stateOptions { get; set; }
         @AuraEnabled public Map<String, String> filterValues { get; set; }
+        @AuraEnabled public List<programValues> programValues { get; set; }
+        @AuraEnabled public String academicLevel { get; set; }
+        @AuraEnabled public String schoolCollege { get; set; }
+        @AuraEnabled public String academicInterestCodes { get; set; }
     }
 
     public class rfiField {
         @AuraEnabled public String fieldLabel { get; set; }
         @AuraEnabled public String fieldLeadAPIName { get; set; }
         @AuraEnabled public List<picklistOption> picklistValues { get; set; }
-        @AuraEnabled public List<programValues> programValues { get; set; }
         @AuraEnabled public String inputType { get; set; }
         @AuraEnabled public Boolean isVisible { get; set; }
         @AuraEnabled public Boolean isRequired { get; set; }
@@ -98,6 +101,9 @@ public with sharing class rfiFormController {
 
 
         leadAndRfiFields leadAndRfi = new leadAndRfiFields();
+        leadAndRfi.academicLevel = rfiController.Academic_Level__c;
+        leadAndRfi.schoolCollege = rfiController.School_College__c;
+        leadAndRfi.academicInterestCodes = rfiController.Academic_Interests_To_Display__c;
 
         //Populate Lead record with rfi_controller defined values and defaults
         leadAndRfi.leadRecord = new Lead();
@@ -142,6 +148,12 @@ public with sharing class rfiFormController {
         leadAndRfi.countryOptions = countries;
         leadAndRfi.stateOptions = getStateProvince('US');
 
+        leadAndRfi.programValues = getPrograms(
+                rfiController.Academic_Level__c,
+                rfiController.School_College__c,
+                rfiController.Academic_Interests_To_Display__c,
+                null
+        );
 
         // Prefill sensible defaults
         leadAndRfi.rfiFieldList = new List<rfiField>();
@@ -189,16 +201,13 @@ public with sharing class rfiFormController {
                 if (!String.isBlank(questionText)) {
                     rfiField newField = new rfiField();
                     newField.fieldLabel = questionText;
-                    //newField.fieldLeadAPIName = key.replace('_To_Display__c', '__c');
-                    newField.isPicklist = true;
                     newField.isVisible = true;
-                    newField.isSelected = false;
-                    newField.isRequired = false;
+                    newField.isRequired = true;
                     newField.isProgramFilter = true;
                     newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
                     newField.fieldLeadAPIName = mapFilterToLeadField.get(key);
                     leadAndRfi.rfiFieldList.add(newField);
-                    leadAndRfi.filterValues.put(key, '');
+                    leadAndRfi.filterValues.put(newField.fieldLeadAPIName, '');
                 }
 
             }
@@ -239,7 +248,6 @@ public with sharing class rfiFormController {
                 when 'Academic Interest' {
                     newField.fieldLeadAPIName = 'Major_Program__c';
                     newField.isProgramLookup = true;
-                    newField.programValues = getPrograms(rfiController.Academic_Level__c, rfiController.School_College__c, rfiController.Academic_Interests_To_Display__c, rfiController.Multi_Select_Display_Type__c == 'Standard Multi-Select', null);
                     if (rfiController.Academic_Interest_Max_Selection__c != null) {
                         newField.max = Integer.valueOf(String.valueOf(rfiController.Academic_Interest_Max_Selection__c));
                     } else {
@@ -544,7 +552,7 @@ public with sharing class rfiFormController {
     }
 
     @AuraEnabled(Cacheable=true)
-    public static List<programValues> getPrograms(String academic_level, String school_college, String academic_interest_codes, Boolean multi_select_standard, Map<String, String> filters) {
+    public static List<programValues> getPrograms(String academic_level, String school_college, String academic_interest_codes, Map<String, String> filters) {
         // reference filters to avoid compiler unused-parameter warning
 
         String query_string =
@@ -584,20 +592,19 @@ public with sharing class rfiFormController {
                 String filterValue = filters.get(filterKey);
                 if (!String.isBlank(filterValue)) {
                     filterValue = filterValue.escapeHtml4();
-                    List<String> filterValues = filterValue.split(';');
-                    if (filterValues.size() > 0) {
-                        query_string += ' AND ' + filterKey + ' INCLUDES ( :filterValues ) ';
+                    //Check filter key which is a Lead field to see if it is a picklist or a multipicklist
+                    Schema.DescribeFieldResult d = Schema.SObjectType.Program__c.fields.getMap().get(filterKey).getDescribe();
+                    if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
+                        List<String> filterValues = filterValue.split(';');
+                        query_string += ' AND ' + filterKey + ' INCLUDES ( :filterValues) ';
+                    } else {
+                        query_string += ' AND ' + filterKey + ' = :filterValue ';
                     }
                 }
             }
         }
 
-        if (multi_select_standard) {
-            query_string += ' ORDER BY Program_Name_on_Application__c ';
-        } else {
-            query_string += ' ORDER BY Degree__c, Program_Name_on_Application__c ';
-        }
-
+        query_string += ' ORDER BY Degree__c, Program_Name_on_Application__c ';
         List<Program__c> programs = Database.query(query_string);
 
         List<programValues> results = new List<programValues>();
@@ -609,36 +616,31 @@ public with sharing class rfiFormController {
                 pv.value = String.valueOf(p.Id);
                 pv.description = (p.Degree__c != null ? p.Degree__c + ' - ' : '') + (p.Program_Major_Concentration__c != null ? p.Program_Major_Concentration__c : '');
                 pv.is_group = false;
-                if (multi_select_standard) {
-                    results.add(pv);
-                } else {
-                    // Group by Degree
-                    String degreeKey = p.Degree__c != null ? p.Degree__c : 'Other Programs';
-                    if (!degreeMap.containsKey(degreeKey)) {
-                        degreeMap.put(degreeKey, new List<programValues>());
-                    }
-                    degreeMap.get(degreeKey).add(pv);
+                // Group by Degree
+                String degreeKey = p.Degree__c != null ? p.Degree__c : 'Other Programs';
+                if (!degreeMap.containsKey(degreeKey)) {
+                    degreeMap.put(degreeKey, new List<programValues>());
                 }
+                degreeMap.get(degreeKey).add(pv);
             }
-            if (!multi_select_standard) {
-                // Flatten the map into results with group headers
-                List<String> sortedDegrees = new List<String>(degreeMap.keySet());
-                sortedDegrees.sort();
-                for (String degree : sortedDegrees) {
-                    programValues header = new programValues();
-                    header.label = degree;
-                    header.value = degree;
-                    header.is_group = true;
-                    results.add(header);
-                    results.addAll(degreeMap.get(degree));
-                }
+
+            // Flatten the map into results with group headers
+            List<String> sortedDegrees = new List<String>(degreeMap.keySet());
+            sortedDegrees.sort();
+            for (String degree : sortedDegrees) {
+                programValues header = new programValues();
+                header.label = degree;
+                header.value = degree;
+                header.is_group = true;
+                results.add(header);
+                results.addAll(degreeMap.get(degree));
             }
 
         }
         return results;
     }
 
-    //Submit the RFI Lead record
+//Submit the RFI Lead record
     @AuraEnabled
     public static Id submitRFILead(Lead leadRecord) {
         // Sanitize: copy only valid Lead fields from the incoming record

@@ -16,8 +16,19 @@
                     <div class="slds-p-vertical_small">
                         <template for:each={fields} for:item="f" for:index="index">
                             <div key={f.key} class="slds-m-vertical_x-small">
+                                <template lwc:if={f.isProgramFilter}>
+                                    <lightning-combobox
+                                            label={f.fieldLabel}
+                                            name={f.fieldLeadAPIName}
+                                            options={f.picklistValues}
+                                            required={f.isRequired}
+                                            onchange={handleProgramFilterChange}
+                                    >
+                                    </lightning-combobox>
+                                </template>
+
                                 <!-- Address -->
-                                <template lwc:if={f.isAddress}>
+                                <template lwc:elseif={f.isAddress}>
                                     <div class="slds-m-bottom_x-small slds-form-element">
                                         <lightning-input-address
                                                 show-address-lookup
@@ -60,8 +71,8 @@
                                     <c-multi-select-pills-groupable
                                             label={f.fieldLabel}
                                             name={f.fieldLeadAPIName}
-                                            options={f.programValues}
-                                            value={f.value}
+                                            options={programValues}
+                                            value={programInterestValues}
                                             required={f.isRequired}
                                             max={f.max}
                                             onchange={handleAcademicInterestChange}
