@@ -20,34 +20,21 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @api googleApiKey; // optional: enable Google Places lookup for address
 
     @track academic_interest_picklist_values;
+    @track lead = {};
+    @track selectedCountry = 'US';
+    @track stateOptions = [];
 
     controllerName;
     rfiData;
     fields = [];
     values = {};
-    lead = {};
-    countryOptions = [];
-    stateOptions = [];
-    saving = false;
-    // reactive country used to wire server-side subdivisions
-    selectedCountry = '';
 
+    countryOptions = [];
+    saving = false;
+
+    // reactive country used to wire server-side subdivisions
     connectedCallback() {
         this.controllerName = this.rfiControllerName;
-    }
-
-    // wire server-side subdivisions for the currently selected country
-    @wire(getStateProvince, {country: '$selectedCountry'})
-    wiredSubdivisions({data, error}) {
-        if (data) {
-            // Apex returns List<picklistOption> with shape {label, value}
-            this.stateOptions = Array.isArray(data) ? data : [];
-            console.log('Fetched subdivisions for', this.selectedCountry, '->', JSON.stringify(this.stateOptions));
-        } else if (error) {
-            // fallback to client-side mapping when server fails
-            this.stateOptions = this._getStateOptions(this.selectedCountry);
-            console.warn('Failed to fetch subdivisions for', this.selectedCountry, '; falling back to client mapping', error);
-        }
     }
 
     @wire(getRecord, {recordId: '$recordId', fields: RFI_CONTROLLER_FIELDS})
@@ -61,34 +48,18 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     wiredForm(result) {
         const {data, error} = result;
         if (data) {
-            console.log('RFI form data', JSON.stringify(data, null, 2));
             this.rfiData = JSON.parse(JSON.stringify(data));
             this.fields = Array.isArray(this.rfiData?.rfiFieldList) ? this.rfiData.rfiFieldList : [];
+            console.log('RFI form fields loaded:', JSON.stringify(this.fields, null, 2));
+            this.lead = this.rfiData.leadRecord || {};
+            console.log('RFI lead record loaded:', JSON.stringify(this.lead, null, 2));
             this.countryOptions = this.rfiData.countryOptions;
-            // initialize selectedCountry so the wired Apex method runs and populates stateOptions
-            const initialCountryRaw = this.lead && (this.lead.Country || this.lead.CountryCode) ? (this.lead.Country || this.lead.CountryCode) : '';
-            this.selectedCountry = this._resolveCountryKey(initialCountryRaw);
+            //this.stateOptions = this.rfiData.stateOptions;
         } else if (error) {
             console.error('Failed to fetch RFI form data', error);
             this.rfiData = undefined;
         }
     }
-
-    // Resolve a raw country string (label or code) to the canonical picklist value from countryOptions if possible.
-    _resolveCountryKey(raw) {
-        if (!raw) return '';
-        const c = String(raw).toLowerCase().trim();
-        if (Array.isArray(this.countryOptions)) {
-            // try exact match on value or label
-            const exact = this.countryOptions.find(o => String(o.value).toLowerCase() === c || String(o.label).toLowerCase() === c);
-            if (exact) return exact.value || exact.label || raw;
-            // try contains match on label
-            const partial = this.countryOptions.find(o => String(o.label).toLowerCase().includes(c));
-            if (partial) return partial.value || partial.label || raw;
-        }
-        return raw;
-    }
-
 
     // Handler for the reusable lookup component's custom event 'valueselected'
     handleSchoolSelect = (event) => {
@@ -133,19 +104,20 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
 
-    // change handlers
-    handleChange = (event) => {
-        /*        const name = event.target.name;
-                console.log('handleChange for', name);
-                const rawValue = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-                const field = this.fields.find(f => f.name === name);
-                if (!field) return;
-
-                field.value = rawValue;
-
-                if (field.fieldLeadAPIName) {
-                    this.lead = { ...this.lead, [field.fieldLeadAPIName]: rawValue };
-                }*/
+    handleAcademicInterestChange = (event) => {
+        const value = event.detail?.value ?? event.detail;
+        //Apply multi select values to Major_Program__c, Major_Program_2__c, Major_Program_3__c, Major_Program_4__c fields
+        if(!Array.isArray(value)) return;
+        if (value.length > 0) {
+            //map to Major_Program__c, Major_Program_2__c, Major_Program_3__c, Major_Program_4__c
+            this.lead = {
+                ...this.lead,
+                Major_Program__c: value[0] || '',
+                Major_Program_2__c: value[1] || '',
+                Major_Program_3__c: value[2] || '',
+                Major_Program_4__c: value[3] || ''
+            };
+        }
     }
 
     handleMultiSelectChange = (event) => {
@@ -160,16 +132,39 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         }
     }
 
-    handleAddressChange = (event) => {
-        const fieldName = event.target.dataset.fieldName;
-        const field = this.fields.find(f => f.name === fieldName);
-        if (!field) return;
-
-        const addressValue = event.detail; // adapt to event contract
-        field.value = addressValue;
-        if (field.fieldLeadAPIName) {
-            this.lead = {...this.lead, [field.fieldLeadAPIName]: addressValue};
+    handleAddressChange = async (event) => {
+        //Get an address record from the event detail and apply it to this.lead
+        const address = event.detail;
+        if (!address) return;
+        //If country changes then update state options
+        if (address.country && address.country !== this.selectedCountry) {
+            console.log('Country changed to', address.country);
+            this.selectedCountry = address.country;
+            this.stateOptions = await getStateProvince(
+                {countryCode: this.selectedCountry}
+            );
+            console.log('State options updated:', JSON.stringify(this.stateOptions, null, 2));
         }
+        console.log('Address change event received:', JSON.stringify(address, null, 2));
+        //update lead object with address fields
+        let countryLabel = '';
+        if (address.country) {
+            //get the country string from the label using the country code value of countryOptions
+            const countryOption = this.countryOptions.find(option => option.value === address.country);
+            countryLabel = countryOption ? countryOption.label : address.country;
+        }
+
+        this.lead = {
+            ...this.lead,
+            Street: address.street || '',
+            City: address.city || '',
+            State: address.state || '',
+            PostalCode: address.postalCode || '',
+            Country: countryLabel || '',
+            CountryCode: address.country || ''
+        };
+
+        console.log('Address updated lead:', JSON.stringify(this.lead, null, 2));
     }
 
     async handleSubmit() {
@@ -222,5 +217,18 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
     get hasData() {
         return Array.isArray(this.fields) && this.fields.length > 0;
+    }
+
+    checkForErrors() {
+        this.errors = [];
+        const selection = this.template.querySelector('c-lookup').getSelection();
+        // Custom validation rule
+        if (this.isMultiEntry && selection.length > this.maxSelectionSize) {
+            this.errors.push({message: `You may only select up to ${this.maxSelectionSize} items.`});
+        }
+        // Enforcing required field
+        if (selection.length === 0) {
+            this.errors.push({message: 'Please make a selection.'});
+        }
     }
 }

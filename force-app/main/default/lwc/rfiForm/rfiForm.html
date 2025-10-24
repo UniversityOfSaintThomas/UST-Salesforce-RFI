@@ -20,7 +20,7 @@
                                 <template lwc:if={f.isAddress}>
                                     <div class="slds-m-bottom_x-small slds-form-element">
                                         <lightning-input-address
-                                                show-address-lookup="true"
+                                                show-address-lookup
                                                 address-lookup-label="Address Lookup"
                                                 address-label={f.fieldLabel}
                                                 street-label="Street"
@@ -59,12 +59,12 @@
                                 <template lwc:elseif={f.isProgramLookup}>
                                     <c-multi-select-pills-groupable
                                             label={f.fieldLabel}
-                                            name={f.name}
+                                            name={f.fieldLeadAPIName}
                                             options={f.programValues}
                                             value={f.value}
                                             required={f.isRequired}
                                             max={f.max}
-                                            onchange={handleMultiSelectChange}
+                                            onchange={handleAcademicInterestChange}
                                     ></c-multi-select-pills-groupable>
                                 </template>
 
@@ -72,11 +72,11 @@
                                 <template lwc:elseif={f.isPicklist}>
                                     <lightning-combobox
                                             label={f.fieldLabel}
-                                            name={f.name}
+                                            name={f.fieldLeadAPIName}
                                             value={f.value}
                                             options={f.picklistValues}
                                             required={f.isRequired}
-                                            onchange={handleChange}>
+                                    >
                                     </lightning-combobox>
                                 </template>
 
@@ -84,7 +84,7 @@
                                 <template lwc:elseif={f.isMultiSelect}>
                                     <c-multi-select-pills-groupable
                                             label={f.fieldLabel}
-                                            name={f.name}
+                                            name={f.fieldLeadAPIName}
                                             options={f.picklistValues}
                                             value={f.value}
                                             required={f.isRequired}
@@ -100,7 +100,6 @@
                                             name={f.fieldLeadAPIName}
                                             value={f.value}
                                             required={f.isRequired}
-                                            onchange={handleChange}
                                     ></lightning-textarea>
                                 </template>
 
@@ -113,7 +112,6 @@
                                             checked={f.value}
                                             required={f.isRequired}
                                             value={f.value}
-                                            onchange={handleChange}
                                     ></lightning-input>
                                 </template>
 
@@ -126,7 +124,7 @@
                                             name={f.fieldLeadAPIName}
                                             value={f.value}
                                             required={f.isRequired}
-                                            onchange={handleChange}>
+                                    >
                                     </lightning-input>
                                 </template>
 
@@ -139,7 +137,7 @@
                                             name={f.fieldLeadAPIName}
                                             value={f.value}
                                             required={f.isRequired}
-                                            onchange={handleChange}>
+                                    >
                                     </lightning-input>
                                 </template>
 
@@ -151,7 +149,7 @@
                                             name={f.fieldLeadAPIName}
                                             value={f.value}
                                             required={f.isRequired}
-                                            onchange={handleChange}>
+                                    >
                                     </lightning-input>
                                 </template>
                             </div>

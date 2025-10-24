@@ -8,7 +8,8 @@ public with sharing class rfiFormController {
         @AuraEnabled public Lead leadRecord { get; set; }
         @AuraEnabled public List<rfiField> rfiFieldList { get; set; }
         @AuraEnabled public List<picklistOption> countryOptions { get; set; }
-        @AuraEnabled public List<String> states { get; set; }
+        @AuraEnabled public List<picklistOption> stateOptions { get; set; }
+        @AuraEnabled public Map<String, String> filterValues { get; set; }
     }
 
     public class rfiField {
@@ -97,8 +98,37 @@ public with sharing class rfiFormController {
 
 
         leadAndRfiFields leadAndRfi = new leadAndRfiFields();
-        leadAndRfi.leadRecord = new Lead();
 
+        //Populate Lead record with rfi_controller defined values and defaults
+        leadAndRfi.leadRecord = new Lead();
+        leadAndRfi.leadRecord.Company = 'No Company';
+        if (!String.isBlank(rfiController.Lead_Source__c)) {
+            leadAndRfi.leadRecord.LeadSource = rfiController.Lead_Source__c;
+        }
+        if (rfiController.Lead_Owner__c != null) {
+            leadAndRfi.leadRecord.OwnerId = rfiController.Lead_Owner__c;
+        }
+        if (rfiController.Citizenship_Type__c != null) {
+            leadAndRfi.leadRecord.Citizenship_Type__c = rfiController.Citizenship_Type__c;
+        }
+
+        //Populate School/College lookup if configured
+        if (rfiController.School_College__c != null) {
+            //Query for the id of the School/College record to populate the lookup properly
+            List<Account> school_college_accounts = [
+                    SELECT Id
+                    FROM Account
+                    WHERE School_College_Name__c = :rfiController.School_College__c
+                    AND RecordType.DeveloperName = 'University_Department'
+                    AND Banner_Key__c LIKE 'STVCOLL-%'
+                    AND Name != 'other'
+            ];
+            if (school_college_accounts.size() > 0) {
+                leadAndRfi.leadRecord.St_Thomas_College_School__c = school_college_accounts[0].Id;
+            }
+        }
+
+        //Get country picklist options
         List<picklistOption> countries = new List<picklistOption>();
         List<Schema.PicklistEntry> countryValues = Lead.CountryCode.getDescribe().getPicklistValues();
         for (Schema.PicklistEntry v : countryValues) {
@@ -110,9 +140,12 @@ public with sharing class rfiFormController {
             }
         }
         leadAndRfi.countryOptions = countries;
+        leadAndRfi.stateOptions = getStateProvince('US');
+
 
         // Prefill sensible defaults
         leadAndRfi.rfiFieldList = new List<rfiField>();
+
 
         //Get field information for all pre-filters for programs
         Map<String, String> mapFilterFields = new Map<String, String>{
@@ -130,7 +163,24 @@ public with sharing class rfiFormController {
                 'Program_Types_To_Display__c' => 'Program_Type_Question__c'
         };
 
+        //Map the filter questions to the correct Lead field API names
+        Map<String,String> mapFilterToLeadField = new Map<String,String>{
+                'School_College_To_Display__c' => 'School_College__c',
+                'Citizen_Types_To_Display__c' => 'Citizenship__c',
+                'Degree_Types_To_Display__c' => 'Degree_Type__c',
+                'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2__c',
+                'Generic_Filter_3_To_Display__c' => 'Generic_Filter_3__c',
+                'Generic_Filter_4_To_Display__c' => 'Generic_Filter_4__c',
+                'Generic_Filter_6_To_Display__c' => 'Generic_Filter_6__c',
+                'Generic_Filter_7_To_Display__c' => 'Generic_Filter_7__c',
+                'Generic_Filter_8_To_Display__c' => 'Generic_Filter_8__c',
+                'Student_Types_To_Display__c' => 'Student_Type__c',
+                'Delivery_Types_To_Display__c' => 'Delivery_Type__c',
+                'Program_Types_To_Display__c' => 'Generic_Filter_5__c'
+        };
+
         //Create rfiField entries for each valid filter field configured on the controller
+        leadAndRfi.filterValues = new Map<String, String>();
         for (String key : mapFilterFields.keySet()) {
             if (String.isNotBlank((String) rfiController.get(key))) {
                 // valid filter field
@@ -146,7 +196,9 @@ public with sharing class rfiFormController {
                     newField.isRequired = false;
                     newField.isProgramFilter = true;
                     newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
+                    newField.fieldLeadAPIName = mapFilterToLeadField.get(key);
                     leadAndRfi.rfiFieldList.add(newField);
+                    leadAndRfi.filterValues.put(key, '');
                 }
 
             }
@@ -186,9 +238,9 @@ public with sharing class rfiFormController {
             switch on fieldName {
                 when 'Academic Interest' {
                     newField.fieldLabel = 'Academic Interest (Max 4)';
-                    newField.fieldLeadAPIName = 'Academic_Interests__c';
+                    newField.fieldLeadAPIName = 'Major_Program__c';
                     newField.isProgramLookup = true;
-                    newField.programValues = getPrograms(rfiController.Academic_Level__c, rfiController.School_College__c, rfiController.Academic_Interests_To_Display__c, rfiController.Multi_Select_Display_Type__c == 'Standard Multi-Select', '');
+                    newField.programValues = getPrograms(rfiController.Academic_Level__c, rfiController.School_College__c, rfiController.Academic_Interests_To_Display__c, rfiController.Multi_Select_Display_Type__c == 'Standard Multi-Select', null);
                     if (rfiController.Academic_Interest_Max_Selection__c != null) {
                         try {
                             newField.max = Integer.valueOf(rfiController.Academic_Interest_Max_Selection__c);
@@ -321,7 +373,6 @@ public with sharing class rfiFormController {
                 Schema.DescribeFieldResult d = leadFieldMap.get(newField.fieldLeadAPIName).getDescribe();
                 leadAndRfi.leadRecord.put(newField.fieldLeadAPIName, null);
                 if (d.getType() == Schema.DisplayType.MULTIPICKLIST || d.getType() == Schema.DisplayType.PICKLIST) {
-                    System.debug('Picklist detected: ' + newField.fieldLeadAPIName);
                     newField.picklistValues = getPicklistOptions(d);
                     if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
                         newField.isMultiSelect = true;
@@ -397,34 +448,89 @@ public with sharing class rfiFormController {
         return leadAndRfi;
     }
 
+    private static final Map<String, Integer> countryIndexCache = new Map<String, Integer>();
+
     @AuraEnabled(Cacheable=true)
     public static List<picklistOption> getStateProvince(String countryCode) {
-        List<PicklistOption> stateOptions = new List<PicklistOption>();
-/*        Schema.DescribeFieldResult fieldResult = Account.MailingStateCode.getDescribe();
-        List<Schema.PicklistEntry> stateEntries = fieldResult.getPicklistValues();
+        List<picklistOption> stateOptions = new List<picklistOption>();
+
+        if (String.isBlank(countryCode)) {
+            return null;
+        }
+
+        Integer countryIndex = getCountryIndex(countryCode);
+        if (countryIndex == -1) {
+            return null;
+        }
+
+        Schema.DescribeFieldResult stateField = Lead.StateCode.getDescribe();
+        List<Schema.PicklistEntry> stateEntries = stateField.getPicklistValues();
 
         for (Schema.PicklistEntry entry : stateEntries) {
-            if (entry.getValidFor() != null && entry.getValidFor().contains(countryCode)) { // Simplified check
-                stateOptions.add(new PicklistOption(entry.getLabel(), entry.getValue()));
+            if (isValidForCountry(entry, countryIndex)) {
+                picklistOption option = new picklistOption();
+                option.label = entry.getLabel();
+                option.value = entry.getValue();
+                stateOptions.add(option);
             }
-        }*/
+        }
         return stateOptions;
+    }
+
+    private static Integer getCountryIndex(String countryCode) {
+        if (countryIndexCache.containsKey(countryCode)) {
+            return countryIndexCache.get(countryCode);
+        }
+
+        Schema.DescribeFieldResult countryField = Lead.CountryCode.getDescribe();
+        List<Schema.PicklistEntry> countryEntries = countryField.getPicklistValues();
+
+        for (Integer i = 0; i < countryEntries.size(); i++) {
+            if (countryEntries[i].getValue().equals(countryCode)) {
+                countryIndexCache.put(countryCode, i);
+                return i;
+            }
+        }
+
+        countryIndexCache.put(countryCode, -1);
+        return -1;
+    }
+
+    private static Boolean isValidForCountry(Schema.PicklistEntry entry, Integer countryIndex) {
+        String validFor = String.valueOf(((Map<String, Object>) JSON.deserializeUntyped(JSON.serialize(entry))).get('validFor'));
+
+        if (String.isBlank(validFor)) {
+            return false;
+        }
+
+        String base64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        Integer byteIndex = countryIndex / 6;
+        Integer bitIndex = 5 - Math.mod(countryIndex, 6);
+
+        if (byteIndex >= validFor.length()) {
+            return false;
+        }
+
+        Integer charValue = base64.indexOf(validFor.substring(byteIndex, byteIndex + 1));
+
+        return (charValue & (1 << bitIndex)) != 0;
     }
 
     @AuraEnabled
     public static Id submitRFILead(Lead leadRecord) {
         // Sanitize: copy only valid Lead fields from the incoming record
         System.debug('Received Lead Record: ' + JSON.serializePretty(leadRecord));
-        leadRecord.Company = String.isBlank(leadRecord.Company) ? 'No Company' : leadRecord.Company;
-        insert leadRecord;
-        return leadRecord.Id;
+        Database.DMLOptions dml = new Database.DMLOptions();
+        //Will create duplicate records if not allowed
+        dml.duplicateRuleHeader.allowSave = true;
+        Database.SaveResult result = Database.insert(leadRecord, dml);
+        return result.id;
     }
 
     public static List<picklistOption> getPicklistOptions(Schema.DescribeFieldResult d) {
         List<picklistOption> opts = new List<picklistOption>();
         for (Schema.PicklistEntry e : d.getPicklistValues()) {
             if (e.isActive()) {
-                System.debug('Adding picklist option: ' + e.getLabel() + ' / ' + e.getValue());
                 picklistOption po = new picklistOption();
                 po.label = String.valueOf(e.getLabel());
                 po.value = String.valueOf(e.getValue());
@@ -446,9 +552,8 @@ public with sharing class rfiFormController {
     }
 
     @AuraEnabled(Cacheable=true)
-    public static List<programValues> getPrograms(String academic_level, String school_college, String academic_interest_codes, Boolean multi_select_standard, String filters) {
+    public static List<programValues> getPrograms(String academic_level, String school_college, String academic_interest_codes, Boolean multi_select_standard, Map<String, String> filters) {
         // reference filters to avoid compiler unused-parameter warning
-        Boolean unusedFilters = String.isBlank(filters);
 
         String query_string =
                 //Student type buckets
@@ -481,6 +586,20 @@ public with sharing class rfiFormController {
             List<String> academicCodes = academic_interest_codes.split(';');
             query_string += ' AND Program_Major_Concentration__c IN :academicCodes ';
         }
+
+        if (filters != null) {
+            for (String filterKey : filters.keySet()) {
+                String filterValue = filters.get(filterKey);
+                if (!String.isBlank(filterValue)) {
+                    filterValue = filterValue.escapeHtml4();
+                    List<String> filterValues = filterValue.split(';');
+                    if (filterValues.size() > 0) {
+                        query_string += ' AND ' + filterKey + ' INCLUDES ( :filterValues ) ';
+                    }
+                }
+            }
+        }
+
         if (multi_select_standard) {
             query_string += ' ORDER BY Program_Name_on_Application__c ';
         } else {

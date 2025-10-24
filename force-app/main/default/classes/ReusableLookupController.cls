@@ -13,7 +13,7 @@ public with sharing class ReusableLookupController {
                 List<String> sanitizedOtherFields = new List<String>();
                 try {
                     String fieldsToQuery = 'SELECT Id, ';
-                    //Check object accessiblity
+                    //Check object accessibility
                     fieldsToQuery = fieldsToQuery + inputWrapper.fieldApiName;
                     SObjectType objectToQuery = Schema.getGlobalDescribe().get(inputWrapper.objectApiName);
                     Map<String, SObjectField> fieldsMap = objectToQuery.getDescribe().fields.getMap();
@@ -51,6 +51,7 @@ public with sharing class ReusableLookupController {
                         } else {
                             query += ' WHERE ' + filterCriteria;
                         }
+                        //TODO receive and use additional WHERE filters. Check if it stats with AND or WHERE
                         if (String.isNotBlank(recordTypeName)) {
                             query += ' AND RecordType.Name = :recordTypeName';
                         }
