@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Scholarship_Of_Interest_Label__c</fullName>
+    <defaultValue>&quot;Scholarship of Interest&quot;</defaultValue>
+    <description>Custom label for the Scholarship of Interest field on RFI form.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Custom label for the Scholarship of Interest field on RFI form.</inlineHelpText>
+    <label>Scholarship Of Interest Label</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

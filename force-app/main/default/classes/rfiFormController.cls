@@ -93,7 +93,31 @@ public with sharing class rfiFormController {
                         Delivery_Type_Question__c,
                         Delivery_Types_To_Display__c,
                         Program_Type_Question__c,
-                        Program_Types_To_Display__c
+                        Program_Types_To_Display__c,
+                        Academic_Interest_Label__c,
+                        Address_Label__c,
+                        Birthdate_Label__c,
+                        Citizenship_Label__c,
+                        Email_Label__c,
+                        Employer_Label__c,
+                        Expected_Start_Term_Label__c,
+                        High_School_Attended_Label__c,
+                        High_School_Graduation_Year_Label__c,
+                        How_Did_You_Hear_About_Us_Label__c,
+                        I_Have_A_Question_Label__c,
+                        Apply_To_St_Thomas_As_Label__c,
+                        Mail_Information_Label__c,
+                        Receive_Text_Messages_Label__c,
+                        Phone_Label__c,
+                        First_Name_Label__c,
+                        Last_Name_Label__c,
+                        Company_Label__c,
+                        Scholarship_Of_Interest_Label__c,
+                        St_Thomas_Colleges_Label__c,
+                        Tell_Us_About_Yourself_Label__c,
+                        Timeline_To_Enrollment_Label__c,
+                        Title_Label__c,
+                        When_Start_School_Label__c
                 FROM RFI_Controller__c
                 WHERE Name = :rfiControllerName
                 LIMIT 1
@@ -253,16 +277,25 @@ public with sharing class rfiFormController {
                     } else {
                         newField.max = 4;
                     }
-                    if (newField.max == 1) {
-                        newField.fieldLabel = 'Academic Interest';
-                    } else if (newField.max > 1) {
-                        newField.fieldLabel = 'Academic Interest (Max ' + newField.max + ' selections)';
+
+                    // Use custom label if provided, otherwise use default
+                    if (!String.isBlank(rfiController.Academic_Interest_Label__c)) {
+                        if (newField.max == 1) {
+                            newField.fieldLabel = rfiController.Academic_Interest_Label__c;
+                        } else if (newField.max > 1) {
+                            newField.fieldLabel = rfiController.Academic_Interest_Label__c + ' (Max ' + newField.max + ' selections)';
+                        }
+                    } else {
+                        if (newField.max == 1) {
+                            newField.fieldLabel = 'Academic Interest';
+                        } else if (newField.max > 1) {
+                            newField.fieldLabel = 'Academic Interest (Max ' + newField.max + ' selections)';
+                        }
                     }
 
                 }
                 when 'Address 1', 'Address 2', 'Address 3', 'City', 'Country', 'State', 'Zipcode' {
                     if (!addressAdded) {
-                        newField.fieldLabel = 'Address';
                         newField.fieldLeadAPIName = 'Address';
                         newField.isAddress = true;
                         addressAdded = true;
@@ -274,101 +307,101 @@ public with sharing class rfiFormController {
                     continue; // skip adding duplicates for address tokens
                 }
                 when 'Birthdate' {
-                    newField.fieldLabel = 'Birthday (MM/DD/YYYY)';
+                    newField.fieldLabel = !String.isBlank(rfiController.Birthdate_Label__c) ? rfiController.Birthdate_Label__c : 'Birthday (MM/DD/YYYY)';
                     newField.fieldLeadAPIName = 'Birthdate';
                     newField.inputType = 'date';
                     newField.isDate = true;
                 }
                 when 'Citizenship' {
-                    newField.fieldLabel = 'Citizenship';
+                    newField.fieldLabel = !String.isBlank(rfiController.Citizenship_Label__c) ? rfiController.Citizenship_Label__c : 'Citizenship';
                     newField.fieldLeadAPIName = 'Citizenship_Type__c';
                 }
                 when 'Email' {
-                    newField.fieldLabel = 'Email';
+                    newField.fieldLabel = !String.isBlank(rfiController.Email_Label__c) ? rfiController.Email_Label__c : 'Email';
                     newField.fieldLeadAPIName = 'Email';
                     newField.isEmail = true;
                     newField.inputType = 'email';
                 }
                 when 'Employer' {
-                    newField.fieldLabel = 'Employer';
+                    newField.fieldLabel = !String.isBlank(rfiController.Employer_Label__c) ? rfiController.Employer_Label__c : 'Employer';
                     newField.fieldLeadAPIName = 'Company';
                 }
                 when 'Expected Start Term at St Thomas' {
-                    newField.fieldLabel = 'Expected Start Term at St. Thomas';
+                    newField.fieldLabel = !String.isBlank(rfiController.Expected_Start_Term_Label__c) ? rfiController.Expected_Start_Term_Label__c : 'Expected Start Term at St. Thomas';
                     newField.fieldLeadAPIName = 'Intended_Start_Term__c';
                 }
                 when 'High School Attended' {
-                    newField.fieldLabel = 'High School Attended';
+                    newField.fieldLabel = !String.isBlank(rfiController.High_School_Attended_Label__c) ? rfiController.High_School_Attended_Label__c : 'High School Attended';
                     newField.fieldLeadAPIName = 'High_School_or_College__c';
                     newField.isSchoolLookup = true;
                 }
                 when 'High School Graduation Year' {
-                    newField.fieldLabel = 'High School Graduation (YYYY)';
+                    newField.fieldLabel = !String.isBlank(rfiController.High_School_Graduation_Year_Label__c) ? rfiController.High_School_Graduation_Year_Label__c : 'High School Graduation (YYYY)';
                     newField.fieldLeadAPIName = 'Expected_Graduate_Date__c';
                 }
                 when 'How did you hear about us' {
-                    newField.fieldLabel = 'How did you hear about us?';
+                    newField.fieldLabel = !String.isBlank(rfiController.How_Did_You_Hear_About_Us_Label__c) ? rfiController.How_Did_You_Hear_About_Us_Label__c : 'How did you hear about us?';
                     newField.fieldLeadAPIName = 'Heard_About_Us__c';
                 }
                 when 'I have a question' {
-                    newField.fieldLabel = 'I have a question';
+                    newField.fieldLabel = !String.isBlank(rfiController.I_Have_A_Question_Label__c) ? rfiController.I_Have_A_Question_Label__c : 'I have a question';
                     newField.fieldLeadAPIName = 'Has_Question__c';
                     newField.isCheckbox = true;
                 }
                 when 'I will apply to St Thomas as a' {
-                    newField.fieldLabel = 'I will apply to St. Thomas as a';
+                    newField.fieldLabel = !String.isBlank(rfiController.Apply_To_St_Thomas_As_Label__c) ? rfiController.Apply_To_St_Thomas_As_Label__c : 'I will apply to St. Thomas as a';
                     newField.fieldLeadAPIName = 'Admit_Type__c';
                 }
                 when 'I would like program information to be mailed to me' {
-                    newField.fieldLabel = 'I would like program information to be mailed to me';
+                    newField.fieldLabel = !String.isBlank(rfiController.Mail_Information_Label__c) ? rfiController.Mail_Information_Label__c : 'I would like program information to be mailed to me';
                     newField.fieldLeadAPIName = 'Mail_Information__c';
                     newField.isCheckbox = true;
                 }
                 when 'I would like to receive text messages' {
-                    newField.fieldLabel = 'I would like to receive text messages';
+                    newField.fieldLabel = !String.isBlank(rfiController.Receive_Text_Messages_Label__c) ? rfiController.Receive_Text_Messages_Label__c : 'I would like to receive text messages';
                     newField.isCheckbox = true;
                 }
                 when 'Phone', 'Home and Mobile Phone', 'Mobile Phone' {
-                    newField.fieldLabel = 'Phone';
+                    newField.fieldLabel = !String.isBlank(rfiController.Phone_Label__c) ? rfiController.Phone_Label__c : 'Phone';
                     newField.fieldLeadAPIName = 'Phone';
                     newField.isTel = true;
                     newField.inputType = 'tel';
                 }
                 when 'First Name' {
-                    newField.fieldLabel = 'First Name';
+                    newField.fieldLabel = !String.isBlank(rfiController.First_Name_Label__c) ? rfiController.First_Name_Label__c : 'First Name';
                     newField.fieldLeadAPIName = 'FirstName';
                 }
                 when 'Last Name' {
-                    newField.fieldLabel = 'Last Name';
+                    newField.fieldLabel = !String.isBlank(rfiController.Last_Name_Label__c) ? rfiController.Last_Name_Label__c : 'Last Name';
                     newField.fieldLeadAPIName = 'LastName';
                 }
                 when 'Company' {
-                    newField.fieldLabel = 'Company';
+                    newField.fieldLabel = !String.isBlank(rfiController.Company_Label__c) ? rfiController.Company_Label__c : 'Company';
                     newField.fieldLeadAPIName = 'Company';
                 }
                 when 'Scholarship of Interest' {
-                    newField.fieldLabel = 'Scholarship of Interest';
+                    newField.fieldLabel = !String.isBlank(rfiController.Scholarship_Of_Interest_Label__c) ? rfiController.Scholarship_Of_Interest_Label__c : 'Scholarship of Interest';
                     newField.fieldLeadAPIName = 'Scholarship_of_Interest__c';
                 }
                 when 'St Thomas Colleges' {
-                    newField.fieldLabel = 'College\\School';
+                    newField.fieldLabel = !String.isBlank(rfiController.St_Thomas_Colleges_Label__c) ? rfiController.St_Thomas_Colleges_Label__c : 'College\\School';
                     newField.fieldLeadAPIName = 'High_School_or_College__c';
                 }
                 when 'Tell us about yourself' {
-                    newField.fieldLabel = 'Tell us about yourself and why you are interested in this program. (150 words or less)';
+                    newField.fieldLabel = !String.isBlank(rfiController.Tell_Us_About_Yourself_Label__c) ? rfiController.Tell_Us_About_Yourself_Label__c : 'Tell us about yourself and why you are interested in this program. (150 words or less)';
                     newField.fieldLeadAPIName = 'Description';
                     newField.isTextarea = true;
                 }
                 when 'Timeline to Enrollment' {
-                    newField.fieldLabel = 'Timeline to Enrollment';
+                    newField.fieldLabel = !String.isBlank(rfiController.Timeline_To_Enrollment_Label__c) ? rfiController.Timeline_To_Enrollment_Label__c : 'Timeline to Enrollment';
                     newField.fieldLeadAPIName = 'Timeline__c';
                 }
                 when 'Title' {
-                    newField.fieldLabel = 'Title';
+                    newField.fieldLabel = !String.isBlank(rfiController.Title_Label__c) ? rfiController.Title_Label__c : 'Title';
                     newField.fieldLeadAPIName = 'Title';
                 }
                 when 'When do you plan to start school' {
-                    newField.fieldLabel = 'When do you plan to start school';
+                    newField.fieldLabel = !String.isBlank(rfiController.When_Start_School_Label__c) ? rfiController.When_Start_School_Label__c : 'When do you plan to start school';
                     newField.fieldLeadAPIName = 'Expected_Graduate_Date__c';
                 }
                 when else {
