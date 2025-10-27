@@ -67,6 +67,12 @@
                 <identifier>c_rfiAdditionalQuestions</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>rfiFieldManager</componentName>
+                <identifier>c_rfiFieldManager</identifier>
+            </componentInstance>
+        </itemInstances>
         <mode>Replace</mode>
         <name>detailTabContent</name>
         <type>Facet</type>

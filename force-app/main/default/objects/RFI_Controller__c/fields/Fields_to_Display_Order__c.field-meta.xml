@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Fields_to_Display_Order__c</fullName>
+    <description>Stores the ordered list of fields to display (semicolon-separated). This field preserves the custom order set by users.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Ordered list of fields to display on the RFI form. Order is preserved as entered. Managed by the RFI Field Manager component.</inlineHelpText>
+    <label>Fields to Display Order</label>
+    <length>32768</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>
+

@@ -1,0 +1,54 @@
+.field-list {
+    max-width: 100%;
+}
+
+.field-item {
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    background-color: #ffffff;
+    transition: all 0.2s ease-in-out;
+    cursor: move;
+}
+
+.field-item:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-color: #0176d3;
+}
+
+.field-item.dragging {
+    opacity: 0.5;
+    background-color: #f3f3f3;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: #706e6b;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.field-name-display {
+    padding: 0.5rem 0;
+    font-weight: 600;
+    color: #080707;
+}
+
+lightning-input {
+    --slds-c-input-sizing-border: 1px solid #d8dde6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .field-item .slds-grid {
+        display: block;
+    }
+
+    .field-item .slds-col {
+        width: 100% !important;
+        margin-bottom: 0.5rem;
+    }
+}
+

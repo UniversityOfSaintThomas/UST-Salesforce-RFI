@@ -59,6 +59,7 @@ public with sharing class rfiFormController {
                         School_College__c,
                         Citizenship_Type__c,
                         Fields_to_Display__c,
+                        Fields_to_Display_Order__c,
                         Required_Fields__c,
                         Academic_Interests_To_Display__c,
                         Lead_Owner__c,
@@ -261,6 +262,23 @@ public with sharing class rfiFormController {
         // Lead field describes for dynamic picklist detection
         Map<String, Schema.SObjectField> leadFieldMap = Schema.SObjectType.Lead.fields.getMap();
 
+        //Reorder fieldsToDisplay based on Fields_to_Display_Order__c
+        List<String> orderedFields = new List<String>();
+        if (!String.isBlank(rfiController.Fields_to_Display_Order__c)) {
+            List<String> orderList = rfiController.Fields_to_Display_Order__c.split(';');
+            for (String orderedField : orderList) {
+                if (fieldsToDisplay.contains(orderedField) && !orderedFields.contains(orderedField)) {
+                    orderedFields.add(orderedField);
+                }
+            }
+            // Add any remaining fields that were not in the order list
+            for (String fieldName : fieldsToDisplay) {
+                if (!orderedFields.contains(fieldName)) {
+                    orderedFields.add(fieldName);
+                }
+            }
+            fieldsToDisplay = orderedFields;
+        }
 
         for (String fieldName : fieldsToDisplay) {
             rfiField newField = new rfiField();
