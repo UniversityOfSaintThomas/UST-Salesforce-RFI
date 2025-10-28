@@ -79,14 +79,22 @@ export default class AcademicInterestSelector extends LightningElement {
             });
 
             // Store all programs with display labels
+            // group_level: 1 = school header, 2 = degree header, 0 = program item
             this.allPrograms = programs.map((prog, index) => ({
-                label: prog.label, // Program name
-                value: prog.value, // Short code
+                label: prog.label, // Program name or header name
+                value: prog.value, // Short code or header identifier
                 description: prog.description,
                 is_group: prog.is_group,
+                group_level: prog.group_level || 0, // 1 for school, 2 for degree, 0 for program
                 key: `prog-${index}`,
-                // Display format: "Program Name (SHORT_CODE)"
-                displayLabel: prog.is_group ? prog.label : `${prog.label} (${prog.value})`
+                // Display format: "Program Name (SHORT_CODE)" for programs, just label for headers
+                displayLabel: prog.is_group ? prog.label : `${prog.label} (${prog.value})`,
+                // CSS class for headers: school-header for level 1, degree-header for level 2
+                headerClass: prog.is_group
+                    ? (prog.group_level === 1
+                        ? 'slds-listbox__item group-header school-header'
+                        : 'slds-listbox__item group-header degree-header')
+                    : ''
             }));
 
             // Clean up selectedValues - only keep values that exist in the loaded programs
@@ -119,22 +127,40 @@ export default class AcademicInterestSelector extends LightningElement {
     get availableOptions() {
         const selectedSet = new Set(this.selectedValues);
         const result = [];
-        let currentGroup = null;
+        let currentSchool = null;
+        let currentDegree = null;
 
         for (const prog of this.allPrograms) {
-            if (prog.is_group) {
-                currentGroup = prog.label;
-                // Add group header if it has unselected items
+            if (prog.is_group && prog.group_level === 1) {
+                // School header
+                currentSchool = prog.label;
+                currentDegree = null;
+                // Add school header if it has unselected items (in any degree)
                 const hasUnselectedItems = this.allPrograms.some(p =>
                     !p.is_group &&
                     p.description &&
-                    p.description.startsWith(currentGroup) &&
+                    p.description.startsWith(currentSchool) &&
+                    !selectedSet.has(p.value)
+                );
+                if (hasUnselectedItems) {
+                    result.push({ ...prog, key: `avail-${prog.key}` });
+                }
+            } else if (prog.is_group && prog.group_level === 2) {
+                // Degree header
+                currentDegree = prog.label;
+                // Add degree header if it has unselected items
+                const degreeDescription = currentSchool + ' - ' + currentDegree;
+                const hasUnselectedItems = this.allPrograms.some(p =>
+                    !p.is_group &&
+                    p.description &&
+                    p.description.startsWith(degreeDescription) &&
                     !selectedSet.has(p.value)
                 );
                 if (hasUnselectedItems) {
                     result.push({ ...prog, key: `avail-${prog.key}` });
                 }
             } else if (!selectedSet.has(prog.value)) {
+                // Program item (not selected)
                 result.push({ ...prog, key: `avail-${prog.key}` });
             }
         }
@@ -146,22 +172,40 @@ export default class AcademicInterestSelector extends LightningElement {
     get selectedOptions() {
         const selectedSet = new Set(this.selectedValues);
         const result = [];
-        let currentGroup = null;
+        let currentSchool = null;
+        let currentDegree = null;
 
         for (const prog of this.allPrograms) {
-            if (prog.is_group) {
-                currentGroup = prog.label;
-                // Add group header if it has selected items
+            if (prog.is_group && prog.group_level === 1) {
+                // School header
+                currentSchool = prog.label;
+                currentDegree = null;
+                // Add school header if it has selected items (in any degree)
                 const hasSelectedItems = this.allPrograms.some(p =>
                     !p.is_group &&
                     p.description &&
-                    p.description.startsWith(currentGroup) &&
+                    p.description.startsWith(currentSchool) &&
+                    selectedSet.has(p.value)
+                );
+                if (hasSelectedItems) {
+                    result.push({ ...prog, key: `selected-${prog.key}` });
+                }
+            } else if (prog.is_group && prog.group_level === 2) {
+                // Degree header
+                currentDegree = prog.label;
+                // Add degree header if it has selected items
+                const degreeDescription = currentSchool + ' - ' + currentDegree;
+                const hasSelectedItems = this.allPrograms.some(p =>
+                    !p.is_group &&
+                    p.description &&
+                    p.description.startsWith(degreeDescription) &&
                     selectedSet.has(p.value)
                 );
                 if (hasSelectedItems) {
                     result.push({ ...prog, key: `selected-${prog.key}` });
                 }
             } else if (selectedSet.has(prog.value)) {
+                // Program item (selected)
                 result.push({ ...prog, key: `selected-${prog.key}` });
             }
         }

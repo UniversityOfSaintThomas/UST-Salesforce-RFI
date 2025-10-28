@@ -44,6 +44,7 @@ public with sharing class rfiFormController {
         @AuraEnabled public String value { get; set; }
         @AuraEnabled public String description { get; set; }
         @AuraEnabled public Boolean is_group { get; set; }
+        @AuraEnabled public Integer group_level { get; set; } // 1 for school, 2 for degree
     }
 
     public class picklistOption {
@@ -750,37 +751,66 @@ public with sharing class rfiFormController {
             }
         }
 
-        query_string += ' ORDER BY Primary_School_College_for_Assignment__c, Program_Name_on_Application__c ';
+        query_string += ' ORDER BY Primary_School_College_for_Assignment__c, Degree__c, Program_Name_on_Application__c ';
         List<Program__c> programs = Database.query(query_string);
 
         List<programValues> results = new List<programValues>();
         if (!programs.isEmpty()) {
-            Map<String, List<programValues>> schoolMap = new Map<String, List<programValues>>();
+            // Create nested map: School -> Degree -> Programs
+            Map<String, Map<String, List<programValues>>> schoolDegreeMap = new Map<String, Map<String, List<programValues>>>();
+
             for (Program__c p : programs) {
                 programValues pv = new programValues();
                 pv.label = p.Program_Name_on_Application__c;
                 // Use short code as value instead of ID
                 pv.value = p.Program_Major_Concentration__c != null ? p.Program_Major_Concentration__c : String.valueOf(p.Id);
-                pv.description = (p.Primary_School_College_for_Assignment__c != null ? p.Primary_School_College_for_Assignment__c + ' - ' : '') + (p.Program_Major_Concentration__c != null ? p.Program_Major_Concentration__c : '');
-                pv.is_group = false;
-                // Group by Primary_School_College_for_Assignment__c
                 String schoolKey = p.Primary_School_College_for_Assignment__c != null ? p.Primary_School_College_for_Assignment__c : 'Other Programs';
-                if (!schoolMap.containsKey(schoolKey)) {
-                    schoolMap.put(schoolKey, new List<programValues>());
+                String degreeKey = p.Degree__c != null ? p.Degree__c : 'Other';
+                pv.description = schoolKey + ' - ' + degreeKey + ' - ' + (p.Program_Major_Concentration__c != null ? p.Program_Major_Concentration__c : '');
+                pv.is_group = false;
+                pv.group_level = 0;
+
+                // Build nested structure
+                if (!schoolDegreeMap.containsKey(schoolKey)) {
+                    schoolDegreeMap.put(schoolKey, new Map<String, List<programValues>>());
                 }
-                schoolMap.get(schoolKey).add(pv);
+                if (!schoolDegreeMap.get(schoolKey).containsKey(degreeKey)) {
+                    schoolDegreeMap.get(schoolKey).put(degreeKey, new List<programValues>());
+                }
+                schoolDegreeMap.get(schoolKey).get(degreeKey).add(pv);
             }
 
-            // Flatten the map into results with group headers
-            List<String> sortedSchools = new List<String>(schoolMap.keySet());
+            // Flatten the nested map into results with school and degree headers
+            List<String> sortedSchools = new List<String>(schoolDegreeMap.keySet());
             sortedSchools.sort();
+
             for (String school : sortedSchools) {
-                programValues header = new programValues();
-                header.label = school;
-                header.value = school;
-                header.is_group = true;
-                results.add(header);
-                results.addAll(schoolMap.get(school));
+                // Add school header (level 1)
+                programValues schoolHeader = new programValues();
+                schoolHeader.label = school;
+                schoolHeader.value = school;
+                schoolHeader.is_group = true;
+                schoolHeader.group_level = 1;
+                results.add(schoolHeader);
+
+                // Get degrees for this school
+                Map<String, List<programValues>> degreeMap = schoolDegreeMap.get(school);
+                List<String> sortedDegrees = new List<String>(degreeMap.keySet());
+                sortedDegrees.sort();
+
+                for (String degree : sortedDegrees) {
+                    // Add degree header (level 2)
+                    programValues degreeHeader = new programValues();
+                    degreeHeader.label = degree;
+                    degreeHeader.value = school + '::' + degree; // Unique value for degree headers
+                    degreeHeader.description = school + ' - ' + degree;
+                    degreeHeader.is_group = true;
+                    degreeHeader.group_level = 2;
+                    results.add(degreeHeader);
+
+                    // Add programs for this degree
+                    results.addAll(degreeMap.get(degree));
+                }
             }
         }
         return results;

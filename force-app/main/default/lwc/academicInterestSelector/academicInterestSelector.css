@@ -99,6 +99,34 @@ lightning-icon {
     color: #3e3e3c;
 }
 
+/* School-level headers (level 1) - Prominent styling */
+.school-header {
+    background-color: #e8eaed;
+    z-index: 2; /* Higher than degree headers */
+}
+
+.school-header h3 {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #080707;
+}
+
+/* Degree-level headers (level 2) - Sub-group styling with indentation */
+.degree-header {
+    background-color: #f4f6f9;
+    z-index: 1;
+}
+
+.degree-header .slds-listbox__option {
+    padding-left: 1.5rem; /* Indent to show hierarchy */
+}
+
+.degree-header h3 {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: #54698d;
+}
+
 /* Arrow buttons */
 .dual-listbox-layout .slds-dueling-list__column button {
     width: 40px;

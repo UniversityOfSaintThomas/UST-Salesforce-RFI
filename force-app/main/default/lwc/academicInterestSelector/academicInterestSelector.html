@@ -47,7 +47,7 @@
                                                 aria-multiselectable="true">
                                             <template for:each={availableOptions} for:item="option">
                                                 <template if:true={option.is_group}>
-                                                    <li key={option.key} role="presentation" class="slds-listbox__item group-header">
+                                                    <li key={option.key} role="presentation" class={option.headerClass}>
                                                         <div class="slds-listbox__option slds-listbox__option_plain">
                                                             <h3 class="slds-text-title_caps slds-p-horizontal_small">{option.label}</h3>
                                                         </div>
@@ -105,7 +105,7 @@
                                                 aria-multiselectable="true">
                                             <template for:each={selectedOptions} for:item="option">
                                                 <template if:true={option.is_group}>
-                                                    <li key={option.key} role="presentation" class="slds-listbox__item group-header">
+                                                    <li key={option.key} role="presentation" class={option.headerClass}>
                                                         <div class="slds-listbox__option slds-listbox__option_plain">
                                                             <h3 class="slds-text-title_caps slds-p-horizontal_small">{option.label}</h3>
                                                         </div>
