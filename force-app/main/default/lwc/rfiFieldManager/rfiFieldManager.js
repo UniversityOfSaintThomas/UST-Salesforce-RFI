@@ -1,5 +1,5 @@
 import { LightningElement, api, track, wire } from 'lwc';
-import { getRecord, updateRecord, getFieldValue } from 'lightning/uiRecordApi';
+import { getRecord, updateRecord, getFieldValue, getRecordNotifyChange } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
@@ -190,7 +190,7 @@ export default class RfiFieldManager extends LightningElement {
         if (!this.recordData) return;
 
         // Get the order field (preserves custom order)
-        let fieldsOrder = this.getFieldValue(FIELDS_TO_DISPLAY_ORDER_FIELD);
+        const fieldsOrder = this.getFieldValue(FIELDS_TO_DISPLAY_ORDER_FIELD);
 
         // Get the multiselect field (source of truth for which fields are selected)
         const fieldsToDisplay = this.getFieldValue(FIELDS_TO_DISPLAY_FIELD);
@@ -421,6 +421,13 @@ export default class RfiFieldManager extends LightningElement {
                 console.log('✅ Save successful! Result:', result);
                 this.showToast('Success', 'Fields configuration saved successfully', 'success');
 
+                // Notify Lightning Data Service that this record has changed
+                // This will trigger a refresh in any other components watching this record
+                console.log('Notifying LDS of record change for recordId:', this.recordId);
+                return getRecordNotifyChange([{ recordId: this.recordId }]);
+            })
+            .then(() => {
+                console.log('✅ LDS notification complete');
                 // Refresh the wire service to get updated data
                 console.log('Refreshing wire service data...');
                 this.isSaving = false;

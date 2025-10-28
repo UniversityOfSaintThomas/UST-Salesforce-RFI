@@ -11,7 +11,7 @@ public with sharing class ReusableLookupController {
         if (inputWrapper != null) {
             if (string.isNotBlank(inputWrapper.fieldApiName)) {
                 List<String> sanitizedOtherFields = new List<String>();
-                try {
+                //try {
                     String fieldsToQuery = 'SELECT Id, ';
                     //Check object accessibility
                     fieldsToQuery = fieldsToQuery + inputWrapper.fieldApiName;
@@ -77,10 +77,10 @@ public with sharing class ReusableLookupController {
                     }
                     return returnWrapperList;
 
-                } catch (Exception err) {
-                    System.debug(err.getMessage());
-                    throw new AuraHandledException(err.getMessage());
-                }
+               // } catch (Exception err) {
+              //      System.debug(err.getMessage());
+              //      throw new AuraHandledException(err.getMessage());
+              //  }
             }
 
         }

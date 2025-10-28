@@ -10,7 +10,7 @@
  */
 
 import { LightningElement, api, wire, track } from 'lwc';
-import { getRecord, updateRecord } from 'lightning/uiRecordApi';
+import { getRecord, updateRecord, getRecordNotifyChange } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import getProgramsWithShortCodes from '@salesforce/apex/rfiFormController.getProgramsWithShortCodes';
@@ -346,6 +346,10 @@ export default class AcademicInterestSelector extends LightningElement {
             // Update the record
             await updateRecord(recordInput);
 
+            // Notify Lightning Data Service that this record has changed
+            console.log('Notifying LDS of record change for recordId:', this.recordId);
+            await getRecordNotifyChange([{ recordId: this.recordId }]);
+
             // Refresh the wired data
             await refreshApex(this.wiredRecordResult);
 
@@ -386,6 +390,10 @@ export default class AcademicInterestSelector extends LightningElement {
 
             // Update the record
             await updateRecord(recordInput);
+
+            // Notify Lightning Data Service that this record has changed
+            console.log('Notifying LDS of record change (quiet save) for recordId:', this.recordId);
+            await getRecordNotifyChange([{ recordId: this.recordId }]);
 
             // Refresh the wired data
             await refreshApex(this.wiredRecordResult);
