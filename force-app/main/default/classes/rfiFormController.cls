@@ -691,12 +691,107 @@ public with sharing class rfiFormController {
         return results;
     }
 
+    /**
+     * Get programs for academic interest selector - returns short codes as values
+     * @param academic_level - The academic level (U/Undergraduate or G/Graduate)
+     * @param school_college - The school/college name
+     * @param academic_interest_codes - Semicolon-delimited list of program codes to filter
+     * @param filters - Optional filters to apply
+     * @return List of programValues with short codes as values, grouped by Primary_School_College_for_Assignment__c
+     */
+    @AuraEnabled(Cacheable=true)
+    public static List<programValues> getProgramsWithShortCodes(String academic_level, String school_college, String academic_interest_codes, Map<String, String> filters) {
+        String query_string =
+                'SELECT ' +
+                        'Id, ' +
+                        'Name, ' +
+                        'Program_Name_on_Application__c, ' +
+                        'Student_Type__c, ' +
+                        'Degree__c, ' +
+                        'Program_Major_Concentration__c, ' +
+                        'Primary_School_College_for_Assignment__c ' +
+                        'FROM Program__c ' +
+                        'WHERE RecordType.DeveloperName = \'Recruitment_Program\' ' +
+                        'AND Program_Display__c INCLUDES (\'RFI\') ' +
+                        'AND Active__c = true ';
+
+        if (academic_level == 'U' || academic_level == 'Undergraduate') {
+            query_string += ' AND (Academic_Level__c = \'Undergraduate\' OR Academic_Level__c = \'U\') ';
+            query_string += ' AND (Program_Type__c INCLUDES (\'Major\') OR Program_Type__c INCLUDES (\'Pre-Professional\') OR Program_Type__c INCLUDES (\'Major Concentration\') OR Program_Type__c INCLUDES (\'Co-Major\')) ';
+        } else {
+            query_string += ' AND (Academic_Level__c = \'Graduate\' OR Academic_Level__c = \'G\')  ';
+            if (!String.isBlank(school_college)) {
+                query_string += ' AND Associated_Schools__c INCLUDES (\'' + school_college + '\')';
+                if (school_college == 'School of Law') {
+                    query_string += ' AND Banner_Program_Code__c LIKE \'LW_%\'';
+                }
+            }
+        }
+
+        if (String.isNotBlank(academic_interest_codes)) {
+            academic_interest_codes = academic_interest_codes.escapeHtml4();
+            List<String> academicCodes = academic_interest_codes.split(';');
+            query_string += ' AND Program_Major_Concentration__c IN :academicCodes ';
+        }
+
+        if (filters != null) {
+            for (String filterKey : filters.keySet()) {
+                String filterValue = filters.get(filterKey);
+                if (!String.isBlank(filterValue)) {
+                    filterValue = filterValue.escapeHtml4();
+                    Schema.DescribeFieldResult d = Schema.SObjectType.Program__c.fields.getMap().get(filterKey).getDescribe();
+                    if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
+                        List<String> filterValues = filterValue.split(';');
+                        query_string += ' AND ' + filterKey + ' INCLUDES ( :filterValues) ';
+                    } else {
+                        query_string += ' AND ' + filterKey + ' = :filterValue ';
+                    }
+                }
+            }
+        }
+
+        query_string += ' ORDER BY Primary_School_College_for_Assignment__c, Program_Name_on_Application__c ';
+        List<Program__c> programs = Database.query(query_string);
+
+        List<programValues> results = new List<programValues>();
+        if (!programs.isEmpty()) {
+            Map<String, List<programValues>> schoolMap = new Map<String, List<programValues>>();
+            for (Program__c p : programs) {
+                programValues pv = new programValues();
+                pv.label = p.Program_Name_on_Application__c;
+                // Use short code as value instead of ID
+                pv.value = p.Program_Major_Concentration__c != null ? p.Program_Major_Concentration__c : String.valueOf(p.Id);
+                pv.description = (p.Primary_School_College_for_Assignment__c != null ? p.Primary_School_College_for_Assignment__c + ' - ' : '') + (p.Program_Major_Concentration__c != null ? p.Program_Major_Concentration__c : '');
+                pv.is_group = false;
+                // Group by Primary_School_College_for_Assignment__c
+                String schoolKey = p.Primary_School_College_for_Assignment__c != null ? p.Primary_School_College_for_Assignment__c : 'Other Programs';
+                if (!schoolMap.containsKey(schoolKey)) {
+                    schoolMap.put(schoolKey, new List<programValues>());
+                }
+                schoolMap.get(schoolKey).add(pv);
+            }
+
+            // Flatten the map into results with group headers
+            List<String> sortedSchools = new List<String>(schoolMap.keySet());
+            sortedSchools.sort();
+            for (String school : sortedSchools) {
+                programValues header = new programValues();
+                header.label = school;
+                header.value = school;
+                header.is_group = true;
+                results.add(header);
+                results.addAll(schoolMap.get(school));
+            }
+        }
+        return results;
+    }
+
 //Submit the RFI Lead record
     @AuraEnabled
     public static Id submitRFILead(Lead leadRecord) {
         // Sanitize: copy only valid Lead fields from the incoming record
         System.debug('Received Lead Record: ' + JSON.serializePretty(leadRecord));
-        If (leadRecord == null) {
+        if (leadRecord == null) {
             throw new AuraHandledException('No Lead record provided.');
         }
         if (String.isNotBlank(leadRecord.Major_Program__c)) {
@@ -709,7 +804,7 @@ public with sharing class rfiFormController {
                     LIMIT 1
             ];
             if (!programs.isEmpty()) {
-                leadRecord.Recruitment_program__c = programs[0].Id;
+                leadRecord.Recruitment_Program__c = programs[0].Id;
             }
         }
         Database.DMLOptions dml = new Database.DMLOptions();
