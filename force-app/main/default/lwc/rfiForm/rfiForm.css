@@ -1,3 +1,6 @@
 /**
  * Created by Thad-PC-2019 on 9/23/2025.
  */
+:host {
+    --sds-c-textarea-sizing-min-height: 200px;
+}

@@ -640,24 +640,7 @@ public with sharing class rfiFormController {
             List<String> academicCodes = academic_interest_codes.split(';');
             query_string += ' AND Program_Major_Concentration__c IN :academicCodes ';
         }
-
-        if (filters != null) {
-            for (String filterKey : filters.keySet()) {
-                String filterValue = filters.get(filterKey);
-                if (!String.isBlank(filterValue)) {
-                    filterValue = filterValue.escapeHtml4();
-                    //Check filter key which is a Lead field to see if it is a picklist or a multipicklist
-                    Schema.DescribeFieldResult d = Schema.SObjectType.Program__c.fields.getMap().get(filterKey).getDescribe();
-                    if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
-                        List<String> filterValues = filterValue.split(';');
-                        query_string += ' AND ' + filterKey + ' INCLUDES ( :filterValues) ';
-                    } else {
-                        query_string += ' AND ' + filterKey + ' = :filterValue ';
-                    }
-                }
-            }
-        }
-
+        query_string += filterQuery(filters);
         query_string += ' ORDER BY Degree__c, Program_Name_on_Application__c ';
         List<Program__c> programs = Database.query(query_string);
 
@@ -692,6 +675,27 @@ public with sharing class rfiFormController {
 
         }
         return results;
+    }
+
+    private static String filterQuery (Map<String, String> filters) {
+        String query_string = '';
+        if (filters != null) {
+            for (String filterKey : filters.keySet()) {
+                String filterValue = filters.get(filterKey);
+                if (!String.isBlank(filterValue)) {
+                    filterValue = filterValue.escapeHtml4();
+                    //Check filter key which is a Lead field to see if it is a picklist or a multipicklist
+                    Schema.DescribeFieldResult d = Schema.SObjectType.Program__c.fields.getMap().get(filterKey).getDescribe();
+                    if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
+                        List<String> filterValues = filterValue.split(';');
+                        query_string += ' AND ' + filterKey + ' INCLUDES ( :filterValues) ';
+                    } else {
+                        query_string += ' AND ' + filterKey + ' = :filterValue ';
+                    }
+                }
+            }
+        }
+        return query_string;
     }
 
     /**
@@ -736,23 +740,7 @@ public with sharing class rfiFormController {
             List<String> academicCodes = academic_interest_codes.split(';');
             query_string += ' AND Program_Major_Concentration__c IN :academicCodes ';
         }
-
-        if (filters != null) {
-            for (String filterKey : filters.keySet()) {
-                String filterValue = filters.get(filterKey);
-                if (!String.isBlank(filterValue)) {
-                    filterValue = filterValue.escapeHtml4();
-                    Schema.DescribeFieldResult d = Schema.SObjectType.Program__c.fields.getMap().get(filterKey).getDescribe();
-                    if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
-                        List<String> filterValues = filterValue.split(';');
-                        query_string += ' AND ' + filterKey + ' INCLUDES ( :filterValues) ';
-                    } else {
-                        query_string += ' AND ' + filterKey + ' = :filterValue ';
-                    }
-                }
-            }
-        }
-
+        query_string += filterQuery(filters);
         query_string += ' ORDER BY Primary_School_College_for_Assignment__c, Degree__c, Program_Name_on_Application__c ';
         List<Program__c> programs = Database.query(query_string);
 

@@ -79,16 +79,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 newAcademicInterests !== this._lastAcademicInterests
             );
 
-            if (hasChanges) {
-                console.log('🔄 RFI Controller record updated, refreshing form...');
-                console.log('  Previous Fields_to_Display:', this._lastFieldsToDisplay);
-                console.log('  New Fields_to_Display:', newFieldsToDisplay);
-                console.log('  Previous Fields_Order:', this._lastFieldsOrder);
-                console.log('  New Fields_Order:', newFieldsOrder);
-                console.log('  Previous Academic_Interests:', this._lastAcademicInterests);
-                console.log('  New Academic_Interests:', newAcademicInterests);
-            }
-
             // Always update tracking variables
             this._lastFieldsToDisplay = newFieldsToDisplay;
             this._lastFieldsOrder = newFieldsOrder;
@@ -112,12 +102,9 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             this.fields = Array.isArray(this.rfiData?.rfiFieldList) ? this.rfiData.rfiFieldList : [];
             console.log('RFI fields loaded:', JSON.stringify(this.fields, null, 2));
             this.lead = this.rfiData.leadRecord || {};
-            console.log('RFI lead record loaded:', JSON.stringify(this.lead, null, 2));
             this.countryOptions = this.rfiData.countryOptions;
             this.filterValues = this.rfiData.filterValues;
             this.programValues = this.rfiData.programValues;
-            console.log('program values:', JSON.stringify(this.programValues, null, 2));
-            console.log('filter values:', JSON.stringify(this.filterValues, null, 2));
             //this.stateOptions = this.rfiData.stateOptions;
             this.cantFindSchool = this.rfiData.cantFindSchool;
         } else if (error) {
@@ -216,13 +203,10 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                     academic_interest_codes: this.rfiData.academicInterestCodes,
                     filters: this.filterValues
                 });
-                console.log('Program values updated:', JSON.stringify(this.programValues, null, 2));
             } catch (error) {
                 console.error('Error fetching programs:', error);
             }
         }
-        console.log('Updated filterValues:', JSON.stringify(this.filterValues, null, 2));
-
     }
 
     handleMultiSelectChange = (event) => {
@@ -243,14 +227,11 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         if (!address) return;
         //If country changes then update state options
         if (address.country && address.country !== this.selectedCountry) {
-            console.log('Country changed to', address.country);
             this.selectedCountry = address.country;
             this.stateOptions = await getStateProvince(
                 {countryCode: this.selectedCountry}
             );
-            console.log('State options updated:', JSON.stringify(this.stateOptions, null, 2));
         }
-        console.log('Address change event received:', JSON.stringify(address, null, 2));
         //update lead object with address fields
         let countryLabel = '';
         if (address.country) {
@@ -332,7 +313,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 refreshApex(this.wiredRecordResult),
                 refreshApex(this.wiredFormResult)
             ]);
-            console.log('RFI Form data refreshed successfully');
         } catch (error) {
             console.error('Error refreshing RFI Form data:', error);
         }

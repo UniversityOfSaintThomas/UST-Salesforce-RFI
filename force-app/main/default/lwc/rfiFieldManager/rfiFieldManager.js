@@ -140,7 +140,7 @@ export default class RfiFieldManager extends LightningElement {
         'Scholarship of Interest': 'Scholarship of Interest',
         'St Thomas Colleges': 'St Thomas Colleges',
         'State': 'State',
-        'Tell us about yourself': 'Tell us about yourself',
+        'Tell us about yourself': 'Tell us about yourself and why you are interested in this program. (150 words or less)',
         'Timeline to Enrollment': 'Timeline to Enrollment',
         'Title': 'Title',
         'When do you plan to start school': 'When do you plan to start school'

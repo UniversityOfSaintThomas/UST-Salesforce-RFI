@@ -127,7 +127,6 @@
                                     ></c-multi-select-pills-groupable>
                                 </template>
 
-
                                 <template lwc:elseif={f.isTel}>
                                     <lightning-input
                                             type="tel"
@@ -152,6 +151,16 @@
                                             required={f.isRequired}
                                     >
                                     </lightning-input>
+                                </template>
+
+                                <template lwc:elseif={f.isTextarea}>
+                                    <lightning-textarea
+                                            label={f.fieldLabel}
+                                            name={f.fieldLeadAPIName}
+                                            value={f.value}
+                                            required={f.isRequired}
+                                    >
+                                    </lightning-textarea>
                                 </template>
 
                                 <!-- Default inputs: text, date, etc. -->
