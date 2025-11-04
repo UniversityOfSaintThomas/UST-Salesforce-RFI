@@ -118,10 +118,12 @@ export default class RfiFieldManager extends LightningElement {
         'Birthdate': 'Birthdate',
         'Citizenship': 'Citizenship',
         'City': 'City',
+        'Company': 'Company',
         'Country': 'Country',
         'Email': 'Email',
         'Employer': 'Employer',
         'Expected Start Term at St Thomas': 'Expected Start Term at St Thomas',
+        'First Name': 'First Name',
         'High School Attended': 'High School Attended',
         'High School Graduation Year': 'High School Graduation Year',
         'Home and Mobile Phone': 'Home and Mobile Phone',
@@ -131,8 +133,10 @@ export default class RfiFieldManager extends LightningElement {
         'I will apply to St Thomas Law as a': 'I will apply to St Thomas Law as a',
         'I would like program information to be mailed to me': 'Mail Information',
         'I would like to receive text messages': 'Receive Text Messages',
+        'Last Name': 'Last Name',
         'Mail Information': 'Mail Information',
         'Phone': 'Phone',
+        'Receive Text Messages': 'Receive Text Messages',
         'Scholarship of Interest': 'Scholarship of Interest',
         'St Thomas Colleges': 'St Thomas Colleges',
         'State': 'State',
@@ -204,9 +208,30 @@ export default class RfiFieldManager extends LightningElement {
         // Parse the selected fields
         const selectedFields = fieldsToDisplay ? fieldsToDisplay.split(';') : [];
 
+        // Check if First Name and Last Name are in the order field (meaning they've been sorted)
+        const hasBeenSorted = fieldsOrder && (fieldsOrder.includes('First Name') || fieldsOrder.includes('Last Name'));
+
+        // Always ensure First Name and Last Name are included
+        // If not been sorted, add them at the beginning
+        if (!hasBeenSorted) {
+            // Remove them if they exist elsewhere
+            const filtered = selectedFields.filter(f => f !== 'First Name' && f !== 'Last Name');
+            // Add them at the start
+            selectedFields.length = 0;
+            selectedFields.push('First Name', 'Last Name', ...filtered);
+        } else {
+            // They've been sorted, just ensure they exist somewhere in the list
+            if (!selectedFields.includes('First Name')) {
+                selectedFields.push('First Name');
+            }
+            if (!selectedFields.includes('Last Name')) {
+                selectedFields.push('Last Name');
+            }
+        }
+
         // If we have a custom order, use it; otherwise use the selected fields order
         let orderedFields;
-        if (fieldsOrder) {
+        if (fieldsOrder && hasBeenSorted) {
             const orderArray = fieldsOrder.split(';');
             // Filter to only include fields that are still selected
             orderedFields = orderArray.filter(field => selectedFields.includes(field));
@@ -217,21 +242,38 @@ export default class RfiFieldManager extends LightningElement {
                 }
             });
         } else {
-            // No custom order yet, use the multiselect order
+            // No custom order yet, or not sorted - use the selected fields order (with First/Last at top)
             orderedFields = selectedFields;
         }
 
         const required = requiredFields ? requiredFields.split(';') : [];
 
+        // Default First Name and Last Name to required if not explicitly in the required fields string
+        const isFirstNameRequired = required.includes('First Name') || !requiredFields || requiredFields.indexOf('First Name') === -1;
+        const isLastNameRequired = required.includes('Last Name') || !requiredFields || requiredFields.indexOf('Last Name') === -1;
+
         console.log('Final ordered fields:', orderedFields);
         console.log('Required fields array:', required);
+        console.log('First Name required:', isFirstNameRequired);
+        console.log('Last Name required:', isLastNameRequired);
 
         this.fieldItems = orderedFields.map((field, index) => {
+            let fieldIsRequired;
+
+            // Default First Name and Last Name to required
+            if (field === 'First Name') {
+                fieldIsRequired = isFirstNameRequired;
+            } else if (field === 'Last Name') {
+                fieldIsRequired = isLastNameRequired;
+            } else {
+                fieldIsRequired = required.includes(field);
+            }
+
             return {
                 id: `field-${index}`,
                 fieldName: field,
                 label: this.getFieldLabel(field),
-                isRequired: required.includes(field),
+                isRequired: fieldIsRequired,
                 index: index
             };
         });
@@ -362,6 +404,12 @@ export default class RfiFieldManager extends LightningElement {
         const index = parseInt(event.currentTarget.dataset.index);
         const fieldName = this.fieldItems[index].fieldName;
 
+        // Prevent removing First Name and Last Name - they're always required
+        if (fieldName === 'First Name' || fieldName === 'Last Name') {
+            this.showToast('Warning', `"${fieldName}" cannot be removed as it is always required on the form`, 'warning');
+            return;
+        }
+
         // Remove the field
         const items = this.fieldItems.filter((item, i) => i !== index);
 
@@ -380,8 +428,15 @@ export default class RfiFieldManager extends LightningElement {
         this.isLoading = true;
         this.isSaving = true;
 
+        // Full order including First Name and Last Name (for text field)
         const fieldsToDisplayOrder = this.fieldItems.map(item => item.fieldName).join(';');
-        const fieldsToDisplay = fieldsToDisplayOrder; // Same for the multiselect (though it may reorder)
+
+        // Filter out First Name and Last Name for the picklist field (they're not in the picklist)
+        const fieldsToDisplay = this.fieldItems
+            .filter(item => item.fieldName !== 'First Name' && item.fieldName !== 'Last Name')
+            .map(item => item.fieldName)
+            .join(';');
+
         const requiredFields = this.fieldItems
             .filter(item => item.isRequired)
             .map(item => item.fieldName)
@@ -390,7 +445,7 @@ export default class RfiFieldManager extends LightningElement {
         console.log('=== SAVING FIELDS ===');
         console.log('Current fieldItems order:', this.fieldItems.map(f => f.fieldName));
         console.log('Saving to Fields_to_Display_Order__c:', fieldsToDisplayOrder);
-        console.log('Saving to Fields_to_Display__c:', fieldsToDisplay);
+        console.log('Saving to Fields_to_Display__c (without First/Last Name):', fieldsToDisplay);
         console.log('Saving to Required_Fields__c:', requiredFields);
 
         const fields = {
