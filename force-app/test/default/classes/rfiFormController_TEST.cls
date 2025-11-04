@@ -12,7 +12,7 @@ private class rfiFormController_TEST {
         return null;
     }
 
-    @testSetup
+    @TestSetup
     static void setupData() {
         // Build a controller record satisfying org-required and restricted picklists dynamically
         Map<String, Schema.SObjectField> fm = Schema.SObjectType.RFI_Controller__c.fields.getMap();
@@ -67,7 +67,7 @@ private class rfiFormController_TEST {
         insert testPrograms;
     }
 
-    @isTest
+    @IsTest
     static void testGetRFIForm_returnsWrapper() {
 /*        // Use the generated Name value
         RFI_Controller__c ctrl = [SELECT Name FROM RFI_Controller__c LIMIT 1];

@@ -14,6 +14,7 @@ public with sharing class rfiFormController {
         @AuraEnabled public String academicLevel { get; set; }
         @AuraEnabled public String schoolCollege { get; set; }
         @AuraEnabled public String academicInterestCodes { get; set; }
+        @AuraEnabled public Boolean cantFindSchool { get; set; }
     }
 
     public class rfiField {
@@ -130,6 +131,7 @@ public with sharing class rfiFormController {
         leadAndRfi.academicLevel = rfiController.Academic_Level__c;
         leadAndRfi.schoolCollege = rfiController.School_College__c;
         leadAndRfi.academicInterestCodes = rfiController.Academic_Interests_To_Display__c;
+        leadAndRfi.cantFindSchool = false;
 
         //Populate Lead record with rfi_controller defined values and defaults
         leadAndRfi.leadRecord = new Lead();

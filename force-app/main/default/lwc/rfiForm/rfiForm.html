@@ -51,18 +51,41 @@
                                 <!-- School lookup using reusable lookup component -->
                                 <template lwc:elseif={f.isSchoolLookup}>
                                     <div class="slds-m-bottom_x-small slds-form-element">
-                                        <c-reusable-lookup
-                                                label={f.fieldLabel}
-                                                selected-icon-name="standard:account"
-                                                object-label=""
-                                                object-api-name="Account"
-                                                field-api-name="Name"
-                                                other-field-api-name="BillingCity,BillingState,billingPostalCode"
-                                                placeholder="Search schools"
-                                                required={f.isRequired}
-                                                record-type-name='Educational Institution'
-                                                onvalueselected={handleSchoolSelect}
-                                        ></c-reusable-lookup>
+                                        <template if:false={cantFindSchool}>
+                                            <c-reusable-lookup
+                                                    label={f.fieldLabel}
+                                                    selected-icon-name="standard:account"
+                                                    object-label=""
+                                                    object-api-name="Account"
+                                                    field-api-name="Name"
+                                                    other-field-api-name="BillingCity,BillingState,billingPostalCode"
+                                                    placeholder="Search schools"
+                                                    required={f.isRequired}
+                                                    record-type-name='Educational Institution'
+                                                    onvalueselected={handleSchoolSelect}
+                                                    type="High School"
+                                            ></c-reusable-lookup>
+                                        </template>
+
+                                        <template if:true={cantFindSchool}>
+                                            <lightning-input
+                                                    type="text"
+                                                    label="Enter your school's name"
+                                                    name="High_School_or_College__c"
+                                                    placeholder="Enter your school's name"
+                                                    required={f.isRequired}
+                                                    onchange={handleManualSchoolEntry}
+                                            ></lightning-input>
+                                        </template>
+
+                                        <div class="slds-p-top_xx-small">
+                                            <lightning-input
+                                                    type="checkbox"
+                                                    label="I can't find my school"
+                                                    checked={cantFindSchool}
+                                                    onchange={handleCantFindSchoolChange}
+                                            ></lightning-input>
+                                        </div>
                                     </div>
                                 </template>
 
@@ -104,27 +127,6 @@
                                     ></c-multi-select-pills-groupable>
                                 </template>
 
-                                <!-- Textarea -->
-                                <template lwc:elseif={f.isTextarea}>
-                                    <lightning-textarea
-                                            label={f.fieldLabel}
-                                            name={f.fieldLeadAPIName}
-                                            value={f.value}
-                                            required={f.isRequired}
-                                    ></lightning-textarea>
-                                </template>
-
-                                <!-- Checkbox -->
-                                <template lwc:elseif={f.isCheckbox}>
-                                    <lightning-input
-                                            type="checkbox"
-                                            label={f.fieldLabel}
-                                            name={f.fieldLeadAPIName}
-                                            checked={f.value}
-                                            required={f.isRequired}
-                                            value={f.value}
-                                    ></lightning-input>
-                                </template>
 
                                 <template lwc:elseif={f.isTel}>
                                     <lightning-input

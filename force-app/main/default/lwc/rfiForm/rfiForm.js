@@ -28,13 +28,14 @@ const RFI_CONTROLLER_FIELDS = [
 export default class RfiForm extends NavigationMixin(LightningElement) {
     @api rfiControllerName;
     @api recordId;
-    @api googleApiKey; // optional: enable Google Places lookup for address
+    @api googleApiKey;
 
     @track lead = {};
     @track selectedCountry = 'US';
     @track stateOptions = [];
     @track filterValues;
     @track programValues;
+    @track cantFindSchool;
 
     controllerName;
     rfiData;
@@ -66,7 +67,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             const newFieldsToDisplay = getFieldValue(data, FIELDS_TO_DISPLAY);
             const newFieldsOrder = getFieldValue(data, FIELDS_TO_DISPLAY_ORDER);
             const newAcademicInterests = getFieldValue(data, ACADEMIC_INTERESTS_TO_DISPLAY);
-
             // Check if this is an update (not initial load)
             const isUpdate = this._lastFieldsToDisplay !== undefined ||
                            this._lastFieldsOrder !== undefined ||
@@ -119,10 +119,29 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             console.log('program values:', JSON.stringify(this.programValues, null, 2));
             console.log('filter values:', JSON.stringify(this.filterValues, null, 2));
             //this.stateOptions = this.rfiData.stateOptions;
+            this.cantFindSchool = this.rfiData.cantFindSchool;
         } else if (error) {
             console.error('Failed to fetch RFI form data', error);
             this.rfiData = undefined;
         }
+    }
+
+    // Handler for the "I can't find my school" checkbox
+    handleCantFindSchoolChange = (event) => {
+        this.cantFindSchool = event.target.checked;
+
+        // If checkbox is checked, clear the school lookup value
+        if (this.cantFindSchool) {
+            // Clear High_School_or_College__c field
+            this.lead = {...this.lead, High_School_or_College__c: ''};
+        }
+    }
+
+    // Handler for manual school name entry
+    handleManualSchoolEntry = (event) => {
+        const schoolName = event.target.value;
+        // Map to High_School_or_College__c field
+        this.lead = {...this.lead, High_School_or_College__c: schoolName};
     }
 
     // Handler for the reusable lookup component's custom event 'valueselected'
