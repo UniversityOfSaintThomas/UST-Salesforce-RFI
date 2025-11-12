@@ -73,6 +73,24 @@
                 <identifier>c_rfiFieldManager</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Select Academic Interests to Display on RFI</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>maxSelections</name>
+                    <value>999</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>required</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentName>academicInterestSelector</componentName>
+                <identifier>c_academicInterestSelector</identifier>
+            </componentInstance>
+        </itemInstances>
         <mode>Replace</mode>
         <name>detailTabContent</name>
         <type>Facet</type>
