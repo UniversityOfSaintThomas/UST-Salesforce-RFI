@@ -22,6 +22,43 @@ tasks:
   run_tests:
     options:
       required_org_code_coverage_percent: 75
+
+  adjust_custom_settings:
+    description: Activate Sites
+    class_path: cumulusci.tasks.apex.anon.AnonymousApexTask
+    options:
+      apex: >
+        Site mySite = [SELECT Id FROM Site WHERE Name = 'EASY_Applicant_Portal'];
+            SiteDetail mySiteDetail = [SELECT SecureURL FROM SiteDetail WHERE DurableId = :mySite.Id];
+            String url = mySiteDetail.SecureURL;
+
+            List<Profile> easyProfile = [
+                    SELECT Name, Id
+                    FROM Profile
+                    WHERE Name = 'EASY Applicant Portal Profile'
+            ];
+
+            List<PermissionSet> easyCommunityPermissionSet = [
+                    SELECT Id, Name
+                    FROM PermissionSet
+                    WHERE Name = 'Application_Community'
+            ];
+
+            Application_Setting__c applicationSettings = Application_Setting__c.getOrgDefaults();
+            applicationSettings.Community_URL__c = url;
+
+            if (easyProfile.size() > 0) {
+                applicationSettings.Community_Profile_Ids__c = easyProfile[0].Id;
+            }
+
+            if (easyCommunityPermissionSet.size() > 0) {
+                applicationSettings.Permission_Set_Id__c = easyCommunityPermissionSet[0].Id;
+            }
+
+            applicationSettings.Default_Template__c = 'stthomas2021';
+
+            upsert applicationSettings;
+
 orgs:
   scratch:
     dev:

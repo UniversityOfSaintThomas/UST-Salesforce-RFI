@@ -36,6 +36,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @track filterValues;
     @track programValues;
     @track cantFindSchool;
+    @track iHaveAQuestion;
 
     controllerName;
     rfiData;
@@ -69,8 +70,8 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             const newAcademicInterests = getFieldValue(data, ACADEMIC_INTERESTS_TO_DISPLAY);
             // Check if this is an update (not initial load)
             const isUpdate = this._lastFieldsToDisplay !== undefined ||
-                           this._lastFieldsOrder !== undefined ||
-                           this._lastAcademicInterests !== undefined;
+                this._lastFieldsOrder !== undefined ||
+                this._lastAcademicInterests !== undefined;
 
             // Check if any relevant fields have changed
             const hasChanges = isUpdate && (
@@ -186,6 +187,20 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 Major_Program_3__c: value[2] || '',
                 Major_Program_4__c: value[3] || ''
             };
+        }
+    }
+
+    handleCheckboxChange = (event) => {
+        console.log('Checkbox change event:', JSON.stringify(event, null, 2));
+        console.log('Checkbox change event target:', JSON.stringify(event.target, null, 2));
+        console.log('Checkbox change event detail:', JSON.stringify(event.detail, null, 2));
+        console.log('Checkbox name:', event.target.name);
+        console.log('Checkbox checked:', event.target.checked);
+        const name = event.target.name;
+        const checked = event.target.checked;
+        if (name.toLowerCase() === 'has_question__c') {
+            this.iHaveAQuestion = checked;
+            console.log('iHaveAQuestion updated to:', this.iHaveAQuestion);
         }
     }
 

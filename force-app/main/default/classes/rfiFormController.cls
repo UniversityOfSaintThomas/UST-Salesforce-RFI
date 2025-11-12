@@ -15,6 +15,7 @@ public with sharing class rfiFormController {
         @AuraEnabled public String schoolCollege { get; set; }
         @AuraEnabled public String academicInterestCodes { get; set; }
         @AuraEnabled public Boolean cantFindSchool { get; set; }
+        @AuraEnabled public Boolean iHaveAQuestion { get; set; }
     }
 
     public class rfiField {
@@ -38,6 +39,7 @@ public with sharing class rfiFormController {
         @AuraEnabled public Boolean isSchoolLookup { get; set; }
         @AuraEnabled public Boolean isProgramLookup { get; set; }
         @AuraEnabled public Boolean isProgramFilter { get; set; }
+        @AuraEnabled public Boolean showDependentField { get; set; }
     }
 
     public class programValues {
@@ -132,6 +134,7 @@ public with sharing class rfiFormController {
         leadAndRfi.schoolCollege = rfiController.School_College__c;
         leadAndRfi.academicInterestCodes = rfiController.Academic_Interests_To_Display__c;
         leadAndRfi.cantFindSchool = false;
+        leadAndRfi.iHaveAQuestion = false;
 
         //Populate Lead record with rfi_controller defined values and defaults
         leadAndRfi.leadRecord = new Lead();
@@ -368,6 +371,7 @@ public with sharing class rfiFormController {
                     newField.fieldLabel = !String.isBlank(rfiController.I_Have_A_Question_Label__c) ? rfiController.I_Have_A_Question_Label__c : 'I have a question';
                     newField.fieldLeadAPIName = 'Has_Question__c';
                     newField.isCheckbox = true;
+                    newField.showDependentField = true; // Show Questions/Comments textarea when checked
                 }
                 when 'I will apply to St Thomas as a' {
                     newField.fieldLabel = !String.isBlank(rfiController.Apply_To_St_Thomas_As_Label__c) ? rfiController.Apply_To_St_Thomas_As_Label__c : 'I will apply to St. Thomas as a';

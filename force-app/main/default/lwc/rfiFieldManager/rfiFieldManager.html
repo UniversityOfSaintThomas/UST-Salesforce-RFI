@@ -1,139 +1,143 @@
 <template>
-    <lightning-card title="RFI Field Configuration" icon-name="custom:custom63" heading-level="2">
-        <div class="slds-card__body slds-card__body_inner">
-            <template if:true={isLoading}>
-                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
-            </template>
+    <div class="slds-box_border slds-m-around_small slds-grid slds-wrap">
+        <div class="slds-p-around_small slds-col slds-size_1-of-1 slds-large-size_12-of-12">
+            <lightning-card title="RFI Field Configuration" icon-name="custom:custom63" heading-level="2">
+                <div class="slds-card__body slds-card__body_inner">
+                    <template if:true={isLoading}>
+                        <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                    </template>
 
-            <!-- Add Field Section -->
-            <template if:true={hasAvailableFields}>
-                <div class="slds-box slds-theme_shade slds-m-bottom_medium">
-                    <div class="slds-grid slds-grid_vertical-align-center slds-wrap">
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_8-of-12 slds-p-right_small">
-                            <lightning-combobox
-                                name="fieldToAdd"
-                                label="Add Field to List"
-                                value={selectedFieldToAdd}
-                                placeholder="Select a field to add"
-                                options={availableFieldOptions}
-                                onchange={handleFieldSelection}
-                                variant="label-inline">
-                            </lightning-combobox>
-                        </div>
-                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12">
-                            <lightning-button
-                                variant="brand"
-                                label="Add Field"
-                                icon-name="utility:add"
-                                onclick={handleAddField}
-                                disabled={isLoading}>
-                            </lightning-button>
-                        </div>
-                    </div>
-                </div>
-            </template>
-
-            <template if:true={hasFields}>
-                <div class="slds-m-bottom_medium">
-                    <p class="slds-text-body_small slds-m-bottom_small">
-                        Drag and drop items to reorder. Edit labels and mark fields as required.
-                    </p>
-                </div>
-
-                <div class="field-list">
-                    <template for:each={fieldItems} for:item="field">
-                        <div key={field.id}
-                             class="field-item slds-box slds-box_x-small slds-m-bottom_small"
-                             data-index={field.index}
-                             draggable="true"
-                             ondragstart={handleDragStart}
-                             ondragend={handleDragEnd}
-                             ondragover={handleDragOver}
-                             ondrop={handleDrop}>
-
-                            <div class="slds-grid slds-grid_vertical-align-top slds-wrap">
-                                <!-- Drag Handle -->
-                                <div class="slds-col slds-size_1-of-12 slds-p-right_small">
-                                    <lightning-icon
-                                        icon-name="utility:rows"
-                                        size="small"
-                                        class="drag-handle"
-                                        title="Drag to reorder">
-                                    </lightning-icon>
+                    <!-- Add Field Section -->
+                    <template if:true={hasAvailableFields}>
+                        <div class="slds-box slds-theme_shade slds-m-bottom_medium">
+                            <div class="slds-grid slds-grid_vertical-align-center slds-wrap">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_8-of-12 slds-p-right_small">
+                                    <lightning-combobox
+                                            name="fieldToAdd"
+                                            label="Add Field to List"
+                                            value={selectedFieldToAdd}
+                                            placeholder="Select a field to add"
+                                            options={availableFieldOptions}
+                                            onchange={handleFieldSelection}
+                                            variant="label-inline">
+                                    </lightning-combobox>
                                 </div>
-
-                                <!-- Field Name (Read-only) -->
-                                <div class="slds-col slds-size_2-of-12 slds-p-right_small">
-                                    <div class="slds-form-element">
-                                        <div class="slds-form-element__control">
-                                            <div class="slds-text-body_regular field-name-display">
-                                                {field.fieldName}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Label Input -->
-                                <div class="slds-col slds-size_7-of-12 slds-p-right_small">
-                                    <lightning-input
-                                        type="text"
-                                        value={field.label}
-                                        data-index={field.index}
-                                        onchange={handleLabelChange}
-                                        label="Label"
-                                        variant="label-hidden"
-                                        >
-                                    </lightning-input>
-                                </div>
-
-                                <!-- Required Checkbox -->
-                                <div class="slds-col slds-size_1-of-12 slds-p-right_small">
-                                    <lightning-input
-                                        type="checkbox"
-                                        label="Required"
-                                        checked={field.isRequired}
-                                        data-index={field.index}
-                                        onchange={handleRequiredChange}
-                                        >
-                                    </lightning-input>
-                                </div>
-
-                                <!-- Remove Button -->
-                                <div class="slds-col slds-size_1-of-12 slds-text-align_right">
-                                    <lightning-button-icon
-                                        icon-name="utility:delete"
-                                        variant="bare"
-                                        alternative-text="Remove field"
-                                        title="Remove field"
-                                        data-index={field.index}
-                                        onclick={handleRemoveField}
-                                        size="medium"
-                                        class="slds-m-left_xx-small">
-                                    </lightning-button-icon>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12">
+                                    <lightning-button
+                                            variant="brand"
+                                            label="Add Field"
+                                            icon-name="utility:add"
+                                            onclick={handleAddField}
+                                            disabled={isLoading}>
+                                    </lightning-button>
                                 </div>
                             </div>
                         </div>
                     </template>
-                </div>
 
-                <div class="slds-m-top_medium">
-                    <lightning-button
-                        variant="brand"
-                        label="Save Changes"
-                        onclick={handleSave}
-                        disabled={isLoading}>
-                    </lightning-button>
-                </div>
-            </template>
+                    <template if:true={hasFields}>
+                        <div class="slds-m-bottom_medium">
+                            <p class="slds-text-body_small slds-m-bottom_small">
+                                Drag and drop items to reorder. Edit labels and mark fields as required.
+                            </p>
+                        </div>
 
-            <template if:false={hasFields}>
-                <div class="slds-text-align_center slds-p-around_medium">
-                    <p class="slds-text-body_regular">
-                        No fields configured. Please configure fields to display in the Fields to Display field.
-                    </p>
+                        <div class="field-list">
+                            <template for:each={fieldItems} for:item="field">
+                                <div key={field.id}
+                                     class="field-item slds-box slds-box_x-small slds-m-bottom_small"
+                                     data-index={field.index}
+                                     draggable="true"
+                                     ondragstart={handleDragStart}
+                                     ondragend={handleDragEnd}
+                                     ondragover={handleDragOver}
+                                     ondrop={handleDrop}>
+
+                                    <div class="slds-grid slds-grid_vertical-align-top slds-wrap">
+                                        <!-- Drag Handle -->
+                                        <div class="slds-col slds-size_1-of-12 slds-p-right_small">
+                                            <lightning-icon
+                                                    icon-name="utility:rows"
+                                                    size="small"
+                                                    class="drag-handle"
+                                                    title="Drag to reorder">
+                                            </lightning-icon>
+                                        </div>
+
+                                        <!-- Field Name (Read-only) -->
+                                        <div class="slds-col slds-size_2-of-12 slds-p-right_small">
+                                            <div class="slds-form-element">
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-text-body_regular field-name-display">
+                                                        {field.fieldName}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Label Input -->
+                                        <div class="slds-col slds-size_7-of-12 slds-p-right_small">
+                                            <lightning-input
+                                                    type="text"
+                                                    value={field.label}
+                                                    data-index={field.index}
+                                                    onchange={handleLabelChange}
+                                                    label="Label"
+                                                    variant="label-hidden"
+                                            >
+                                            </lightning-input>
+                                        </div>
+
+                                        <!-- Required Checkbox -->
+                                        <div class="slds-col slds-size_1-of-12 slds-p-right_small">
+                                            <lightning-input
+                                                    type="checkbox"
+                                                    label="Required"
+                                                    checked={field.isRequired}
+                                                    data-index={field.index}
+                                                    onchange={handleRequiredChange}
+                                            >
+                                            </lightning-input>
+                                        </div>
+
+                                        <!-- Remove Button -->
+                                        <div class="slds-col slds-size_1-of-12 slds-text-align_right">
+                                            <lightning-button-icon
+                                                    icon-name="utility:delete"
+                                                    variant="bare"
+                                                    alternative-text="Remove field"
+                                                    title="Remove field"
+                                                    data-index={field.index}
+                                                    onclick={handleRemoveField}
+                                                    size="medium"
+                                                    class="slds-m-left_xx-small">
+                                            </lightning-button-icon>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="slds-m-top_medium">
+                            <lightning-button
+                                    variant="brand"
+                                    label="Save Changes"
+                                    onclick={handleSave}
+                                    disabled={isLoading}>
+                            </lightning-button>
+                        </div>
+                    </template>
+
+                    <template if:false={hasFields}>
+                        <div class="slds-text-align_center slds-p-around_medium">
+                            <p class="slds-text-body_regular">
+                                No fields configured. Please configure fields to display in the Fields to Display field.
+                            </p>
+                        </div>
+                    </template>
                 </div>
-            </template>
+            </lightning-card>
         </div>
-    </lightning-card>
+    </div>
 </template>
 

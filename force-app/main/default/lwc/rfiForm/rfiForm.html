@@ -163,6 +163,28 @@
                                     </lightning-textarea>
                                 </template>
 
+                                <template lwc:elseif={f.isCheckbox}>
+                                    <lightning-input
+                                            type="checkbox"
+                                            label={f.fieldLabel}
+                                            name={f.fieldLeadAPIName}
+                                            checked={f.value}
+                                            required={f.isRequired}
+                                            onchange={handleCheckboxChange}
+                                    >
+                                    </lightning-input>
+                                    <!-- Only show Questions/Comments textarea for the "I have a question" checkbox -->
+                                    <template if:true={f.showDependentField}>
+                                        <template if:true={iHaveAQuestion}>
+                                            <lightning-textarea
+                                                    label="Questions/Comments"
+                                                    name="Description"
+                                                    required=true
+                                            ></lightning-textarea>
+                                        </template>
+                                    </template>
+                                </template>
+
                                 <!-- Default inputs: text, date, etc. -->
                                 <template lwc:else>
                                     <lightning-input

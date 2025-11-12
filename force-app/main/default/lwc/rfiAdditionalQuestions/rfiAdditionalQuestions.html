@@ -4,27 +4,27 @@
 
 <!-- Rfi Additional Questions -->
 <template>
-    <template lwc:if={showDataTable}>
-        <div class="slds-grid slds-wrap slds-m-around_small">
-            <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12">
-                <lightning-datatable
-                        key-field="id"
-                        show-row-number-column
-                        data={questionJSON}
-                        hide-checkbox-column
-                        columns={columns}
-                        class='actionButtons'
-                        onrowaction={callRowAction}
-                >
-                </lightning-datatable>
-            </div>
-        </div>
-    </template>
-
     <div class="slds-box_border slds-m-around_small slds-grid slds-wrap">
         <div class="slds-p-around_small slds-col slds-size_1-of-1 slds-large-size_12-of-12">
-            <form>
-                <lightning-card title="Add a Question" icon-name="utility:add">
+            <lightning-card title="Add a Question" icon-name="utility:add" heading-level="2">
+                <template lwc:if={showDataTable}>
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12">
+                            <lightning-datatable
+                                    key-field="id"
+                                    show-row-number-column
+                                    data={questionJSON}
+                                    hide-checkbox-column
+                                    columns={columns}
+                                    class='actionButtons'
+                                    onrowaction={callRowAction}
+                            >
+                            </lightning-datatable>
+                        </div>
+                    </div>
+                </template>
+                <form>
+
                     <div class="slds-grid slds-wrap slds-gutters">
                         <div class="slds-p-bottom_small slds-col slds-size_1-of-1 slds-large-size_6-of-12">
                             <!-- Get what type of question it is -->
@@ -119,8 +119,9 @@
                                 variant="brand">
                         </lightning-button>
                     </p>
-                </lightning-card>
-            </form>
+
+                </form>
+            </lightning-card>
         </div>
     </div>
 </template>
