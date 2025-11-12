@@ -644,6 +644,7 @@ public with sharing class rfiFormController {
             List<String> academicCodes = academic_interest_codes.split(';');
             query_string += ' AND Program_Major_Concentration__c IN :academicCodes ';
         }
+
         query_string += filterQuery(filters);
         query_string += ' ORDER BY Degree__c, Program_Name_on_Application__c ';
         List<Program__c> programs = Database.query(query_string);
@@ -744,6 +745,20 @@ public with sharing class rfiFormController {
             List<String> academicCodes = academic_interest_codes.split(';');
             query_string += ' AND Program_Major_Concentration__c IN :academicCodes ';
         }
+
+        if(String.isBlank(school_college) && String.isBlank(academic_interest_codes)) {
+            //Scope programs to only those with Program_Major_Concentration__c that ar in the available values of the Academic_Interests_To_Display__c field on active RFI_Controller__c
+            //Get the values from Academic_Interests_To_Display__c field
+            Schema.DescribeFieldResult d = Schema.SObjectType.RFI_Controller__c.fields.getMap().get('Academic_Interests_To_Display__c').getDescribe();
+            List<String> academicInterestValues = new List<String>();
+            for (Schema.PicklistEntry e : d.getPicklistValues()) {
+                if (e.isActive()) {
+                    academicInterestValues.add(String.valueOf(e.getValue()));
+                }
+            }
+            query_string += ' AND Program_Major_Concentration__c IN :academicInterestValues ';
+        }
+
         query_string += filterQuery(filters);
         query_string += ' ORDER BY Primary_School_College_for_Assignment__c, Degree__c, Program_Name_on_Application__c ';
         List<Program__c> programs = Database.query(query_string);

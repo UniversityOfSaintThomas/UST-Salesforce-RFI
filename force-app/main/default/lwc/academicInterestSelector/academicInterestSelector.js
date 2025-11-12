@@ -9,10 +9,10 @@
  * - Uses custom dual-listbox UI
  */
 
-import { LightningElement, api, wire, track } from 'lwc';
-import { getRecord, updateRecord, getRecordNotifyChange } from 'lightning/uiRecordApi';
-import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import { refreshApex } from '@salesforce/apex';
+import {LightningElement, api, wire, track} from 'lwc';
+import {getRecord, updateRecord, getRecordNotifyChange} from 'lightning/uiRecordApi';
+import {ShowToastEvent} from 'lightning/platformShowToastEvent';
+import {refreshApex} from '@salesforce/apex';
 import getProgramsWithShortCodes from '@salesforce/apex/rfiFormController.getProgramsWithShortCodes';
 import ACADEMIC_INTERESTS_FIELD from '@salesforce/schema/RFI_Controller__c.Academic_Interests_To_Display__c';
 import ID_FIELD from '@salesforce/schema/RFI_Controller__c.Id';
@@ -45,10 +45,10 @@ export default class AcademicInterestSelector extends LightningElement {
     schoolCollege;
     wiredRecordResult;
 
-    @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
+    @wire(getRecord, {recordId: '$recordId', fields: FIELDS})
     wiredRFIController(result) {
         this.wiredRecordResult = result;
-        const { error, data } = result;
+        const {error, data} = result;
 
         if (data) {
             this.academicLevel = data.fields.Academic_Level__c?.value;
@@ -143,7 +143,7 @@ export default class AcademicInterestSelector extends LightningElement {
                     !selectedSet.has(p.value)
                 );
                 if (hasUnselectedItems) {
-                    result.push({ ...prog, key: `avail-${prog.key}` });
+                    result.push({...prog, key: `avail-${prog.key}`});
                 }
             } else if (prog.is_group && prog.group_level === 2) {
                 // Degree header
@@ -157,11 +157,11 @@ export default class AcademicInterestSelector extends LightningElement {
                     !selectedSet.has(p.value)
                 );
                 if (hasUnselectedItems) {
-                    result.push({ ...prog, key: `avail-${prog.key}` });
+                    result.push({...prog, key: `avail-${prog.key}`});
                 }
             } else if (!selectedSet.has(prog.value)) {
                 // Program item (not selected)
-                result.push({ ...prog, key: `avail-${prog.key}` });
+                result.push({...prog, key: `avail-${prog.key}`});
             }
         }
 
@@ -188,7 +188,7 @@ export default class AcademicInterestSelector extends LightningElement {
                     selectedSet.has(p.value)
                 );
                 if (hasSelectedItems) {
-                    result.push({ ...prog, key: `selected-${prog.key}` });
+                    result.push({...prog, key: `selected-${prog.key}`});
                 }
             } else if (prog.is_group && prog.group_level === 2) {
                 // Degree header
@@ -202,11 +202,11 @@ export default class AcademicInterestSelector extends LightningElement {
                     selectedSet.has(p.value)
                 );
                 if (hasSelectedItems) {
-                    result.push({ ...prog, key: `selected-${prog.key}` });
+                    result.push({...prog, key: `selected-${prog.key}`});
                 }
             } else if (selectedSet.has(prog.value)) {
                 // Program item (selected)
-                result.push({ ...prog, key: `selected-${prog.key}` });
+                result.push({...prog, key: `selected-${prog.key}`});
             }
         }
 
@@ -385,14 +385,14 @@ export default class AcademicInterestSelector extends LightningElement {
             fields[ID_FIELD.fieldApiName] = this.recordId;
             fields[ACADEMIC_INTERESTS_FIELD.fieldApiName] = this.selectedValues.join(';');
 
-            const recordInput = { fields };
+            const recordInput = {fields};
 
             // Update the record
             await updateRecord(recordInput);
 
             // Notify Lightning Data Service that this record has changed
             console.log('Notifying LDS of record change for recordId:', this.recordId);
-            await getRecordNotifyChange([{ recordId: this.recordId }]);
+            await getRecordNotifyChange([{recordId: this.recordId}]);
 
             // Refresh the wired data
             await refreshApex(this.wiredRecordResult);
@@ -430,14 +430,14 @@ export default class AcademicInterestSelector extends LightningElement {
             fields[ID_FIELD.fieldApiName] = this.recordId;
             fields[ACADEMIC_INTERESTS_FIELD.fieldApiName] = this.selectedValues.join(';');
 
-            const recordInput = { fields };
+            const recordInput = {fields};
 
             // Update the record
             await updateRecord(recordInput);
 
             // Notify Lightning Data Service that this record has changed
             console.log('Notifying LDS of record change (quiet save) for recordId:', this.recordId);
-            await getRecordNotifyChange([{ recordId: this.recordId }]);
+            await getRecordNotifyChange([{recordId: this.recordId}]);
 
             // Refresh the wired data
             await refreshApex(this.wiredRecordResult);
