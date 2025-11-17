@@ -4,6 +4,7 @@
 
 import {api, LightningElement, track, wire} from 'lwc';
 import {getFieldValue, getRecord} from 'lightning/uiRecordApi';
+import {refreshApex} from '@salesforce/apex';
 import getRFIForm from '@salesforce/apex/rfiFormController.getRFIForm';
 import submitRFILead from '@salesforce/apex/rfiFormController.submitRFILead';
 import getStateProvince from '@salesforce/apex/rfiFormController.getStateProvince';
@@ -11,11 +12,17 @@ import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 import {NavigationMixin, CurrentPageReference} from 'lightning/navigation';
 import RFI_CONTROLLER_NAME from '@salesforce/schema/RFI_Controller__c.Name';
 import RFI_CONTROLLER_ID from '@salesforce/schema/RFI_Controller__c.Id';
+import RFI_CONTROLLER_FIELDS_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Fields_to_Display__c';
+import RFI_CONTROLLER_FIELDS_ORDER from '@salesforce/schema/RFI_Controller__c.Fields_to_Display_Order__c';
+import RFI_CONTROLLER_ACADEMIC_INTERESTS from '@salesforce/schema/RFI_Controller__c.Academic_Interests_To_Display__c';
 import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
 
 const RFI_CONTROLLER_FIELDS = [
     RFI_CONTROLLER_NAME,
-    RFI_CONTROLLER_ID
+    RFI_CONTROLLER_ID,
+    RFI_CONTROLLER_FIELDS_TO_DISPLAY,
+    RFI_CONTROLLER_FIELDS_ORDER,
+    RFI_CONTROLLER_ACADEMIC_INTERESTS
 ];
 
 export default class RfiForm extends NavigationMixin(LightningElement) {
@@ -43,6 +50,15 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     // Internal property to store controller name from record (not the @api property)
     _controllerNameFromRecord;
 
+    // Store wired results for refreshApex
+    wiredRecordResult;
+    wiredFormResult;
+
+    // Track previous values to detect changes
+    _lastFieldsToDisplay;
+    _lastFieldsOrder;
+    _lastAcademicInterests;
+
     @wire(CurrentPageReference)
     setCurrentPageReference(pageRef) {
         this.currentPageReference = pageRef;
@@ -53,11 +69,46 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     @wire(getRecord, {recordId: "$recordId", fields: RFI_CONTROLLER_FIELDS})
-    rfiControllerInfo({error, data}) {
+    rfiControllerInfo(result) {
+        this.wiredRecordResult = result;
+        const {error, data} = result;
+
         if (error) {
-            console.log(error);
+            console.log('Error fetching RFI Controller record:', error);
         } else if (data) {
             this._controllerNameFromRecord = getFieldValue(data, RFI_CONTROLLER_NAME);
+
+            // Get field values for change detection
+            const newFieldsToDisplay = getFieldValue(data, RFI_CONTROLLER_FIELDS_TO_DISPLAY);
+            const newFieldsOrder = getFieldValue(data, RFI_CONTROLLER_FIELDS_ORDER);
+            const newAcademicInterests = getFieldValue(data, RFI_CONTROLLER_ACADEMIC_INTERESTS);
+
+            // Check if this is an update (not initial load)
+            const isUpdate = this._lastFieldsToDisplay !== undefined ||
+                           this._lastFieldsOrder !== undefined ||
+                           this._lastAcademicInterests !== undefined;
+
+            // Check if any relevant fields have changed
+            const hasChanges = isUpdate && (
+                newFieldsToDisplay !== this._lastFieldsToDisplay ||
+                newFieldsOrder !== this._lastFieldsOrder ||
+                newAcademicInterests !== this._lastAcademicInterests
+            );
+
+            if (hasChanges) {
+                console.log('🔄 RFI Controller record updated - refreshing form data');
+                console.log('Fields to Display changed:', this._lastFieldsToDisplay !== newFieldsToDisplay);
+                console.log('Fields Order changed:', this._lastFieldsOrder !== newFieldsOrder);
+                console.log('Academic Interests changed:', this._lastAcademicInterests !== newAcademicInterests);
+
+                // Refresh the form data
+                this.refreshFormData();
+            }
+
+            // Store current values for next comparison
+            this._lastFieldsToDisplay = newFieldsToDisplay;
+            this._lastFieldsOrder = newFieldsOrder;
+            this._lastAcademicInterests = newAcademicInterests;
         }
     }
 
@@ -69,6 +120,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
     @wire(getRFIForm, {rfiControllerName: '$effectiveControllerName'})
     wiredForm(result) {
+        this.wiredFormResult = result;
         const {data, error} = result;
         if (data) {
             this.rfiData = JSON.parse(JSON.stringify(data));
@@ -83,6 +135,42 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         } else if (error) {
             console.error('Failed to fetch RFI form data', error);
             this.rfiData = undefined;
+        }
+    }
+
+    /**
+     * Refresh the form data when RFI Controller fields change
+     * Called automatically when monitored fields are updated
+     */
+    async refreshFormData() {
+        try {
+            if (this.wiredFormResult) {
+                await refreshApex(this.wiredFormResult);
+                console.log('✅ RFI Form data refreshed successfully');
+            }
+        } catch (error) {
+            console.error('Error refreshing RFI Form data:', error);
+        }
+    }
+
+    /**
+     * Public API method to manually refresh all data
+     * Can be called programmatically by parent components if needed
+     */
+    @api
+    async refreshData() {
+        try {
+            const promises = [];
+            if (this.wiredRecordResult) {
+                promises.push(refreshApex(this.wiredRecordResult));
+            }
+            if (this.wiredFormResult) {
+                promises.push(refreshApex(this.wiredFormResult));
+            }
+            await Promise.all(promises);
+            console.log('✅ All RFI Form data refreshed successfully (manual refresh)');
+        } catch (error) {
+            console.error('Error refreshing RFI Form data:', error);
         }
     }
 
