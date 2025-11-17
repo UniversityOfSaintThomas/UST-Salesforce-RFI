@@ -114,6 +114,7 @@ public with sharing class rfiFormController {
                         Mail_Information_Label__c,
                         Receive_Text_Messages_Label__c,
                         Phone_Label__c,
+                        Home_Phone_Label__c,
                         First_Name_Label__c,
                         Last_Name_Label__c,
                         Company_Label__c,
@@ -316,7 +317,6 @@ public with sharing class rfiFormController {
                             newField.fieldLabel = 'Academic Interest (Max ' + newField.max + ' selections)';
                         }
                     }
-
                 }
                 when 'Address 1', 'Address 2', 'Address 3', 'City', 'Country', 'State', 'Zipcode' {
                     if (!addressAdded) {
@@ -352,6 +352,8 @@ public with sharing class rfiFormController {
                 }
                 when 'Expected Start Term at St Thomas' {
                     newField.fieldLabel = !String.isBlank(rfiController.Expected_Start_Term_Label__c) ? rfiController.Expected_Start_Term_Label__c : 'Expected Start Term at St. Thomas';
+                    newField.isPicklist = true;
+                    newField.picklistValues = getTerms();
                     newField.fieldLeadAPIName = 'Intended_Start_Term__c';
                 }
                 when 'High School Attended' {
@@ -386,9 +388,15 @@ public with sharing class rfiFormController {
                     newField.fieldLabel = !String.isBlank(rfiController.Receive_Text_Messages_Label__c) ? rfiController.Receive_Text_Messages_Label__c : 'I would like to receive text messages';
                     newField.isCheckbox = true;
                 }
-                when 'Phone', 'Home and Mobile Phone', 'Mobile Phone' {
+                when 'Phone' {
                     newField.fieldLabel = !String.isBlank(rfiController.Phone_Label__c) ? rfiController.Phone_Label__c : 'Phone';
                     newField.fieldLeadAPIName = 'Phone';
+                    newField.isTel = true;
+                    newField.inputType = 'tel';
+                }
+                when 'Home Phone' {
+                    newField.fieldLabel = !String.isBlank(rfiController.Home_Phone_Label__c) ? rfiController.Home_Phone_Label__c : 'Home Phone';
+                    newField.fieldLeadAPIName = 'Home_Phone__c';
                     newField.isTel = true;
                     newField.inputType = 'tel';
                 }
@@ -410,7 +418,9 @@ public with sharing class rfiFormController {
                 }
                 when 'St Thomas Colleges' {
                     newField.fieldLabel = !String.isBlank(rfiController.St_Thomas_Colleges_Label__c) ? rfiController.St_Thomas_Colleges_Label__c : 'College\\School';
-                    newField.fieldLeadAPIName = 'High_School_or_College__c';
+                    newField.isPicklist = true;
+                    newField.picklistValues = getUSTSchoolList();
+                    newField.fieldLeadAPIName = 'St_Thomas_College_School__c';
                 }
                 when 'Tell us about yourself' {
                     newField.fieldLabel = !String.isBlank(rfiController.Tell_Us_About_Yourself_Label__c) ? rfiController.Tell_Us_About_Yourself_Label__c : 'Tell us about yourself and why you are interested in this program. (150 words or less)';
@@ -609,6 +619,34 @@ public with sharing class rfiFormController {
         return opts;
     }
 
+    public static List<picklistOption> getUSTSchoolList() {
+        //Using the list of school names on School_College_To_Display__c field on RFI_Controller__c get the ids of the account ids with matching titles
+        Schema.DescribeFieldResult d = Schema.SObjectType.RFI_Controller__c.fields.getMap().get('School_College__c').getDescribe();
+        List<String> schoolNameList = new List<String>();
+        for (Schema.PicklistEntry e : d.getPicklistValues()) {
+            if (e.isActive()) {
+                schoolNameList.add(String.valueOf(e.getValue()));
+            }
+        }
+        //Query for Account records matching the school names
+        List<Account> schoolAccounts = [
+                SELECT Id, School_College_Name__c
+                FROM Account
+                WHERE School_College_Name__c IN :schoolNameList
+                AND RecordType.DeveloperName = 'University_Department'
+                AND Banner_Key__c LIKE 'STVCOLL-%'
+                AND Name != 'other'
+        ];
+        List<picklistOption> opts = new List<picklistOption>();
+        for (Account acc : schoolAccounts) {
+            picklistOption po = new picklistOption();
+            po.label = acc.School_College_Name__c;
+            po.value = acc.Id;
+            opts.add(po);
+        }
+        return opts;
+    }
+
     @AuraEnabled(Cacheable=true)
     public static List<programValues> getPrograms(String academic_level, String school_college, String academic_interest_codes, Map<String, String> filters) {
         // reference filters to avoid compiler unused-parameter warning
@@ -682,7 +720,7 @@ public with sharing class rfiFormController {
         return results;
     }
 
-    private static String filterQuery (Map<String, String> filters) {
+    private static String filterQuery(Map<String, String> filters) {
         String query_string = '';
         if (filters != null) {
             for (String filterKey : filters.keySet()) {
@@ -701,6 +739,32 @@ public with sharing class rfiFormController {
             }
         }
         return query_string;
+    }
+
+    private static List<picklistOption> getTerms() {
+        List<picklistOption> termOptions = new List<picklistOption>();
+        Date today = System.today();
+        Date today_plus_four_years = today.addYears(4);
+        // Academic Term -> intended start term
+        // limit by 4 years, show Fall and Spring
+        Map<Id, Academic_Term__c> terms = new Map<Id, Academic_Term__c>([
+                SELECT
+                        Id,
+                        Name,
+                        Term_Start_Date__c
+                FROM Academic_Term__c
+                WHERE Term_Start_Date__c >= :today
+                AND Term_Start_Date__c <= :today_plus_four_years
+                AND (Name LIKE 'Fall%' OR Name LIKE 'Spring%')
+                ORDER BY Term_Start_Date__c
+        ]);
+        for (Academic_Term__c term : terms.values()) {
+            picklistOption po = new picklistOption();
+            po.label = term.Name;
+            po.value = String.valueOf(term.Id);
+            termOptions.add(po);
+        }
+        return termOptions;
     }
 
     /**
@@ -746,7 +810,7 @@ public with sharing class rfiFormController {
             query_string += ' AND Program_Major_Concentration__c IN :academicCodes ';
         }
 
-        if(String.isBlank(school_college) && String.isBlank(academic_interest_codes)) {
+        if (String.isBlank(school_college) && String.isBlank(academic_interest_codes)) {
             //Scope programs to only those with Program_Major_Concentration__c that ar in the available values of the Academic_Interests_To_Display__c field on active RFI_Controller__c
             //Get the values from Academic_Interests_To_Display__c field
             Schema.DescribeFieldResult d = Schema.SObjectType.RFI_Controller__c.fields.getMap().get('Academic_Interests_To_Display__c').getDescribe();

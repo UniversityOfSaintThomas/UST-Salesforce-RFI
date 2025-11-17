@@ -4,25 +4,18 @@
 
 import {api, LightningElement, track, wire} from 'lwc';
 import {getFieldValue, getRecord} from 'lightning/uiRecordApi';
-import {refreshApex} from '@salesforce/apex';
 import getRFIForm from '@salesforce/apex/rfiFormController.getRFIForm';
 import submitRFILead from '@salesforce/apex/rfiFormController.submitRFILead';
 import getStateProvince from '@salesforce/apex/rfiFormController.getStateProvince';
 import {ShowToastEvent} from 'lightning/platformShowToastEvent';
-import {NavigationMixin} from 'lightning/navigation';
+import {NavigationMixin, CurrentPageReference} from 'lightning/navigation';
 import RFI_CONTROLLER_NAME from '@salesforce/schema/RFI_Controller__c.Name';
 import RFI_CONTROLLER_ID from '@salesforce/schema/RFI_Controller__c.Id';
-import FIELDS_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Fields_to_Display__c';
-import FIELDS_TO_DISPLAY_ORDER from '@salesforce/schema/RFI_Controller__c.Fields_to_Display_Order__c';
-import ACADEMIC_INTERESTS_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Academic_Interests_To_Display__c';
 import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
 
 const RFI_CONTROLLER_FIELDS = [
     RFI_CONTROLLER_NAME,
-    RFI_CONTROLLER_ID,
-    FIELDS_TO_DISPLAY,
-    FIELDS_TO_DISPLAY_ORDER,
-    ACADEMIC_INTERESTS_TO_DISPLAY
+    RFI_CONTROLLER_ID
 ];
 
 export default class RfiForm extends NavigationMixin(LightningElement) {
@@ -38,65 +31,44 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @track cantFindSchool;
     @track iHaveAQuestion;
 
-    controllerName;
     rfiData;
     fields = [];
     values = {};
     countryOptions = [];
     saving = false;
 
-    // Store wired results for refreshing
-    wiredRecordResult;
-    wiredFormResult;
+    // Store the current page reference for URL parameters
+    currentPageReference;
 
-    // Private properties to track field changes
-    _lastFieldsToDisplay;
-    _lastFieldsOrder;
-    _lastAcademicInterests;
+    // Internal property to store controller name from record (not the @api property)
+    _controllerNameFromRecord;
 
-    // reactive country used to wire server-side subdivisions
-    connectedCallback() {
-        this.controllerName = this.rfiControllerName;
+    @wire(CurrentPageReference)
+    setCurrentPageReference(pageRef) {
+        this.currentPageReference = pageRef;
     }
 
-    @wire(getRecord, {recordId: '$recordId', fields: RFI_CONTROLLER_FIELDS})
-    wiredRecord(result) {
-        this.wiredRecordResult = result;
-        const {data, error} = result;
-        if (data) {
-            const newControllerName = getFieldValue(data, RFI_CONTROLLER_NAME);
-            const newFieldsToDisplay = getFieldValue(data, FIELDS_TO_DISPLAY);
-            const newFieldsOrder = getFieldValue(data, FIELDS_TO_DISPLAY_ORDER);
-            const newAcademicInterests = getFieldValue(data, ACADEMIC_INTERESTS_TO_DISPLAY);
-            // Check if this is an update (not initial load)
-            const isUpdate = this._lastFieldsToDisplay !== undefined ||
-                this._lastFieldsOrder !== undefined ||
-                this._lastAcademicInterests !== undefined;
+    connectedCallback() {
 
-            // Check if any relevant fields have changed
-            const hasChanges = isUpdate && (
-                newFieldsToDisplay !== this._lastFieldsToDisplay ||
-                newFieldsOrder !== this._lastFieldsOrder ||
-                newAcademicInterests !== this._lastAcademicInterests
-            );
+    }
 
-            // Always update tracking variables
-            this._lastFieldsToDisplay = newFieldsToDisplay;
-            this._lastFieldsOrder = newFieldsOrder;
-            this._lastAcademicInterests = newAcademicInterests;
-
-            // Update controllerName to trigger form refresh
-            if (newControllerName !== this.controllerName || hasChanges) {
-                this.controllerName = newControllerName;
-            }
-        } else if (error) {
-            console.error('Error loading RFI Controller record:', error);
+    @wire(getRecord, {recordId: "$recordId", fields: RFI_CONTROLLER_FIELDS})
+    rfiControllerInfo({error, data}) {
+        if (error) {
+            console.log(error);
+        } else if (data) {
+            this._controllerNameFromRecord = getFieldValue(data, RFI_CONTROLLER_NAME);
         }
     }
 
-    @wire(getRFIForm, {rfiControllerName: '$controllerName'})
+    // Getter to determine which controller name to use
+    // Priority: 1) @api property set by parent, 2) value from record
+    get effectiveControllerName() {
+        return this.rfiControllerName || this._controllerNameFromRecord;
+    }
+
+    @wire(getRFIForm, {rfiControllerName: '$effectiveControllerName'})
     wiredForm(result) {
-        this.wiredFormResult = result;
         const {data, error} = result;
         if (data) {
             this.rfiData = JSON.parse(JSON.stringify(data));
@@ -106,7 +78,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             this.countryOptions = this.rfiData.countryOptions;
             this.filterValues = this.rfiData.filterValues;
             this.programValues = this.rfiData.programValues;
-            //this.stateOptions = this.rfiData.stateOptions;
+            this.stateOptions = this.rfiData.stateOptions;
             this.cantFindSchool = this.rfiData.cantFindSchool;
         } else if (error) {
             console.error('Failed to fetch RFI form data', error);
@@ -191,11 +163,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     handleCheckboxChange = (event) => {
-        console.log('Checkbox change event:', JSON.stringify(event, null, 2));
-        console.log('Checkbox change event target:', JSON.stringify(event.target, null, 2));
-        console.log('Checkbox change event detail:', JSON.stringify(event.detail, null, 2));
-        console.log('Checkbox name:', event.target.name);
-        console.log('Checkbox checked:', event.target.checked);
         const name = event.target.name;
         const checked = event.target.checked;
         if (name.toLowerCase() === 'has_question__c') {
@@ -234,6 +201,12 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         if (field.fieldLeadAPIName) {
             this.lead = {...this.lead, [field.fieldLeadAPIName]: value};
         }
+    }
+
+    handlePicklistChange = (event) => {
+        const selectedValue = event.detail.value
+        const name = event.target.name;
+        this.lead = {...this.lead, [name]: selectedValue};
     }
 
     handleAddressChange = async (event) => {
@@ -279,6 +252,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 input.reportValidity(); // Display the error message
             } else {
                 //apply the values to lead object using input name for field api name
+                console.log(`Input valid: ${input.name} = ${input.value}`);
                 this.lead[input.name] = input.value; // Update lead object with valid input values
             }
         });
@@ -286,6 +260,23 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         if (isValid) {
             //save lead using submitRFILead apex method
             this.saving = true;
+
+            // Add UTM and tracking parameters to lead before submission
+            this.lead.utm_campaign__c = this.getUrlParamValue('utm_campaign');
+            this.lead.utm_medium__c = this.getUrlParamValue('utm_medium');
+            this.lead.utm_source__c = this.getUrlParamValue('utm_source');
+            this.lead.utm_content__c = this.getUrlParamValue('utm_content');
+            this.lead.utm_term__c = this.getUrlParamValue('utm_term');
+            this.lead.utm_id__c = this.getUrlParamValue('utm_id');
+            this.lead.utm_creative_format__c = this.getUrlParamValue('utm_creative_format');
+            this.lead.utm_marketing_topic__c = this.getUrlParamValue('utm_marketing_topic');
+            this.lead.utm_source_platform__c = this.getUrlParamValue('utm_source_platform');
+            this.lead.gclid__c = this.getUrlParamValue('gclid');
+            this.lead.nominator_contact__c = this.getUrlParamValue('sfcid');
+            this.lead.Lead_Website__c = window.location.href;
+            this.lead.Lead_Website_Referrer__c = document.referrer;
+
+            console.log('Submitting lead:', JSON.stringify(this.lead, null, 2));
             await submitRFILead({
                 leadRecord: this.lead
             }).then((result) => {
@@ -317,19 +308,29 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     /**
-     * Public method to refresh the form data
-     * Can be called programmatically if needed
+     * Gets url parameters to populate utm fields
+     * Checks CurrentPageReference state first (for standard Salesforce pages),
+     * then falls back to URL parsing (for Lightning Out on external sites)
+     * @param {string} param - The parameter name to extract
+     * @returns {string} - The parameter value or empty string
      */
-    @api
-    async refreshData() {
+    getUrlParamValue(param) {
         try {
-            // Refresh both the record and form data
-            await Promise.all([
-                refreshApex(this.wiredRecordResult),
-                refreshApex(this.wiredFormResult)
-            ]);
-        } catch (error) {
-            console.error('Error refreshing RFI Form data:', error);
+            // First try CurrentPageReference state (Lightning-native)
+            const pageState = this.currentPageReference?.state || {};
+            if (pageState[param]) {
+                return pageState[param];
+            }
+            if (pageState['c__' + param]) {
+                return pageState['c__' + param];
+            }
+
+            // Fallback to URL parsing (Lightning Out compatibility)
+            const urlObject = new URL(window.location.href);
+            return urlObject.searchParams.get(param) || urlObject.searchParams.get('c__' + param) || '';
+        } catch (e) {
+            console.error('Error parsing URL parameter:', e);
+            return '';
         }
     }
 

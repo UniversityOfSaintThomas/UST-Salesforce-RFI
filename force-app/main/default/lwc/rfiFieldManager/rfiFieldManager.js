@@ -1,5 +1,5 @@
 import { LightningElement, api, track, wire } from 'lwc';
-import { getRecord, updateRecord, getFieldValue, getRecordNotifyChange } from 'lightning/uiRecordApi';
+import { getRecord, updateRecord, getFieldValue, notifyRecordUpdateAvailable } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
@@ -25,6 +25,7 @@ import I_HAVE_A_QUESTION_LABEL from '@salesforce/schema/RFI_Controller__c.I_Have
 import LAST_NAME_LABEL from '@salesforce/schema/RFI_Controller__c.Last_Name_Label__c';
 import MAIL_INFORMATION_LABEL from '@salesforce/schema/RFI_Controller__c.Mail_Information_Label__c';
 import PHONE_LABEL from '@salesforce/schema/RFI_Controller__c.Phone_Label__c';
+import HOME_PHONE_LABEL from '@salesforce/schema/RFI_Controller__c.Home_Phone_Label__c';
 import RECEIVE_TEXT_MESSAGES_LABEL from '@salesforce/schema/RFI_Controller__c.Receive_Text_Messages_Label__c';
 import SCHOLARSHIP_OF_INTEREST_LABEL from '@salesforce/schema/RFI_Controller__c.Scholarship_Of_Interest_Label__c';
 import ST_THOMAS_COLLEGES_LABEL from '@salesforce/schema/RFI_Controller__c.St_Thomas_Colleges_Label__c';
@@ -54,6 +55,7 @@ const FIELDS = [
     LAST_NAME_LABEL,
     MAIL_INFORMATION_LABEL,
     PHONE_LABEL,
+    HOME_PHONE_LABEL,
     RECEIVE_TEXT_MESSAGES_LABEL,
     SCHOLARSHIP_OF_INTEREST_LABEL,
     ST_THOMAS_COLLEGES_LABEL,
@@ -91,7 +93,8 @@ export default class RfiFieldManager extends LightningElement {
         'Expected Start Term at St Thomas': EXPECTED_START_TERM_LABEL,
         'High School Attended': HIGH_SCHOOL_ATTENDED_LABEL,
         'High School Graduation Year': HIGH_SCHOOL_GRADUATION_YEAR_LABEL,
-        'Home and Mobile Phone': PHONE_LABEL,
+        'Phone': PHONE_LABEL,
+        'Home Phone': HOME_PHONE_LABEL,
         'How did you hear about us': HOW_DID_YOU_HEAR_ABOUT_US_LABEL,
         'I have a question': I_HAVE_A_QUESTION_LABEL,
         'I will apply to St Thomas as a': APPLY_TO_ST_THOMAS_AS_LABEL,
@@ -136,9 +139,10 @@ export default class RfiFieldManager extends LightningElement {
         'Last Name': 'Last Name',
         'Mail Information': 'Mail Information',
         'Phone': 'Phone',
+        'Home Phone': 'Home Phone',
         'Receive Text Messages': 'Receive Text Messages',
         'Scholarship of Interest': 'Scholarship of Interest',
-        'St Thomas Colleges': 'St Thomas Colleges',
+        'St Thomas Colleges': 'College\\School',
         'State': 'State',
         'Tell us about yourself': 'Tell us about yourself and why you are interested in this program. (150 words or less)',
         'Timeline to Enrollment': 'Timeline to Enrollment',
@@ -200,11 +204,6 @@ export default class RfiFieldManager extends LightningElement {
         const fieldsToDisplay = this.getFieldValue(FIELDS_TO_DISPLAY_FIELD);
         const requiredFields = this.getFieldValue(REQUIRED_FIELDS_FIELD);
 
-        console.log('=== INITIALIZING FIELD ITEMS ===');
-        console.log('Fields_to_Display_Order__c (custom order):', fieldsOrder);
-        console.log('Fields_to_Display__c (selected fields):', fieldsToDisplay);
-        console.log('Required_Fields__c:', requiredFields);
-
         // Parse the selected fields
         const selectedFields = fieldsToDisplay ? fieldsToDisplay.split(';') : [];
 
@@ -251,11 +250,6 @@ export default class RfiFieldManager extends LightningElement {
         // Default First Name and Last Name to required if not explicitly in the required fields string
         const isFirstNameRequired = required.includes('First Name') || !requiredFields || requiredFields.indexOf('First Name') === -1;
         const isLastNameRequired = required.includes('Last Name') || !requiredFields || requiredFields.indexOf('Last Name') === -1;
-
-        console.log('Final ordered fields:', orderedFields);
-        console.log('Required fields array:', required);
-        console.log('First Name required:', isFirstNameRequired);
-        console.log('Last Name required:', isLastNameRequired);
 
         this.fieldItems = orderedFields.map((field, index) => {
             let fieldIsRequired;
@@ -437,16 +431,11 @@ export default class RfiFieldManager extends LightningElement {
             .map(item => item.fieldName)
             .join(';');
 
+        // Filter out First Name and Last Name from required fields too (they're not in the picklist)
         const requiredFields = this.fieldItems
-            .filter(item => item.isRequired)
+            .filter(item => item.isRequired && item.fieldName !== 'First Name' && item.fieldName !== 'Last Name')
             .map(item => item.fieldName)
             .join(';');
-
-        console.log('=== SAVING FIELDS ===');
-        console.log('Current fieldItems order:', this.fieldItems.map(f => f.fieldName));
-        console.log('Saving to Fields_to_Display_Order__c:', fieldsToDisplayOrder);
-        console.log('Saving to Fields_to_Display__c (without First/Last Name):', fieldsToDisplay);
-        console.log('Saving to Required_Fields__c:', requiredFields);
 
         const fields = {
             Id: this.recordId,
@@ -465,12 +454,6 @@ export default class RfiFieldManager extends LightningElement {
 
         const recordInput = { fields };
 
-        console.log('Field API Names being updated:');
-        console.log('  - Fields_to_Display__c:', FIELDS_TO_DISPLAY_FIELD.fieldApiName);
-        console.log('  - Fields_to_Display_Order__c:', FIELDS_TO_DISPLAY_ORDER_FIELD.fieldApiName);
-        console.log('  - Required_Fields__c:', REQUIRED_FIELDS_FIELD.fieldApiName);
-        console.log('Complete record input object:', JSON.stringify(recordInput, null, 2));
-
         updateRecord(recordInput)
             .then((result) => {
                 console.log('✅ Save successful! Result:', result);
@@ -479,7 +462,7 @@ export default class RfiFieldManager extends LightningElement {
                 // Notify Lightning Data Service that this record has changed
                 // This will trigger a refresh in any other components watching this record
                 console.log('Notifying LDS of record change for recordId:', this.recordId);
-                return getRecordNotifyChange([{ recordId: this.recordId }]);
+                return notifyRecordUpdateAvailable([{ recordId: this.recordId }]);
             })
             .then(() => {
                 console.log('✅ LDS notification complete');

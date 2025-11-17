@@ -26,19 +26,18 @@
                                     >
                                     </lightning-combobox>
                                 </template>
-
                                 <!-- Address -->
                                 <template lwc:elseif={f.isAddress}>
                                     <div class="slds-m-bottom_x-small slds-form-element">
                                         <lightning-input-address
-                                                show-address-lookup
-                                                address-lookup-label="Address Lookup"
                                                 address-label={f.fieldLabel}
                                                 street-label="Street"
                                                 city-label="City"
                                                 province-label="State/Province"
                                                 postal-code-label="Zip/Postal Code"
                                                 country-label="Country"
+                                                country="US"
+                                                hide-province="true"
                                                 required={f.isRequired}
                                                 data-field-name={f.name}
                                                 country-options={countryOptions}
@@ -95,7 +94,6 @@
                                             label={f.fieldLabel}
                                             name={f.fieldLeadAPIName}
                                             options={programValues}
-                                            value={programInterestValues}
                                             required={f.isRequired}
                                             max={f.max}
                                             onchange={handleAcademicInterestChange}
@@ -107,9 +105,9 @@
                                     <lightning-combobox
                                             label={f.fieldLabel}
                                             name={f.fieldLeadAPIName}
-                                            value={f.value}
                                             options={f.picklistValues}
                                             required={f.isRequired}
+                                            onchange={handlePicklistChange}
                                     >
                                     </lightning-combobox>
                                 </template>
@@ -120,7 +118,6 @@
                                             label={f.fieldLabel}
                                             name={f.fieldLeadAPIName}
                                             options={f.picklistValues}
-                                            value={f.value}
                                             required={f.isRequired}
                                             max={f.max}
                                             onchange={handleMultiSelectChange}
@@ -134,7 +131,6 @@
                                             message-when-pattern-mismatch="Please enter a valid phone number (e.g., (123)456-7890, +1234567890, 123-456-7890)."
                                             label={f.fieldLabel}
                                             name={f.fieldLeadAPIName}
-                                            value={f.value}
                                             required={f.isRequired}
                                     >
                                     </lightning-input>
@@ -147,7 +143,6 @@
                                             message-when-pattern-mismatch="Please enter a valid email add."
                                             label={f.fieldLabel}
                                             name={f.fieldLeadAPIName}
-                                            value={f.value}
                                             required={f.isRequired}
                                     >
                                     </lightning-input>
@@ -157,7 +152,6 @@
                                     <lightning-textarea
                                             label={f.fieldLabel}
                                             name={f.fieldLeadAPIName}
-                                            value={f.value}
                                             required={f.isRequired}
                                     >
                                     </lightning-textarea>
@@ -191,7 +185,6 @@
                                             type={f.inputType}
                                             label={f.fieldLabel}
                                             name={f.fieldLeadAPIName}
-                                            value={f.value}
                                             required={f.isRequired}
                                     >
                                     </lightning-input>
