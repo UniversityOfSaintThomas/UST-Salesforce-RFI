@@ -442,6 +442,7 @@ public with sharing class rfiFormController {
                 }
                 when 'I would like to receive text messages' {
                     newField.fieldLabel = !String.isBlank(rfiController.Receive_Text_Messages_Label__c) ? rfiController.Receive_Text_Messages_Label__c : 'I would like to receive text messages';
+                    newField.fieldLeadAPIName = 'Text_Message_Opt_In__c';
                     newField.isCheckbox = true;
                 }
                 when 'Phone' {
