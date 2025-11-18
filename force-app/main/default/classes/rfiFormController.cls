@@ -272,6 +272,7 @@ public with sharing class rfiFormController {
         //Reorder fieldsToDisplay based on Fields_to_Display_Order__c
         List<String> orderedFields = new List<String>();
         if (!String.isBlank(rfiController.Fields_to_Display_Order__c)) {
+            // Use the explicit order from Fields_to_Display_Order__c
             List<String> orderList = rfiController.Fields_to_Display_Order__c.split(';');
             for (String orderedField : orderList) {
                 if (fieldsToDisplay.contains(orderedField) && !orderedFields.contains(orderedField)) {
@@ -285,6 +286,61 @@ public with sharing class rfiFormController {
                 }
             }
             fieldsToDisplay = orderedFields;
+        } else {
+            // LEGACY SUPPORT: Apply hard-coded order from old requestForInformationForm component
+            // This ensures backward compatibility with existing RFI Controller records created
+            // before Fields_to_Display_Order__c was implemented
+            List<String> legacyOrder = new List<String>{
+                'I will apply to St Thomas as a',
+                'I will apply to St Thomas Law as a',
+                'St Thomas Colleges',
+                'Citizenship',
+                'Academic Interest',
+                'Title',
+                'First Name',
+                'Last Name',
+                'Email',
+                'Home and Mobile Phone',
+                'Home Phone',
+                'Phone',
+                'I would like to receive text messages',
+                'Birthdate',
+                'Employer',
+                'Company',
+                'Expected Start Term at St Thomas',
+                'Timeline to Enrollment',
+                'When do you want to start school',
+                'High School Attended',
+                'High School Graduation Year',
+                'Address 1',
+                'Address 2',
+                'Address 3',
+                'City',
+                'State',
+                'Country',
+                'Zipcode',
+                'Mail me information',
+                'How did you hear about us',
+                'Scholarship of Interest',
+                'Tell us about yourself',
+                'I have a question'
+            };
+
+            // Apply legacy order
+            for (String legacyField : legacyOrder) {
+                if (fieldsToDisplay.contains(legacyField) && !orderedFields.contains(legacyField)) {
+                    orderedFields.add(legacyField);
+                }
+            }
+            // Add any remaining fields not in legacy order (in case new fields were added)
+            for (String fieldName : fieldsToDisplay) {
+                if (!orderedFields.contains(fieldName)) {
+                    orderedFields.add(fieldName);
+                }
+            }
+            fieldsToDisplay = orderedFields;
+
+            System.debug('Applied legacy field order for backward compatibility');
         }
 
         for (String fieldName : fieldsToDisplay) {
