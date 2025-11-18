@@ -18,7 +18,6 @@ lightning-icon {
 /* Dual Listbox Layout - Horizontal flex, fills width */
 .dual-listbox-layout {
     display: flex;
-    gap: 0.5rem;
     width: 100%;
 }
 
