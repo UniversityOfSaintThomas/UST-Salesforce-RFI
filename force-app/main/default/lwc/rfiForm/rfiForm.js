@@ -96,11 +96,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             );
 
             if (hasChanges) {
-                console.log('🔄 RFI Controller record updated - refreshing form data');
-                console.log('Fields to Display changed:', this._lastFieldsToDisplay !== newFieldsToDisplay);
-                console.log('Fields Order changed:', this._lastFieldsOrder !== newFieldsOrder);
-                console.log('Academic Interests changed:', this._lastAcademicInterests !== newAcademicInterests);
-
                 // Refresh the form data
                 this.refreshFormData();
             }
@@ -146,7 +141,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         try {
             if (this.wiredFormResult) {
                 await refreshApex(this.wiredFormResult);
-                console.log('✅ RFI Form data refreshed successfully');
             }
         } catch (error) {
             console.error('Error refreshing RFI Form data:', error);
@@ -168,7 +162,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 promises.push(refreshApex(this.wiredFormResult));
             }
             await Promise.all(promises);
-            console.log('✅ All RFI Form data refreshed successfully (manual refresh)');
         } catch (error) {
             console.error('Error refreshing RFI Form data:', error);
         }
@@ -255,7 +248,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         const checked = event.target.checked;
         if (name.toLowerCase() === 'has_question__c') {
             this.iHaveAQuestion = checked;
-            console.log('iHaveAQuestion updated to:', this.iHaveAQuestion);
         }
     }
 
