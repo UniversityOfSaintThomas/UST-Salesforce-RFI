@@ -26,17 +26,67 @@ export default class MultiSelectPillsGroupable extends LightningElement {
     rendered = false;
 
     @api checkValidity() {
-        let isSelfValidated = false;
-        isSelfValidated = [...this.template.querySelectorAll("input")].reduce((validSoFar, inputField) => {
-            inputField.reportValidity();
-            let validCheck = validSoFar && inputField.checkValidity();
-            if (!validCheck) {
-                this.template.querySelector('.slds-form-element').classList.add('slds-has-error');
-                this.displayError = true;
+        // Check if required and no values selected
+        if (this.required && this.selectedPills.length === 0) {
+            return false;
+        }
+        return true;
+    }
+
+    @api reportValidity() {
+        const isValid = this.checkValidity();
+        const formElement = this.template.querySelector('.slds-form-element');
+
+        if (!isValid) {
+            // Show error state
+            if (formElement) {
+                formElement.classList.add('slds-has-error');
             }
-            return validSoFar && inputField.checkValidity();
-        }, true);
-        return isSelfValidated;
+            this.displayError = true;
+        } else {
+            // Clear error state
+            if (formElement) {
+                formElement.classList.remove('slds-has-error');
+            }
+            this.displayError = false;
+        }
+
+        return isValid;
+    }
+
+    /**
+     * Reset the multi-select component to its initial state
+     * Clears all selected values and pills
+     */
+    @api reset() {
+        // Clear the internal value
+        this.value_ = '';
+
+        // Deselect all options
+        if (this.options_ && Array.isArray(this.options_)) {
+            this.options_ = this.options_.map(option => ({
+                ...option,
+                selected: false,
+                selectedAt: undefined
+            }));
+        }
+
+        // Clear selected pills
+        this.selectedPills = [];
+
+        // Clear the hidden input value
+        const idInput = this.template.querySelector("input");
+        if (idInput) {
+            idInput.value = '';
+        }
+
+        // Clear any error state
+        this.displayError = false;
+        this.displayHelp = false;
+        const formElement = this.template.querySelector('.slds-form-element');
+        if (formElement) {
+            formElement.classList.remove('slds-has-error');
+        }
     }
 
     @api get options() {
@@ -118,6 +168,10 @@ export default class MultiSelectPillsGroupable extends LightningElement {
         return this.isOpen ? ' slds-is-open ' + style : style;
     }
 
+    get ariaExpanded() {
+        return this.isOpen ? 'true' : 'false';
+    }
+
     get hintText() {
         if (this.selectedPills.length === 0) {
             if (this.hint) {
@@ -153,6 +207,77 @@ export default class MultiSelectPillsGroupable extends LightningElement {
         event.stopPropagation();
         this.closeDropdown();
         window.removeEventListener('click', this.handleClose);
+    }
+
+    /**
+     * Handle keyboard events for accessibility
+     * Enter/Space: Toggle dropdown open/close
+     * Escape: Close dropdown
+     * Arrow Down: Open dropdown or move to next option
+     * Arrow Up: Move to previous option
+     */
+    handleKeyDown(event) {
+        const key = event.key;
+
+        switch (key) {
+            case 'Enter':
+            case ' ':
+                event.preventDefault();
+                event.stopPropagation();
+                if (this.isOpen) {
+                    this.closeDropdown();
+                    window.removeEventListener('click', this.handleClose);
+                } else {
+                    this.openDropdown();
+                    window.addEventListener('click', this.handleClose);
+                }
+                break;
+            case 'Escape':
+                event.preventDefault();
+                if (this.isOpen) {
+                    this.closeDropdown();
+                    window.removeEventListener('click', this.handleClose);
+                }
+                break;
+            case 'ArrowDown':
+                event.preventDefault();
+                if (!this.isOpen) {
+                    this.openDropdown();
+                    window.addEventListener('click', this.handleClose);
+                }
+                break;
+            case 'ArrowUp':
+                event.preventDefault();
+                if (!this.isOpen) {
+                    this.openDropdown();
+                    window.addEventListener('click', this.handleClose);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Handle focus event for visual feedback
+     */
+    handleFocus() {
+        // Add focus styling if needed
+        const comboboxDiv = this.template.querySelector('#combobox-div-1');
+        if (comboboxDiv) {
+            comboboxDiv.classList.add('slds-has-focus');
+        }
+    }
+
+    /**
+     * Handle blur event
+     */
+    handleBlur() {
+        // Remove focus styling
+        const comboboxDiv = this.template.querySelector('#combobox-div-1');
+        if (comboboxDiv) {
+            comboboxDiv.classList.remove('slds-has-focus');
+        }
     }
 
     handlePillRemove(event) {
@@ -226,7 +351,14 @@ export default class MultiSelectPillsGroupable extends LightningElement {
         let valueString = values.length > 0 ? values.join(";") : "";
         let idInput = this.template.querySelector("input");
         idInput.value = valueString;
-        idInput.closest('.slds-form-element').classList.remove('slds-has-error');
+
+        // Clear error state when user makes a selection
+        const formElement = idInput.closest('.slds-form-element');
+        if (formElement) {
+            formElement.classList.remove('slds-has-error');
+        }
+        this.displayError = false;
+
         this.template.querySelector("input").value = valueString;
         const eventDetail = {value: valueString.split(';')};
         const changeEvent = new CustomEvent('change', {detail: eventDetail});

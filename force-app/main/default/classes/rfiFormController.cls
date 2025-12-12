@@ -16,6 +16,8 @@ public with sharing class rfiFormController {
         @AuraEnabled public String academicInterestCodes { get; set; }
         @AuraEnabled public Boolean cantFindSchool { get; set; }
         @AuraEnabled public Boolean iHaveAQuestion { get; set; }
+        @AuraEnabled public String redirectUrl { get; set; }
+        @AuraEnabled public Boolean redirectAfterSubmission { get; set; }
     }
 
     public class rfiField {
@@ -136,6 +138,8 @@ public with sharing class rfiFormController {
         leadAndRfi.academicInterestCodes = rfiController.Academic_Interests_To_Display__c;
         leadAndRfi.cantFindSchool = false;
         leadAndRfi.iHaveAQuestion = false;
+        leadAndRfi.redirectUrl = rfiController.Redirect_URL__c;
+        leadAndRfi.redirectAfterSubmission = rfiController.Redirect_After_Form_Submission__c;
 
         //Populate Lead record with rfi_controller defined values and defaults
         leadAndRfi.leadRecord = new Lead();

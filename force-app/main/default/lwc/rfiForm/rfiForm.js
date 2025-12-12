@@ -38,6 +38,10 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @track cantFindSchool;
     @track iHaveAQuestion;
 
+    // Redirect settings from RFI Controller
+    redirectUrl;
+    redirectAfterSubmission;
+
     rfiData;
     fields = [];
     values = {};
@@ -127,6 +131,8 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             this.programValues = this.rfiData.programValues;
             this.stateOptions = this.rfiData.stateOptions;
             this.cantFindSchool = this.rfiData.cantFindSchool;
+            this.redirectUrl = this.rfiData.redirectUrl;
+            this.redirectAfterSubmission = this.rfiData.redirectAfterSubmission;
         } else if (error) {
             console.error('Failed to fetch RFI form data', error);
             this.rfiData = undefined;
@@ -346,6 +352,32 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             }
         });
 
+        // Validate multi-select components
+        const allMultiSelects = this.template.querySelectorAll('c-multi-select-pills-groupable');
+        allMultiSelects.forEach(multiSelect => {
+            if (multiSelect.reportValidity && !multiSelect.reportValidity()) {
+                isValid = false;
+            }
+        });
+
+        // Validate comboboxes
+        const allComboboxes = this.template.querySelectorAll('lightning-combobox');
+        allComboboxes.forEach(combobox => {
+            if (!combobox.checkValidity()) {
+                isValid = false;
+                combobox.reportValidity();
+            }
+        });
+
+        // Validate textareas
+        const allTextareas = this.template.querySelectorAll('lightning-textarea');
+        allTextareas.forEach(textarea => {
+            if (!textarea.checkValidity()) {
+                isValid = false;
+                textarea.reportValidity();
+            }
+        });
+
         if (isValid) {
             //save lead using submitRFILead apex method
             this.saving = true;
@@ -377,7 +409,14 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                         variant: 'success'
                     })
                 );
-            }).error((error) => {
+                // Redirect if configured on the RFI Controller
+                if (this.redirectAfterSubmission && this.redirectUrl) {
+                    window.open(this.redirectUrl, '_self');
+                } else {
+                    // No redirect - reset the form for new submission
+                    this.resetForm();
+                }
+            }).catch((error) => {
                 console.error('Error submitting lead:', error);
                 this.dispatchEvent(
                     new ShowToastEvent({
@@ -388,8 +427,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 );
             }).finally(() => {
                 this.saving = false;
-                //reset the form for new submission and allow submission again
-                this.lead = {};
             });
         } else {
             console.log('Form is invalid. Please correct the errors.');
@@ -425,5 +462,66 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
     get hasData() {
         return Array.isArray(this.fields) && this.fields.length > 0;
+    }
+
+    /**
+     * Reset the form to allow for another submission
+     * Clears all user-entered values while preserving controller defaults
+     */
+    resetForm() {
+        // Reset the lead object to defaults from rfiData
+        this.lead = this.rfiData?.leadRecord ? JSON.parse(JSON.stringify(this.rfiData.leadRecord)) : {};
+
+        // Reset tracked form state
+        this.cantFindSchool = false;
+        this.iHaveAQuestion = false;
+        this.selectedCountry = 'US';
+        this.values = {};
+
+        // Reset filter values if they exist
+        if (this.filterValues) {
+            for (const key of Object.keys(this.filterValues)) {
+                this.filterValues[key] = '';
+            }
+        }
+
+        // Reset field values in the fields array
+        if (Array.isArray(this.fields)) {
+            this.fields = this.fields.map(field => ({
+                ...field,
+                value: undefined,
+                selectedLabel: undefined
+            }));
+        }
+
+        // Clear all input elements in the template
+        const allInputs = this.template.querySelectorAll('lightning-input');
+        allInputs.forEach(input => {
+            if (input.type === 'checkbox') {
+                input.checked = false;
+            } else {
+                input.value = '';
+            }
+        });
+
+        // Clear textarea elements
+        const allTextareas = this.template.querySelectorAll('lightning-textarea');
+        allTextareas.forEach(textarea => {
+            textarea.value = '';
+        });
+
+        // Clear combobox/picklist elements
+        const allComboboxes = this.template.querySelectorAll('lightning-combobox');
+        allComboboxes.forEach(combobox => {
+            combobox.value = '';
+        });
+
+        // Reset multi-select components
+        const allMultiSelects = this.template.querySelectorAll('c-multi-select-pills-groupable');
+        allMultiSelects.forEach(multiSelect => {
+            if (multiSelect.reset) {
+                multiSelect.reset();
+            }
+        });
     }
 }
