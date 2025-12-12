@@ -24,7 +24,6 @@ public with sharing class rfiFormController {
         @AuraEnabled public String fieldLabel { get; set; }
         @AuraEnabled public String fieldLeadAPIName { get; set; }
         @AuraEnabled public List<picklistOption> picklistValues { get; set; }
-        @AuraEnabled public String inputType { get; set; }
         @AuraEnabled public Boolean isVisible { get; set; }
         @AuraEnabled public Boolean isRequired { get; set; }
         @AuraEnabled public Boolean isSelected { get; set; }
@@ -393,7 +392,6 @@ public with sharing class rfiFormController {
                 when 'Birthdate' {
                     newField.fieldLabel = !String.isBlank(rfiController.Birthdate_Label__c) ? rfiController.Birthdate_Label__c : 'Birthday (MM/DD/YYYY)';
                     newField.fieldLeadAPIName = 'Birthdate';
-                    newField.inputType = 'date';
                     newField.isDate = true;
                 }
                 when 'Citizenship' {
@@ -404,7 +402,6 @@ public with sharing class rfiFormController {
                     newField.fieldLabel = !String.isBlank(rfiController.Email_Label__c) ? rfiController.Email_Label__c : 'Email';
                     newField.fieldLeadAPIName = 'Email';
                     newField.isEmail = true;
-                    newField.inputType = 'email';
                 }
                 when 'Employer' {
                     newField.fieldLabel = !String.isBlank(rfiController.Employer_Label__c) ? rfiController.Employer_Label__c : 'Employer';
@@ -453,13 +450,11 @@ public with sharing class rfiFormController {
                     newField.fieldLabel = !String.isBlank(rfiController.Phone_Label__c) ? rfiController.Phone_Label__c : 'Phone';
                     newField.fieldLeadAPIName = 'Phone';
                     newField.isTel = true;
-                    newField.inputType = 'tel';
                 }
                 when 'Home Phone' {
                     newField.fieldLabel = !String.isBlank(rfiController.Home_Phone_Label__c) ? rfiController.Home_Phone_Label__c : 'Home Phone';
                     newField.fieldLeadAPIName = 'Home_Phone__c';
                     newField.isTel = true;
-                    newField.inputType = 'tel';
                 }
                 when 'First Name' {
                     newField.fieldLabel = !String.isBlank(rfiController.First_Name_Label__c) ? rfiController.First_Name_Label__c : 'First Name';
@@ -557,7 +552,6 @@ public with sharing class rfiFormController {
                         newField.isStaticContent = true;
                     } else if (qMap.containsKey('isEmail') && (Boolean) qMap.get('isEmail')) {
                         newField.isEmail = true;
-                        newField.inputType = 'email';
                     } else if (qMap.containsKey('isTextBox') && (Boolean) qMap.get('isTextBox')) {
                         newField.isTextarea = true;
                     }
