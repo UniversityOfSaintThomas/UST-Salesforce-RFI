@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Admit_Type__c</fullName>
+    <deprecated>false</deprecated>
+    <description>The category the potential applicant falls into for recruitment segmentation (Ex: New student, Transfer student, etc.)</description>
+    <inlineHelpText>Select the type of student for recruitment segmentation.</inlineHelpText>
+    <label>Applicant Type</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Transfer</fullName>
+                <default>false</default>
+                <label>Transfer</label>
+            </value>
+            <value>
+                <fullName>First-Year</fullName>
+                <default>false</default>
+                <label>First-Year</label>
+            </value>
+            <value>
+                <fullName>Graduate</fullName>
+                <default>false</default>
+                <label>Graduate</label>
+            </value>
+            <value>
+                <fullName>Non-Degree</fullName>
+                <default>false</default>
+                <label>Non-Degree</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
+            <value>
+                <fullName>Nursing</fullName>
+                <default>false</default>
+                <label>Nursing</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
