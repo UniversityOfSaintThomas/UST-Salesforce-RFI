@@ -22,6 +22,7 @@ export default class MultiSelectPillsGroupable extends LightningElement {
     @track isOpen = false;
     @track displayHelp = false;
     @track displayError = false;
+    @track focusedOptionIndex = -1; // Track focused option for keyboard navigation
 
     rendered = false;
 
@@ -97,6 +98,26 @@ export default class MultiSelectPillsGroupable extends LightningElement {
         this.rendered = false;
         this.parseOptions(options);
         this.parseValue(this.value_);
+    }
+
+    /**
+     * Get options with focused state for display
+     * Computes which option should be highlighted based on focusedOptionIndex
+     */
+    get displayOptions() {
+        if (!this.options_ || this.options_.length === 0) {
+            return [];
+        }
+
+        let selectableIndex = 0;
+        return this.options_.map(option => {
+            if (option.is_group) {
+                return { ...option, focused: false };
+            }
+            const isFocused = selectableIndex === this.focusedOptionIndex;
+            selectableIndex++;
+            return { ...option, focused: isFocused };
+        });
     }
 
     @api get value() {
@@ -185,10 +206,12 @@ export default class MultiSelectPillsGroupable extends LightningElement {
 
     openDropdown() {
         this.isOpen = true;
+        this.focusedOptionIndex = -1;
     }
 
     closeDropdown() {
         this.isOpen = false;
+        this.focusedOptionIndex = -1;
     }
 
     /* following pair of functions are a clever way of handling a click outside,
@@ -211,7 +234,7 @@ export default class MultiSelectPillsGroupable extends LightningElement {
 
     /**
      * Handle keyboard events for accessibility
-     * Enter/Space: Toggle dropdown open/close
+     * Enter/Space: Toggle dropdown open/close or select focused option
      * Escape: Close dropdown
      * Arrow Down: Open dropdown or move to next option
      * Arrow Up: Move to previous option
@@ -219,17 +242,29 @@ export default class MultiSelectPillsGroupable extends LightningElement {
     handleKeyDown(event) {
         const key = event.key;
 
+        // Get selectable options (non-group items)
+        const selectableOptions = this.options_?.filter(opt => !opt.is_group) || [];
+
         switch (key) {
             case 'Enter':
             case ' ':
                 event.preventDefault();
                 event.stopPropagation();
-                if (this.isOpen) {
+                if (this.isOpen && this.focusedOptionIndex >= 0) {
+                    // Select the focused option
+                    const focusedOption = selectableOptions[this.focusedOptionIndex];
+                    if (focusedOption) {
+                        this._selectOption(focusedOption.value, focusedOption.selected);
+                    }
+                } else if (this.isOpen) {
                     this.closeDropdown();
                     window.removeEventListener('click', this.handleClose);
+                    this.focusedOptionIndex = -1;
                 } else {
                     this.openDropdown();
                     window.addEventListener('click', this.handleClose);
+                    this.focusedOptionIndex = 0;
+                    this._scrollToFocusedOption();
                 }
                 break;
             case 'Escape':
@@ -237,6 +272,7 @@ export default class MultiSelectPillsGroupable extends LightningElement {
                 if (this.isOpen) {
                     this.closeDropdown();
                     window.removeEventListener('click', this.handleClose);
+                    this.focusedOptionIndex = -1;
                 }
                 break;
             case 'ArrowDown':
@@ -244,18 +280,89 @@ export default class MultiSelectPillsGroupable extends LightningElement {
                 if (!this.isOpen) {
                     this.openDropdown();
                     window.addEventListener('click', this.handleClose);
+                    this.focusedOptionIndex = 0;
+                } else if (this.focusedOptionIndex < selectableOptions.length - 1) {
+                    this.focusedOptionIndex++;
                 }
+                this._scrollToFocusedOption();
                 break;
             case 'ArrowUp':
                 event.preventDefault();
                 if (!this.isOpen) {
                     this.openDropdown();
                     window.addEventListener('click', this.handleClose);
+                    this.focusedOptionIndex = selectableOptions.length - 1;
+                } else if (this.focusedOptionIndex > 0) {
+                    this.focusedOptionIndex--;
+                }
+                this._scrollToFocusedOption();
+                break;
+            case 'Tab':
+                // Close dropdown on tab and allow normal tab behavior
+                if (this.isOpen) {
+                    this.closeDropdown();
+                    window.removeEventListener('click', this.handleClose);
+                    this.focusedOptionIndex = -1;
                 }
                 break;
             default:
                 break;
         }
+    }
+
+    /**
+     * Select an option programmatically (used by keyboard navigation)
+     */
+    _selectOption(value, currentlySelected) {
+        let num_values = this.selectedValues().length;
+        let max_reached = false;
+        this.displayHelp = false;
+
+        if (this.max) {
+            if (num_values + 1 > this.max && !currentlySelected) {
+                max_reached = true;
+            }
+        }
+
+        this.options_.forEach(option => {
+            if (option.value === value) {
+                if (currentlySelected === true) {
+                    option.selected = false;
+                    option.selectedAt = undefined;
+                } else if (!max_reached) {
+                    option.selected = true;
+                    option.selectedAt = Date.now();
+                }
+            }
+        });
+
+        if (max_reached) {
+            this.displayHelp = true;
+        }
+
+        this.selectedPills = this.getPillArray();
+        this.dispatchChangeEvent();
+    }
+
+    /**
+     * Scroll the dropdown to keep the focused option visible
+     */
+    _scrollToFocusedOption() {
+        // Use setTimeout to allow DOM to update
+        setTimeout(() => {
+            const listbox = this.template.querySelector('.slds-listbox');
+            if (!listbox) return;
+
+            // Get all the item components
+            const items = this.template.querySelectorAll('c-multi-select-pills-groupable-item');
+            if (items && items.length > this.focusedOptionIndex && this.focusedOptionIndex >= 0) {
+                const focusedItem = items[this.focusedOptionIndex];
+                if (focusedItem) {
+                    // Scroll the item into view within the dropdown
+                    focusedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
+        }, 0);
     }
 
     /**
