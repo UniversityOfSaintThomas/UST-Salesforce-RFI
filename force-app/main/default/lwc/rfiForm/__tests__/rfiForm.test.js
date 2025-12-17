@@ -1,7 +1,7 @@
 import { createElement } from 'lwc';
 import RfiForm from 'c/rfiForm';
 import getRFIForm from '@salesforce/apex/rfiFormController.getRFIForm';
-import submitRFILead from '@salesforce/apex/rfiFormController.submitRFILead';
+import submitRFILead from '@salesforce/apex/rfiFormController.submitRfiInteraction';
 
 jest.mock('@salesforce/apex/rfiFormController.getRFIForm');
 jest.mock('@salesforce/apex/rfiFormController.submitRFILead');

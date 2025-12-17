@@ -72,16 +72,16 @@ when 'I would like to receive text messages' {
 handleCheckboxChange = (event) => {
     const name = event.target.name;
     const checked = event.target.checked;
-    
+
     // Special handling for "I have a question" to show/hide dependent field
     if (name && name.toLowerCase() === 'has_question__c') {
         this.iHaveAQuestion = checked;
         console.log('iHaveAQuestion updated to:', this.iHaveAQuestion);
     }
-    
+
     // ✅ ADDED: Store checkbox value in lead object if field name is provided
     if (name) {
-        this.lead = {...this.lead, [name]: checked};
+        this.interaction = {...this.interaction, [name]: checked};
         console.log(`Checkbox ${name} updated to:`, checked);
     }
 }

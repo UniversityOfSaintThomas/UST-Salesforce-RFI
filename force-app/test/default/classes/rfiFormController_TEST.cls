@@ -103,7 +103,7 @@ private class rfiFormController_TEST {
         l.PostalCode = '55105';
 
         Test.startTest();
-        Id leadId = rfiFormController.submitRFILead(l);
+        Id leadId = rfiFormController.submitRfiInteraction(l);
         Test.stopTest();
 
         System.assertNotEquals(null, leadId, 'Lead Id should be returned');

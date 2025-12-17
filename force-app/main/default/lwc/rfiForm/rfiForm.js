@@ -6,8 +6,7 @@ import {api, LightningElement, track, wire} from 'lwc';
 import {getFieldValue, getRecord} from 'lightning/uiRecordApi';
 import {refreshApex} from '@salesforce/apex';
 import getRFIForm from '@salesforce/apex/rfiFormController.getRFIForm';
-import submitRFILead from '@salesforce/apex/rfiFormController.submitRFILead';
-import getStateProvince from '@salesforce/apex/rfiFormController.getStateProvince';
+import submitRfiInteraction from '@salesforce/apex/rfiFormController.submitRfiInteraction';
 import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 import {NavigationMixin, CurrentPageReference} from 'lightning/navigation';
 import RFI_CONTROLLER_NAME from '@salesforce/schema/RFI_Controller__c.Name';
@@ -49,7 +48,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @api recordId;
     @api googleApiKey;
 
-    @track lead = {};
+    @track interaction = {};
     @track selectedCountry = 'US';
     @track stateOptions = [];
     @track filterValues;
@@ -89,7 +88,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     _urlParamsCache = {};
 
     // Debounced handlers (initialized in connectedCallback)
-    _debouncedAddressChange;
     _debouncedProgramFilterChange;
 
     @wire(CurrentPageReference)
@@ -101,7 +99,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
     connectedCallback() {
         // Initialize debounced handlers
-        this._debouncedAddressChange = debounce(this._processAddressChange.bind(this), 150);
         this._debouncedProgramFilterChange = debounce(this._processProgramFilterChange.bind(this), 200);
     }
 
@@ -181,7 +178,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this._invalidateCaches();
 
         console.log('RFI fields loaded:', this._fields.length, 'fields');
-        this.lead = this.rfiData.leadRecord || {};
+        this.interaction = this.rfiData.interaction || {};
         this.countryOptions = this.rfiData.countryOptions;
         this.filterValues = this.rfiData.filterValues;
         this.programValues = this.rfiData.programValues;
@@ -220,7 +217,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         // Process fields with unique keys only - boolean type flags come from Apex
         this._processedFieldsCache = this._fields.map((field, index) => ({
             ...field,
-            key: field.fieldLeadAPIName || field.name || `field-${index}`
+            key: field.fieldInteractionAPIName || field.name || `field-${index}`
         }));
 
         this._processedFieldsCacheKey = cacheKey;
@@ -277,7 +274,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         // If checkbox is checked, clear the school lookup value
         if (this.cantFindSchool) {
             // Clear High_School_or_College__c field
-            this.lead = {...this.lead, High_School_or_College__c: ''};
+            this.interaction = {...this.interaction, High_School_or_College__c: ''};
         }
     }
 
@@ -285,7 +282,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     handleManualSchoolEntry = (event) => {
         const schoolName = event.target.value;
         // Map to High_School_or_College__c field
-        this.lead = {...this.lead, High_School_or_College__c: schoolName};
+        this.interaction = {...this.interaction, High_School_or_College__c: schoolName};
     }
 
     // Handler for the reusable lookup component's custom event 'valueselected'
@@ -313,11 +310,11 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         // update values map
         this.values = {...this.values, [name]: selectedId};
 
-        // find field and update its value and the lead SObject mapping
+        // find field and update its value and the interaction SObject mapping
         const idx = this._fields.findIndex(f => f.name === name);
         if (idx > -1) {
             const field = this._fields[idx];
-            const api = (field.fieldLeadAPIName || '').trim();
+            const api = (field.fieldInteractionAPIName || '').trim();
             const updated = {...field, value: selectedId, selectedLabel: display};
             this._fields = [
                 ...this._fields.slice(0, idx),
@@ -329,7 +326,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             this._processedFieldsCacheKey = null;
 
             if (api) {
-                this.lead = {...this.lead, [api]: selectedId};
+                this.interaction = {...this.interaction, [api]: selectedId};
             }
         }
     }
@@ -340,9 +337,9 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         if (!Array.isArray(value)) return;
         if (value.length > 0) {
             //map to Major_Program__c, Major_Program_2__c, Major_Program_3__c, Major_Program_4__c
-            this.lead = {
-                ...this.lead,
-                Major_Program__c: value[0] || '',
+            this.interaction = {
+                ...this.interaction,
+                Major_Program_1__c: value[0] || '',
                 Major_Program_2__c: value[1] || '',
                 Major_Program_3__c: value[2] || '',
                 Major_Program_4__c: value[3] || ''
@@ -359,9 +356,9 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             this.iHaveAQuestion = checked;
         }
 
-        // Store checkbox value in lead object if field name is provided
+        // Store checkbox value in interaction object if field name is provided
         if (name) {
-            this.lead = {...this.lead, [name]: checked};
+            this.interaction = {...this.interaction, [name]: checked};
         }
     }
 
@@ -426,53 +423,51 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this._processedFieldsCache = null;
         this._processedFieldsCacheKey = null;
 
-        if (field.fieldLeadAPIName) {
-            this.lead = {...this.lead, [field.fieldLeadAPIName]: value};
+        if (field.fieldInteractionAPIName) {
+            this.interaction = {...this.interaction, [field.fieldInteractionAPIName]: value};
         }
     }
 
     handlePicklistChange = (event) => {
         const selectedValue = event.detail.value;
         const name = event.target.name;
-        this.lead = {...this.lead, [name]: selectedValue};
+        this.interaction = {...this.interaction, [name]: selectedValue};
     }
 
-    // Public handler that uses debounced internal method
+    // Store address for processing on submit
     handleAddressChange = (event) => {
         const address = event.detail;
         if (!address) return;
         this._pendingAddress = address;
-        this._debouncedAddressChange();
     }
 
-    // Internal debounced handler for address changes
-    async _processAddressChange() {
+    /**
+     * Process stored address and add to interaction
+     * Called during form submission
+     */
+    _processAddressForSubmit() {
         const address = this._pendingAddress;
         if (!address) return;
 
-        // If country changes then update state options
-        if (address.country && address.country !== this.selectedCountry) {
-            this.selectedCountry = address.country;
-            this.stateOptions = await getStateProvince(
-                {countryCode: this.selectedCountry}
-            );
-        }
-
         // Get country label from options
         let countryLabel = '';
+        let stateLabel = '';
         if (address.country) {
             const countryOption = this.countryOptions.find(option => option.value === address.country);
             countryLabel = countryOption ? countryOption.label : address.country;
         }
+        if(address.province) {
+            const stateOption = this.stateOptions.find(option => option.value === address.province);
+            stateLabel = stateOption ? stateOption.label : address.province;
+        }
 
-        this.lead = {
-            ...this.lead,
-            Street: address.street || '',
-            City: address.city || '',
-            State: address.state || '',
-            PostalCode: address.postalCode || '',
-            Country: countryLabel || '',
-            CountryCode: address.country || ''
+        this.interaction = {
+            ...this.interaction,
+            Mailing_Street__c: address.street || '',
+            Mailing_City__c: address.city || '',
+            Mailing_Country__c: countryLabel || '',
+            Mailing_State__c: stateLabel || '',
+            Mailing_Postal_Code__c: address.postalCode || ''
         };
     }
 
@@ -508,14 +503,14 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             const allInputs = this.template.querySelectorAll('lightning-input');
             allInputs.forEach(input => {
                 if (input.name) {
-                    this.lead[input.name] = input.type === 'checkbox' ? input.checked : input.value;
+                    this.interaction[input.name] = input.type === 'checkbox' ? input.checked : input.value;
                 }
             });
 
             const allTextareas = this.template.querySelectorAll('lightning-textarea');
             allTextareas.forEach(textarea => {
                 if (textarea.name) {
-                    this.lead[textarea.name] = textarea.value;
+                    this.interaction[textarea.name] = textarea.value;
                 }
             });
         }
@@ -524,29 +519,29 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     /**
-     * Add UTM and tracking parameters to lead
+     * Add UTM and tracking parameters to Interaction
      */
     _addTrackingParams() {
         const trackingFields = [
-            { leadField: 'utm_campaign__c', param: 'utm_campaign' },
-            { leadField: 'utm_medium__c', param: 'utm_medium' },
-            { leadField: 'utm_source__c', param: 'utm_source' },
-            { leadField: 'utm_content__c', param: 'utm_content' },
-            { leadField: 'utm_term__c', param: 'utm_term' },
-            { leadField: 'utm_id__c', param: 'utm_id' },
-            { leadField: 'utm_creative_format__c', param: 'utm_creative_format' },
-            { leadField: 'utm_marketing_topic__c', param: 'utm_marketing_topic' },
-            { leadField: 'utm_source_platform__c', param: 'utm_source_platform' },
-            { leadField: 'gclid__c', param: 'gclid' },
-            { leadField: 'nominator_contact__c', param: 'sfcid' }
+            { interactionField: 'utm_campaign__c', param: 'utm_campaign' },
+            { interactionField: 'utm_medium__c', param: 'utm_medium' },
+            { interactionField: 'utm_source__c', param: 'utm_source' },
+            { interactionField: 'utm_content__c', param: 'utm_content' },
+            { interactionField: 'utm_term__c', param: 'utm_term' },
+            { interactionField: 'utm_id__c', param: 'utm_id' },
+            { interactionField: 'utm_creative_format__c', param: 'utm_creative_format' },
+            { interactionField: 'utm_marketing_topic__c', param: 'utm_marketing_topic' },
+            { interactionField: 'utm_source_platform__c', param: 'utm_source_platform' },
+            //{ interactionField: 'gclid__c', param: 'gclid' },
+            { interactionField: 'Nominator_Contact__c', param: 'sfcid' }
         ];
 
-        for (const { leadField, param } of trackingFields) {
-            this.lead[leadField] = this.getUrlParamValue(param);
+        for (const { interactionField, param } of trackingFields) {
+            this.interaction[interactionField] = this.getUrlParamValue(param);
         }
 
-        this.lead.Lead_Website__c = window.location.href;
-        this.lead.Lead_Website_Referrer__c = document.referrer;
+        this.interaction.Lead_Website__c = window.location.href;
+        this.interaction.Lead_Website_Referrer__c = document.referrer;
     }
 
     async handleSubmit() {
@@ -556,14 +551,17 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         if (isValid) {
             this.saving = true;
 
+            // Process address data before submit
+            this._processAddressForSubmit();
+
             // Add UTM and tracking parameters
             this._addTrackingParams();
 
-            console.log('Submitting lead:', JSON.stringify(this.lead, null, 2));
+            console.log('Submitting Interaction:', JSON.stringify(this.interaction, null, 2));
 
             try {
-                const result = await submitRFILead({ leadRecord: this.lead });
-                console.log('Lead submission result:', result);
+                const result = await submitRfiInteraction({ interaction: this.interaction });
+                console.log('Interaction submission result:', result);
 
                 this.dispatchEvent(
                     new ShowToastEvent({
@@ -581,7 +579,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                     this.resetForm();
                 }
             } catch (error) {
-                console.error('Error submitting lead:', error);
+                console.error('Error submitting Interaction:', error);
                 this.dispatchEvent(
                     new ShowToastEvent({
                         title: 'Error',
@@ -644,8 +642,8 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
      * Clears all user-entered values while preserving controller defaults
      */
     resetForm() {
-        // Reset the lead object to defaults from rfiData
-        this.lead = this.rfiData?.leadRecord ? JSON.parse(JSON.stringify(this.rfiData.leadRecord)) : {};
+        // Reset the interaction object to defaults from rfiData
+        this.interaction = this.rfiData?.interaction ? JSON.parse(JSON.stringify(this.rfiData.interaction)) : {};
 
         // Reset tracked form state
         this.cantFindSchool = false;
