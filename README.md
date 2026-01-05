@@ -10,20 +10,27 @@ This project provides a Lightning Web Component (LWC) for collecting Requests fo
 - **rfiFieldManager** - Field configuration management
 
 ### Admin Configuration Tools
-- **academicInterestSelector** - NEW! Admin tool to configure which academic programs appear on public RFI forms
+- **academicInterestSelector** - Admin tool to configure which academic programs appear on public RFI forms
   - Shows ALL available programs grouped by school/degree
   - Displays full program names (not codes)
   - Auto-saves to `Academic_Interests_To_Display__c`
   - No selection limits for administrators
-  - 📚 [Complete Documentation](docs/README.md)
+- **rfiAdditionalQuestions** - Manage additional questions for Lead objects
+- **rfiAdditionalQuestionsInteractions** - NEW! Manage additional questions for Interaction objects
+  - Modern drag-and-drop sorting
+  - Modal-based editing
+  - Toast notifications
+  - 🚀 [Setup Guide](docs/ACTION_REQUIRED_FIELD_CREATION.md)
+  - 📚 [Complete Documentation](docs/INTERACTION_QUESTIONS_INDEX.md)
 
 ## Documentation
 
-All documentation for the Academic Interest Selector component is located in the **[docs](docs/)** folder:
+📁 **All documentation is located in the [docs](docs/) folder**
 
-- **[Quick Start Guide](docs/QUICK_REFERENCE.md)** - One-page overview
-- **[Admin Tool Guide](docs/ADMIN_TOOL_GUIDE.md)** - Complete admin documentation
-- **[Deployment Guide](docs/DEPLOYMENT_READY.md)** - Deployment instructions
+### Quick Links
+- **[Quick Start](docs/QUICK_START.md)** - Getting started
+- **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Deployment instructions
+- **[Interaction Questions Setup](docs/ACTION_REQUIRED_FIELD_CREATION.md)** - New component setup (2 min)
 - **[Full Documentation Index](docs/README.md)** - Complete documentation listing
 
 ## Development

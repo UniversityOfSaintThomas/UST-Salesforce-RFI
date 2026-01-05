@@ -1,281 +1,208 @@
-# Academic Interest Selector - Documentation Index
+# UST Salesforce RFI - Documentation
 
-## 📚 Documentation Overview
+**Last Updated:** January 5, 2026
 
-This folder contains comprehensive documentation for the **Academic Interest Selector** component - an admin configuration tool for RFI Controllers.
+---
+
+## 📚 Quick Navigation
+
+### Getting Started
+- **[Main Guide](MAIN_GUIDE.md)** - Complete overview of all components and features
+- **[Interaction Questions Setup](INTERACTION_QUESTIONS_SETUP.md)** - NEW component setup and user guide
+- **[Troubleshooting](TROUBLESHOOTING.md)** - Solutions to common issues
+
+### Component-Specific Guides
+- **[Academic Interest Selector](ADMIN_TOOL_GUIDE.md)** - Configure academic programs on RFI forms
+- **[RFI Interaction Questions](RFI_INTERACTION_QUESTIONS_GUIDE.md)** - Technical deep-dive
 
 ---
 
 ## 🚀 Quick Start
 
-**New to this component? Start here:**
-
-1. **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - One-page quick start guide
-2. **[DEPLOYMENT_READY.md](DEPLOYMENT_READY.md)** - Deployment status and commands
-3. **[ADMIN_TOOL_GUIDE.md](ADMIN_TOOL_GUIDE.md)** - Complete admin user guide
-
----
-
-## 📖 Documentation by Category
-
-### Getting Started
-
-| Document | Description | Audience |
-|----------|-------------|----------|
-| **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | One-page quick start with essential info | Everyone |
-| **[DEPLOYMENT_READY.md](DEPLOYMENT_READY.md)** | Current deployment status and commands | Developers |
-| **[QUICK_START_ACADEMIC_SELECTOR.md](QUICK_START_ACADEMIC_SELECTOR.md)** | Step-by-step deployment guide | Developers |
-
-### User Guides
-
-| Document | Description | Audience |
-|----------|-------------|----------|
-| **[ADMIN_TOOL_GUIDE.md](ADMIN_TOOL_GUIDE.md)** | Complete admin configuration guide | Admins |
-| **[COMPONENT_UPDATE_SUMMARY.md](COMPONENT_UPDATE_SUMMARY.md)** | What changed and why | Admins/Developers |
-
-### Technical Documentation
-
-| Document | Description | Audience |
-|----------|-------------|----------|
-| **[ACADEMIC_INTEREST_SELECTOR_GUIDE.md](ACADEMIC_INTEREST_SELECTOR_GUIDE.md)** | Original technical guide (pre-redesign) | Developers |
-| **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** | Visual architecture and data flow | Developers |
-| **[SUMMARY_ACADEMIC_SELECTOR.md](SUMMARY_ACADEMIC_SELECTOR.md)** | Implementation summary | Developers |
-
-### Deployment & Issues
-
-| Document | Description | Audience |
-|----------|-------------|----------|
-| **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** | Complete deployment checklist | Developers |
-| **[FORMULA_FIELD_FIX.md](FORMULA_FIELD_FIX.md)** | Read-only formula field issue fix | Developers |
-| **[PROPERTY_FIX.md](PROPERTY_FIX.md)** | Property compatibility fix | Developers |
-| **[DEPLOYMENT_ISSUE_RESOLUTION.md](DEPLOYMENT_ISSUE_RESOLUTION.md)** | All deployment issues resolved | Developers |
-
----
-
-## 🎯 Choose Your Path
-
 ### I'm an Administrator
-**Goal:** Learn how to use the component to configure RFI forms
+**Goal:** Configure RFI forms
 
-1. Start with **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** for overview
-2. Read **[ADMIN_TOOL_GUIDE.md](ADMIN_TOOL_GUIDE.md)** for detailed instructions
-3. Check **[COMPONENT_UPDATE_SUMMARY.md](COMPONENT_UPDATE_SUMMARY.md)** to understand what it does
+1. Read [Main Guide - Components Section](MAIN_GUIDE.md#components)
+2. Use [Admin Tool Guide](ADMIN_TOOL_GUIDE.md) for academic interests
+3. See [Interaction Questions Setup](INTERACTION_QUESTIONS_SETUP.md) for custom questions
 
-### I'm a Developer (Deploying)
-**Goal:** Deploy the component successfully
+### I'm a Developer
+**Goal:** Deploy and maintain components
 
-1. Check **[DEPLOYMENT_READY.md](DEPLOYMENT_READY.md)** for current status
-2. Follow **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** step-by-step
-3. Review **[FORMULA_FIELD_FIX.md](FORMULA_FIELD_FIX.md)** and **[PROPERTY_FIX.md](PROPERTY_FIX.md)** if issues arise
-4. Use **[QUICK_START_ACADEMIC_SELECTOR.md](QUICK_START_ACADEMIC_SELECTOR.md)** for quick deployment
-
-### I'm a Developer (Understanding)
-**Goal:** Understand the architecture and implementation
-
-1. Read **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** for visual overview
-2. Review **[COMPONENT_UPDATE_SUMMARY.md](COMPONENT_UPDATE_SUMMARY.md)** for what changed
-3. Study **[SUMMARY_ACADEMIC_SELECTOR.md](SUMMARY_ACADEMIC_SELECTOR.md)** for implementation details
-4. Check **[ADMIN_TOOL_GUIDE.md](ADMIN_TOOL_GUIDE.md)** for functionality
-
-### I'm Troubleshooting
-**Goal:** Fix deployment or runtime issues
-
-1. Check **[DEPLOYMENT_ISSUE_RESOLUTION.md](DEPLOYMENT_ISSUE_RESOLUTION.md)** for resolved issues
-2. Review **[FORMULA_FIELD_FIX.md](FORMULA_FIELD_FIX.md)** if seeing formula field errors
-3. Check **[PROPERTY_FIX.md](PROPERTY_FIX.md)** if seeing property removal errors
-4. Consult troubleshooting sections in **[ADMIN_TOOL_GUIDE.md](ADMIN_TOOL_GUIDE.md)**
+1. Review [Main Guide - Deployment Section](MAIN_GUIDE.md#deployment)
+2. For interaction questions: [Interaction Questions Setup](INTERACTION_QUESTIONS_SETUP.md)
+3. Issues? Check [Troubleshooting Guide](TROUBLESHOOTING.md)
 
 ---
 
-## 📋 Document Summaries
+## 📖 Core Documentation
 
-### QUICK_REFERENCE.md
-**One-page quick start guide**
-- What the component is and does
-- How to add it to a page
-- How selections work
-- Common tasks and troubleshooting
+### 1. Main Guide (Start Here)
+**File:** [MAIN_GUIDE.md](MAIN_GUIDE.md)
 
-### DEPLOYMENT_READY.md
-**Deployment status and go/no-go decision**
-- Current deployment status
-- Issues resolved
-- Deployment commands
-- Post-deployment steps
-- Verification checklist
-
-### ADMIN_TOOL_GUIDE.md
-**Complete administrator guide**
-- Detailed feature descriptions
-- How it works
-- Use cases and scenarios
+**Contains:**
+- Overview of all components
+- Quick start for admins and developers
+- Deployment instructions
+- Architecture overview
 - Best practices
-- Troubleshooting
 
-### ARCHITECTURE_DIAGRAM.md
-**Visual diagrams and data flow**
-- Component architecture
-- Data flow diagrams
-- Storage comparison
-- Integration points
+**Read this first** to understand the entire system.
 
-### COMPONENT_UPDATE_SUMMARY.md
-**What changed from original design**
-- Purpose shift (end-user → admin tool)
-- Functionality changes
-- Updated files
-- Breaking changes
+### 2. Interaction Questions Setup
+**File:** [INTERACTION_QUESTIONS_SETUP.md](INTERACTION_QUESTIONS_SETUP.md)
 
-### DEPLOYMENT_CHECKLIST.md
-**Step-by-step deployment guide**
-- Pre-deployment verification
-- Deployment steps
-- Post-deployment configuration
-- Testing scenarios
-- Sign-off checklist
+**Contains:**
+- 5-minute setup guide (includes manual field creation)
+- Complete user guide for the new component
+- All features explained
+- Comparison with Lead questions component
+- Technical details
 
-### FORMULA_FIELD_FIX.md
-**Fix for read-only formula field issue**
-- Issue: Can't write to Program_Major_Concentration__c
-- Solution: Use Major_Code__c instead
-- Impact on component (none)
-- Test class updates
+**New component** - requires manual field setup before use.
 
-### PROPERTY_FIX.md
-**Fix for property removal issue**
-- Issue: Can't remove properties from deployed component
-- Solution: Keep properties for backward compatibility
-- Impact on functionality
-- Future cleanup steps
+### 3. Troubleshooting Guide
+**File:** [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
-### DEPLOYMENT_ISSUE_RESOLUTION.md
-**Summary of all deployment issues and fixes**
-- Both major issues documented
-- Solutions explained
+**Contains:**
+- Common issues and solutions
+- Component-specific troubleshooting
+- Deployment issues
+- Browser compatibility
+- Diagnostic commands
+
+**Start here** when encountering errors.
+
+---
+
+## 🎯 Component Guides
+
+### Academic Interest Selector
+**Primary Guide:** [ADMIN_TOOL_GUIDE.md](ADMIN_TOOL_GUIDE.md)
+
+**What it does:**
+- Allows admins to select which academic programs appear on public RFI forms
+- Dual-listbox interface with search
+- Grouped by school and degree type
+- Auto-saves selections
+
+**Quick Access:**
+- Setup: [Admin Tool Guide - Getting Started](ADMIN_TOOL_GUIDE.md#getting-started)
+- Usage: [Admin Tool Guide - Using the Component](ADMIN_TOOL_GUIDE.md#using-the-component)
+
+### RFI Additional Questions (Interactions)
+**Primary Guide:** [INTERACTION_QUESTIONS_SETUP.md](INTERACTION_QUESTIONS_SETUP.md)  
+**Technical Guide:** [RFI_INTERACTION_QUESTIONS_GUIDE.md](RFI_INTERACTION_QUESTIONS_GUIDE.md)
+
+**What it does:**
+- Manage custom questions that map to Interaction object fields
+- Modern drag-and-drop interface
+- Modal-based editing
+- Toast notifications
+
+**Quick Access:**
+- Setup: [Interaction Questions Setup - Quick Setup](INTERACTION_QUESTIONS_SETUP.md#quick-setup-5-minutes)
+- Usage: [Interaction Questions Setup - User Guide](INTERACTION_QUESTIONS_SETUP.md#user-guide)
+
+---
+
+## 🔧 Additional Resources
+
+### Deployment
+See [Main Guide - Deployment Section](MAIN_GUIDE.md#deployment) for:
+- Standard deployment commands
+- Component-specific deployment
 - Verification steps
-- Next steps
 
-### QUICK_START_ACADEMIC_SELECTOR.md
-**Quick deployment and setup guide**
-- What was created
-- How it works
-- Quick deployment commands
-- Configuration tips
-- Common issues
+### Architecture
+See [Main Guide - Architecture Section](MAIN_GUIDE.md#architecture) for:
+- Data flow diagram
+- Configuration storage details
+- JSON structure examples
 
-### SUMMARY_ACADEMIC_SELECTOR.md
-**Implementation summary**
-- High-level overview
-- Key features
-- Benefits over old approach
-- Success criteria
-
-### ACADEMIC_INTEREST_SELECTOR_GUIDE.md
-**Original technical guide (historical)**
-- Early design documentation
-- May not reflect current admin tool design
-- Kept for reference
+### Best Practices
+See [Main Guide - Best Practices Section](MAIN_GUIDE.md#best-practices) for:
+- Configuration guidelines
+- Development standards
+- Testing recommendations
 
 ---
 
-## 🔍 Quick Answers
+## 📁 File Organization
 
-### What is this component?
-An admin configuration tool that helps configure which academic programs appear on public-facing RFI forms.
-
-### Who uses it?
-RFI Controller administrators who configure public forms.
-
-### Where is it used?
-On RFI Controller record pages in Salesforce Lightning.
-
-### What does it do?
-- Shows ALL available programs (grouped by school/degree)
-- Allows unlimited selections
-- Auto-saves to Academic_Interests_To_Display__c
-- Filters programs based on Academic Level and School/College
-
-### How do I deploy it?
-```bash
-sfdx force:source:deploy -p force-app/main/default/lwc/academicInterestSelector
-```
-See **[DEPLOYMENT_READY.md](DEPLOYMENT_READY.md)** for details.
-
-### How do I use it?
-1. Add component to RFI Controller record page
-2. Open any RFI Controller record
-3. Select programs from the list
-4. Selections auto-save
-
-See **[ADMIN_TOOL_GUIDE.md](ADMIN_TOOL_GUIDE.md)** for complete instructions.
-
----
-
-## 📊 Document Statistics
-
-- **Total Documents:** 12
-- **Total Pages (estimated):** ~150
-- **Categories:** 
-  - Quick Start: 3 docs
-  - User Guides: 2 docs
-  - Technical: 3 docs
-  - Deployment: 4 docs
-
----
-
-## 🔄 Document History
-
-### October 27, 2025
-- Initial documentation created
-- Component redesigned as admin tool
-- All deployment issues resolved
-- Documentation consolidated into docs folder
-
----
-
-## 📞 Need Help?
-
-1. **Check the docs** - Most questions answered here
-2. **Search for keywords** - Use Ctrl+F in documents
-3. **Follow the path** - Use "Choose Your Path" above
-4. **Review examples** - Many docs include examples
-
----
-
-## 📁 File Structure
-
+### Active Documentation (Use These)
 ```
 docs/
-├── README.md (this file)
-├── QUICK_REFERENCE.md
-├── DEPLOYMENT_READY.md
-├── ADMIN_TOOL_GUIDE.md
-├── ARCHITECTURE_DIAGRAM.md
-├── COMPONENT_UPDATE_SUMMARY.md
-├── DEPLOYMENT_CHECKLIST.md
-├── FORMULA_FIELD_FIX.md
-├── PROPERTY_FIX.md
-├── DEPLOYMENT_ISSUE_RESOLUTION.md
-├── QUICK_START_ACADEMIC_SELECTOR.md
-├── SUMMARY_ACADEMIC_SELECTOR.md
-└── ACADEMIC_INTEREST_SELECTOR_GUIDE.md
+├── README.md (this file)               # Documentation index
+├── MAIN_GUIDE.md                       # Primary reference guide
+├── INTERACTION_QUESTIONS_SETUP.md      # New component setup
+├── TROUBLESHOOTING.md                  # Common issues & solutions
+├── ADMIN_TOOL_GUIDE.md                 # Academic Interest Selector
+└── RFI_INTERACTION_QUESTIONS_GUIDE.md  # Interaction questions technical guide
+```
+
+### Historical/Reference (Archived)
+All other .md files in this folder are historical documentation from past implementations and bug fixes. They are kept for reference but not actively maintained.
+
+To see historical docs:
+```powershell
+Get-ChildItem -Path docs -Filter "*.md" | Where-Object { $_.Name -notmatch "^(README|MAIN_GUIDE|INTERACTION_QUESTIONS_SETUP|TROUBLESHOOTING|ADMIN_TOOL_GUIDE|RFI_INTERACTION).*\.md$" }
 ```
 
 ---
 
-## 🎯 Component Status
+## 🆘 Getting Help
 
-**Current Status:** ✅ Ready for Production
+### Troubleshooting
+1. **Check [Troubleshooting Guide](TROUBLESHOOTING.md)** - Most issues covered
+2. **Browser console** - F12 for JavaScript errors  
+3. **Debug logs** - Setup → Debug Logs in Salesforce
+4. **Test in sandbox** - Reproduce in safe environment
 
-- Component: Complete
-- Tests: Passing
-- Documentation: Complete
-- Issues: Resolved
-- Deployment: Ready
+### Deployment Issues
+- See [Troubleshooting - Deployment Issues](TROUBLESHOOTING.md#deployment-issues)
+- Use targeted deploys: `cci task run deploy --path ... --org dev`
+- Avoid `cci flow run dev_org` for small changes
+
+### Component Issues
+- **Interaction Questions:** [Interaction Questions Setup - Troubleshooting](INTERACTION_QUESTIONS_SETUP.md#troubleshooting)
+- **Academic Selector:** [Admin Tool Guide - Troubleshooting](ADMIN_TOOL_GUIDE.md#troubleshooting)
+- **General:** [Troubleshooting Guide](TROUBLESHOOTING.md)
 
 ---
 
-**Last Updated:** October 27, 2025  
-**Component Version:** 2.0 (Admin Tool)  
-**Documentation Version:** 1.0
+## 📊 Documentation Status
+
+**Current (Active):**
+- ✅ MAIN_GUIDE.md - Complete
+- ✅ INTERACTION_QUESTIONS_SETUP.md - Complete
+- ✅ TROUBLESHOOTING.md - Complete
+- ✅ ADMIN_TOOL_GUIDE.md - Current
+- ✅ RFI_INTERACTION_QUESTIONS_GUIDE.md - Current
+
+**Consolidated:** January 5, 2026
+- Removed redundant documentation
+- Consolidated overlapping guides
+- Archived historical bug fix docs
+- Created clear documentation hierarchy
+
+---
+
+## 🔄 Version History
+
+### 2.0 - January 5, 2026 (Consolidated)
+- Created MAIN_GUIDE.md as primary reference
+- Created INTERACTION_QUESTIONS_SETUP.md for new component
+- Created TROUBLESHOOTING.md for all issues
+- Consolidated 40+ docs into 6 core guides
+- Archived historical documentation
+
+### 1.0 - Previous
+- Multiple component-specific guides
+- Historical bug fix documentation
+- Deployment summaries per feature
+
+---
+
+**Need something not covered here?** Check the [Main Guide](MAIN_GUIDE.md) or [Troubleshooting Guide](TROUBLESHOOTING.md).
 

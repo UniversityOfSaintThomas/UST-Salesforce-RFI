@@ -69,6 +69,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>rfiAdditionalQuestionsInteractions</componentName>
+                <identifier>c_rfiAdditionalQuestionsInteractions</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>rfiFieldManager</componentName>
                 <identifier>c_rfiFieldManager</identifier>
             </componentInstance>
