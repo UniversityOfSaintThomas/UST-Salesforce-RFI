@@ -169,6 +169,25 @@ public with sharing class rfiFormController {
             }
         }
 
+        // Populate Major/Program lookup if configured
+        if (String.isNotBlank(rfiController.Academic_Interests_To_Display__c)) {
+            System.debug('Populating Academic Interest lookup for codes: ' + rfiController.Academic_Interests_To_Display__c);
+            //Query for the id of the Program record to populate the lookup properly
+            List<Program__c> programRecords = [
+                    SELECT Id
+                    FROM Program__c
+                    WHERE Program_Major_Concentration__c IN :rfiController.Academic_Interests_To_Display__c.split(';')
+                    AND RecordType.DeveloperName = 'Recruitment_Program'
+                    AND Active__c = TRUE
+            ];
+            System.debug('Found ' + programRecords.size() + ' matching Program records for Academic Interest codes.');
+            if (programRecords.size() > 0) {
+                interactionAndRfi.interaction.Major_Program_1__c = programRecords[0].Id;
+            }
+        }
+
+        System.debug(JSON.serializePretty(interactionAndRfi.interaction));
+
         //Get country picklist options from Lead
         List<picklistOption> countries = new List<picklistOption>();
         List<Schema.PicklistEntry> countryValues = Lead.CountryCode.getDescribe().getPicklistValues();
@@ -944,7 +963,7 @@ public with sharing class rfiFormController {
         return results;
     }
 
-//Submit the RFI Lead record
+    //Submit the RFI Lead record
     @AuraEnabled
     public static Id submitRfiInteraction(Interaction__c interaction) {
         // Sanitize: copy only valid Interaction fields from the incoming record
@@ -959,12 +978,15 @@ public with sharing class rfiFormController {
                     FROM Program__c
                     WHERE Recruitment_Program__c = :interaction.Major_Program_1__c
                     AND RecordType.DeveloperName = 'Academic_Program'
+                    AND Active__c = TRUE
                     LIMIT 1
             ];
             if (!programs.isEmpty()) {
                 interaction.Recruitment_Program__c = programs[0].Id;
+                interaction.Academic_Program__c = programs[0].Id;
             }
         }
+
         //Loop through the interaction fields and only copy those that exist and are insertable on the Interaction__c object
         Map<String, Schema.SObjectField> fieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
         Interaction__c cleanInteraction = new Interaction__c();
