@@ -97,11 +97,11 @@ this.config.nested.prop = value;     // Won't update UI
 
 **Current Components:**
 - `academicInterestSelector` - Admin tool for selecting academic programs to display
-- `rfiAdditionalQuestions` - Manage Lead questions (DataTable UI)
-- `rfiAdditionalQuestionsInteractions` - Manage Interaction questions (Modern drag-drop UI)
+- `rfiAdditionalQuestions` - Manage Lead questions (DataTable UI) - **Legacy, for Lead-based forms only**
+- `rfiAdditionalQuestionsInteractions` - Manage Interaction questions (Modern drag-drop UI) - **Used by rfiForm**
 - `rfiFieldManager` - Configure field display and ordering
-- `rfiForm` - Public-facing form (modern)
-- `requestForInformationForm` - Public-facing form (legacy, still in use)
+- `rfiForm` - Public-facing form (modern) - **Creates Interactions, uses Interaction_Questions__c**
+- `requestForInformationForm` - Public-facing form (legacy, still in use) - **Creates Leads, uses Additional_Questions__c**
 - `reusableLookup` - Reusable lookup component
 - `multiSelectPillsGroupable*` - Multi-select UI components (3 components)
 
@@ -113,9 +113,13 @@ this.config.nested.prop = value;     // Won't update UI
 ### 5. Data Storage Patterns
 
 **JSON in Long Text Area Fields:**
-- `Additional_Questions__c` - Lead questions configuration
-- `Interaction_Questions__c` - Interaction questions configuration
+- `Additional_Questions__c` - Lead questions configuration (used by `requestForInformationForm` - legacy)
+- `Interaction_Questions__c` - Interaction questions configuration (used by `rfiForm` - modern)
 - `Academic_Interests_To_Display__c` - Selected academic programs (multi-select picklist)
+
+**Important:** 
+- **rfiForm** (modern, creates Interactions) → reads from `Interaction_Questions__c`
+- **requestForInformationForm** (legacy, creates Leads) → reads from `Additional_Questions__c`
 
 **Structure:**
 ```json

@@ -74,6 +74,7 @@ public with sharing class rfiFormController {
                         Redirect_After_Form_Submission__c,
                         Multi_Select_Display_Type__c,
                         Additional_Questions__c,
+                        Interaction_Questions__c,
                         Academic_Interest_Max_Selection__c,
                         Disable_fields_to_display__c,
                         School_College_Question__c,
@@ -545,15 +546,15 @@ public with sharing class rfiFormController {
 
         }
 
-        // Additional Questions
-        /* Data example stored in Additional_Questions__c field:
+        // Additional Questions - Read from Interaction_Questions__c for Interaction forms
+        /* Data example stored in Interaction_Questions__c field:
         [{"id":0,"questionLabel":"TEST","questionType":"Picklist","fieldToApplyTo":"Description","assistiveText":"","position":"bottom","isPicklist":true,"isRequired":false,"isTextBox":false,"isTextarea":false,"isRichText":false,"isStaticContent":false,"isEmail":false,"picklistValues":[{"label":"Test1","value":"Test1"},{"label":"Test2","value":"Test2"},{"label":"Test3","value":"Test3"},{"label":"Test4","value":"Test4"},{"label":"Test5","value":"Test5"}],"valuesFlat":"Test1;Test2;Test3;Test4;Test5"}]
          */
         List<rfiField> additionalFieldsTop = new List<rfiField>();
         List<rfiField> additionalFieldsBottom = new List<rfiField>();
-        if (String.isNotBlank(rfiController.Additional_Questions__c)) {
+        if (String.isNotBlank(rfiController.Interaction_Questions__c)) {
             try {
-                List<Object> additionalQuestions = (List<Object>) JSON.deserializeUntyped(rfiController.Additional_Questions__c);
+                List<Object> additionalQuestions = (List<Object>) JSON.deserializeUntyped(rfiController.Interaction_Questions__c);
                 for (Object qObj : additionalQuestions) {
                     if (!(qObj instanceof Map<String, Object>)) continue;
                     Map<String, Object> qMap = (Map<String, Object>) qObj;
