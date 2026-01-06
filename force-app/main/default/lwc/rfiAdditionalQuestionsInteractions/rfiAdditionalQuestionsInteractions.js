@@ -7,6 +7,7 @@ import {api, LightningElement, track, wire} from 'lwc';
 import {getObjectInfo} from "lightning/uiObjectInfoApi";
 import {getRecord, getFieldValue} from "lightning/uiRecordApi";
 import {updateRecord} from "lightning/uiRecordApi";
+import {refreshApex} from '@salesforce/apex';
 import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 import ID_FIELD from "@salesforce/schema/RFI_Controller__c.Id";
 import INTERACTION_QUESTIONS_FIELD from "@salesforce/schema/RFI_Controller__c.Interaction_Questions__c";
@@ -25,6 +26,10 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
     @track showModal = false;
     @track modalMode = 'add'; // 'add' or 'edit'
     @track draggedItemId = null;
+    @track draggedItemPosition = null; // Track position group (top/bottom)
+
+    // Store wired result for refreshApex
+    wiredQuestionsResult;
 
     @track inputItem = {
         'id': '',
@@ -63,7 +68,10 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
 
     // Wire to get interaction questions from RFI Controller record
     @wire(getRecord, {recordId: "$recordId", fields: FIELDS})
-    loadQuestionsWire({error, data}) {
+    loadQuestionsWire(result) {
+        this.wiredQuestionsResult = result;
+        const {error, data} = result;
+
         if (error) {
             let errorMsg = error.body?.message || 'Unknown error';
 
@@ -88,8 +96,10 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
 
     @api
     async refresh() {
-        // This method can be called externally to refresh the data
-        return;
+        // Refresh the wired data to get latest from Salesforce
+        if (this.wiredQuestionsResult) {
+            await refreshApex(this.wiredQuestionsResult);
+        }
     }
 
     // Get all the field names and api names for the Interaction object using wire
@@ -185,6 +195,23 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
 
     get modalTitle() {
         return this.modalMode === 'add' ? 'Add Question' : 'Edit Question';
+    }
+
+    // Group questions by position
+    get topQuestions() {
+        return this.questionJSON.filter(q => q.position === 'top');
+    }
+
+    get bottomQuestions() {
+        return this.questionJSON.filter(q => q.position === 'bottom');
+    }
+
+    get hasTopQuestions() {
+        return this.topQuestions.length > 0;
+    }
+
+    get hasBottomQuestions() {
+        return this.bottomQuestions.length > 0;
     }
 
     // Handle input changes
@@ -323,18 +350,25 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
     // Drag and drop handlers
     handleDragStart(event) {
         this.draggedItemId = parseInt(event.currentTarget.dataset.id);
+        this.draggedItemPosition = event.currentTarget.dataset.position;
         event.currentTarget.classList.add('dragging');
     }
 
     handleDragEnd(event) {
         event.currentTarget.classList.remove('dragging');
         this.draggedItemId = null;
+        this.draggedItemPosition = null;
     }
 
     handleDragOver(event) {
         event.preventDefault();
         const dropTarget = event.currentTarget;
-        dropTarget.classList.add('drag-over');
+        const dropPosition = dropTarget.dataset.position;
+
+        // Only allow drag-over styling if same position group
+        if (this.draggedItemPosition === dropPosition) {
+            dropTarget.classList.add('drag-over');
+        }
     }
 
     handleDragLeave(event) {
@@ -346,8 +380,14 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
         event.currentTarget.classList.remove('drag-over');
 
         const dropTargetId = parseInt(event.currentTarget.dataset.id);
+        const dropPosition = event.currentTarget.dataset.position;
 
-        if (this.draggedItemId === dropTargetId || this.draggedItemId === null) {
+        // Don't allow drop if different position groups or same item
+        if (this.draggedItemPosition !== dropPosition ||
+            this.draggedItemId === dropTargetId ||
+            this.draggedItemId === null) {
+            this.draggedItemId = null;
+            this.draggedItemPosition = null;
             return;
         }
 
@@ -355,14 +395,17 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
             let updatedQuestions = [...this.questionJSON];
             const draggedItem = updatedQuestions[this.draggedItemId];
 
-            // Remove dragged item
+            // Remove dragged item first
             updatedQuestions.splice(this.draggedItemId, 1);
 
-            // Insert at new position
-            const newIndex = this.draggedItemId < dropTargetId ? dropTargetId - 1 : dropTargetId;
+            // Calculate insert position
+            // After removing an item, indices shift - we just use dropTargetId for insertion
+            const newIndex = dropTargetId;
+
+            // Insert at calculated position
             updatedQuestions.splice(newIndex, 0, draggedItem);
 
-            // Reindex
+            // Reindex all questions
             updatedQuestions = updatedQuestions.map((q, index) => ({...q, id: index}));
 
             await this.saveToSalesforce(updatedQuestions);
@@ -371,6 +414,9 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
         } catch (error) {
             this.showToast('Error', 'Failed to reorder questions: ' + error.message, 'error');
         }
+
+        this.draggedItemId = null;
+        this.draggedItemPosition = null;
     }
 
     // Move question up
@@ -428,7 +474,12 @@ export default class RfiAdditionalQuestionsInteractions extends LightningElement
         fields[INTERACTION_QUESTIONS_FIELD.fieldApiName] = JSON.stringify(questions);
         const recordInput = {fields};
 
-        return updateRecord(recordInput);
+        await updateRecord(recordInput);
+
+        // Refresh the wire adapter to get latest data
+        if (this.wiredQuestionsResult) {
+            await refreshApex(this.wiredQuestionsResult);
+        }
     }
 
     // Show toast message
