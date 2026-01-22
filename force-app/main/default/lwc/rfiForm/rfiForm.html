@@ -179,6 +179,13 @@
                                     </template>
                                 </template>
 
+                                <!-- Static Content (read-only HTML) -->
+                                <template lwc:elseif={f.isStaticContent}>
+                                    <div class="slds-m-bottom_x-small">
+                                        <lightning-formatted-rich-text value={f.staticContentHtml}></lightning-formatted-rich-text>
+                                    </div>
+                                </template>
+
                                 <!-- Default inputs: text, date, etc. -->
                                 <template lwc:else>
                                     <lightning-input

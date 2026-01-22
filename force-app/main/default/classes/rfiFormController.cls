@@ -37,6 +37,7 @@ public with sharing class rfiFormController {
         @AuraEnabled public Boolean isPicklist { get; set; }
         @AuraEnabled public Boolean isAddress { get; set; }
         @AuraEnabled public Boolean isStaticContent { get; set; }
+        @AuraEnabled public String staticContentHtml { get; set; } // HTML content for static content fields
         @AuraEnabled public Boolean isSchoolLookup { get; set; }
         @AuraEnabled public Boolean isProgramLookup { get; set; }
         @AuraEnabled public Boolean isProgramFilter { get; set; }
@@ -568,8 +569,13 @@ public with sharing class rfiFormController {
                         newField.picklistValues = getOptionsFromDelineatedString((String) qMap.get('valuesFlat'));
                     } else if (qMap.containsKey('isTextarea') && (Boolean) qMap.get('isTextarea')) {
                         newField.isTextarea = true;
-                    } else if (qMap.containsKey('isRichText') && (Boolean) qMap.get('isRichText')) {
+                    } else if (qMap.containsKey('isStaticContent') && (Boolean) qMap.get('isStaticContent')) {
                         newField.isStaticContent = true;
+                        newField.staticContentHtml = qMap.containsKey('valuesFlat') ? String.valueOf(qMap.get('valuesFlat')) : '';
+                    } else if (qMap.containsKey('isRichText') && (Boolean) qMap.get('isRichText')) {
+                        // Legacy support for isRichText (older data structure)
+                        newField.isStaticContent = true;
+                        newField.staticContentHtml = qMap.containsKey('valuesFlat') ? String.valueOf(qMap.get('valuesFlat')) : '';
                     } else if (qMap.containsKey('isEmail') && (Boolean) qMap.get('isEmail')) {
                         newField.isEmail = true;
                     } else if (qMap.containsKey('isTextBox') && (Boolean) qMap.get('isTextBox')) {
