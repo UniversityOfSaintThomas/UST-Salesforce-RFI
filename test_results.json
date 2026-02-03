@@ -1,0 +1,4290 @@
+[
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "setupData",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 321
+        },
+        "TestTimestamp": "2026-01-30T00:10:06.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetCountryIndex_caching",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 208,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:06.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetCountryIndex_multipleCalls",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 454,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:08.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetOptionsFromDelineatedString",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 10,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:09.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetOptionsFromDelineatedString_edgeCases",
+        "Message": "System.AssertException: Assertion Failed: Empty string should return empty list: Expected: 0, Actual: 1",
+        "Outcome": "Fail",
+        "StackTrace": "Class.rfiFormController_TEST.testGetOptionsFromDelineatedString_edgeCases: line 1697, column 1",
+        "Stats": {
+            "duration": 10
+        },
+        "TestTimestamp": "2026-01-30T00:10:09.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPicklistOptions",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 16,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 1,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:10.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPicklistOptions_multipleFields",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 13,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:10.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_graduate",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 43,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 1,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:10.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_grouping",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 97,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 9,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:11.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_lawSchool",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 21,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:11.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_noFilters",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 36,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:11.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_noFiltersNoSchool",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 29,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:12.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_nullParameters",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 63,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 3,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:12.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_undergraduate",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 27,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:13.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_withAcademicInterests",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 61,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 9,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 1,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:13.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetProgramsWithShortCodes_withFilter",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 36,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 6,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:14.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_emptyResults",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 21,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:14.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_graduate",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 26,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 1,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:15.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_graduateVariations",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 36,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:15.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_graduate_withSchool",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 22,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 1,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:16.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_lawSchool",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 22,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:16.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_nullSchoolAndCodes",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 17,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 1,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:16.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_undergraduate",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 23,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:17.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_undergraduateVariations",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 31,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 4,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:17.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_withAcademicInterestCodes",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 33,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 5,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 1,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:18.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetPrograms_withFilters",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 17,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:18.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_addressFieldConsolidation",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 214,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:18.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_addressNotRequired",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 182,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:19.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_allFieldTypeCoverage",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 221,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:19.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_customFieldLabels",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 202,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:20.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_emptyFieldsToDisplay",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 201,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 2,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:20.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_emptyStrings",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 226,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 6,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:21.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_fieldOrderPreservation",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 219,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:22.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_interactionQuestionsInvalidJSON",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 244,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 2,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:22.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_interactionQuestionsRichText",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 225,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:23.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_interactionQuestionsTextBox",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 246,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:23.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_legacyOrder",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 270,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 6,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:24.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_missingAcademicInterest",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 306,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 6,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:25.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_missingSchoolCollege",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 351,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 9,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:25.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_multiSelectFieldDetection",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 325,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:26.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_multipleFieldConfigurations",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 346,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:27.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_picklistDetection",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 446,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:27.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_programLookup",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 403,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:28.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_returnsWrapper",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 392,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 4,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:29.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withAcademicInterestMaxSelection",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 494,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:29.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withAcademicInterests",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 427,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:30.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withAdditionalQuestions_email",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 472,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:31.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withAdditionalQuestions_staticContent",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 630,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:32.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withAdditionalQuestions_textarea",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 417,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:33.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withAllFieldTypes",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 427,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 4,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:34.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withAllValidPicklistFields",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 537,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 3,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 15,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:35.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withCitizenshipType",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 612,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 9,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:36.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withFieldsToDisplayOrder",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 541,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 9,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:37.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withFilterFields",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 496,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:38.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withInteractionQuestions",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 578,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 5,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:38.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withInteractionQuestionsJSON",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 597,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:39.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withLeadOwner",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 684,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:40.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withLeadSource",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 694,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:41.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withMultipleFilterFields",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 691,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:42.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withRedirectSettings",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 653,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:44.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withRequiredFields",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 636,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:45.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withSchoolCollege",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 719,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 2,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:46.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetRFIForm_withStaticContent",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 685,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 2,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:47.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetStateProvince_BlankCountry",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 14,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:48.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetStateProvince_Canada",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 709,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:48.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetStateProvince_US",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 721,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:49.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetStateProvince_cacheHit",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1526,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 769,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:50.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetStateProvince_caching",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1615,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:52.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetStateProvince_invalidCountry",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 15,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:54.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetStateProvince_multipleCountries",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 2578,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:54.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetUSTSchoolList",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 19,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:57.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testGetUSTSchoolList_withAccounts",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 600,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 1,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 135,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:58.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_allFields",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 2713,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 6,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:10:59.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_dmlError",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 32,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 1,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 1,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:02.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_duplicateHandling",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 2141,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 12,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 16,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 4,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 16,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:02.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_insertsInteraction",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1111,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 6,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 5,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:05.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_minimalData",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1067,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 6,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:06.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_multiplePrograms",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1273,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 7,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 4,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:08.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_nullInteraction",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 14,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 0,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 0,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 0,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:09.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_programMappingNoAcademicProgram",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1130,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 7,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 7,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:10.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_withInvalidField",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1107,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 6,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:11.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_withNonCreateableField",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1064,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 6,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 0,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:13.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_withProgramMapping",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1139,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 7,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 13,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 4,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:14.000+0000"
+    },
+    {
+        "Children": null,
+        "ClassName": "rfiFormController_TEST",
+        "Method": "testSubmitRFIInteraction_withoutProgram",
+        "Message": null,
+        "Outcome": "Pass",
+        "StackTrace": null,
+        "Stats": {
+            "duration": 1033,
+            "TESTING_LIMITS: Number of SOQL queries": {
+                "used": 6,
+                "allowed": 100
+            },
+            "TESTING_LIMITS: Number of Email Invocations": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of future calls": {
+                "used": 0,
+                "allowed": 50
+            },
+            "TESTING_LIMITS: Number of DML rows": {
+                "used": 8,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Maximum CPU time": {
+                "used": 3,
+                "allowed": 10000
+            },
+            "TESTING_LIMITS: Number of query rows": {
+                "used": 2,
+                "allowed": 50000
+            },
+            "TESTING_LIMITS: Number of DML statements": {
+                "used": 8,
+                "allowed": 150
+            },
+            "TESTING_LIMITS: Number of Mobile Apex push calls": {
+                "used": 0,
+                "allowed": 10
+            },
+            "TESTING_LIMITS: Number of SOSL queries": {
+                "used": 0,
+                "allowed": 20
+            },
+            "TESTING_LIMITS: Number of callouts": {
+                "used": 0,
+                "allowed": 100
+            }
+        },
+        "TestTimestamp": "2026-01-30T00:11:16.000+0000"
+    }
+]

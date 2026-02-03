@@ -64,6 +64,11 @@
                 <label>Banner Conversion</label>
             </value>
             <value>
+                <fullName>Career Development Center</fullName>
+                <default>false</default>
+                <label>Career Development Center</label>
+            </value>
+            <value>
                 <fullName>Catholic Enrollment Options</fullName>
                 <default>false</default>
                 <label>Catholic Enrollment Options</label>
@@ -294,6 +299,11 @@
                 <label>MEF: U of M Crookston</label>
             </value>
             <value>
+                <fullName>MFCOH</fullName>
+                <default>false</default>
+                <label>MFCOH</label>
+            </value>
+            <value>
                 <fullName>Minnesota Music Educators Association (MMEA)</fullName>
                 <default>false</default>
                 <label>Minnesota Music Educators Association (MMEA)</label>
@@ -399,6 +409,11 @@
                 <label>Purchase List</label>
             </value>
             <value>
+                <fullName>Racial Justice Initiative (RJI)</fullName>
+                <default>false</default>
+                <label>Racial Justice Initiative (RJI)</label>
+            </value>
+            <value>
                 <fullName>RaiseMe</fullName>
                 <default>false</default>
                 <label>RaiseMe</label>
@@ -407,6 +422,11 @@
                 <fullName>Referral</fullName>
                 <default>false</default>
                 <label>Referral</label>
+            </value>
+            <value>
+                <fullName>RM&amp;I</fullName>
+                <default>false</default>
+                <label>RM&amp;I</label>
             </value>
             <value>
                 <fullName>RNL Christian Connector</fullName>
@@ -567,6 +587,11 @@
                 <fullName>Undergraduate Schulze</fullName>
                 <default>false</default>
                 <label>Undergraduate Schulze</label>
+            </value>
+            <value>
+                <fullName>University Advancement</fullName>
+                <default>false</default>
+                <label>University Advancement</label>
             </value>
             <value>
                 <fullName>USNWR</fullName>
