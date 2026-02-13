@@ -15,19 +15,21 @@
                 <template if:true={hasData}>
                     <div class="slds-p-vertical_small">
                         <template for:each={fields} for:item="f" for:index="index">
-                            <div key={f.key} class="slds-m-vertical_x-small">
-                                <template lwc:if={f.isProgramFilter}>
-                                    <lightning-combobox
-                                            label={f.fieldLabel}
-                                            name={f.fieldInteractionAPIName}
-                                            options={f.picklistValues}
-                                            required={f.isRequired}
-                                            onchange={handleProgramFilterChange}
-                                    >
-                                    </lightning-combobox>
-                                </template>
-                                <!-- Address -->
-                                <template lwc:elseif={f.isAddress}>
+                            <!-- Only show field if isVisible is true -->
+                            <template lwc:if={f.isVisible}>
+                                <div key={f.key} class="slds-m-vertical_x-small">
+                                    <template lwc:if={f.isProgramFilter}>
+                                        <lightning-combobox
+                                                label={f.fieldLabel}
+                                                name={f.fieldInteractionAPIName}
+                                                options={f.picklistValues}
+                                                required={f.isRequired}
+                                                onchange={handleProgramFilterChange}
+                                        >
+                                        </lightning-combobox>
+                                    </template>
+                                    <!-- Address -->
+                                    <template lwc:elseif={f.isAddress}>
                                     <div class="slds-m-bottom_x-small slds-form-element">
                                         <lightning-input-address
                                                 address-label={f.fieldLabel}
@@ -197,6 +199,7 @@
                                     </lightning-input>
                                 </template>
                             </div>
+                            </template>
                         </template>
 
                         <div class="slds-m-top_medium">

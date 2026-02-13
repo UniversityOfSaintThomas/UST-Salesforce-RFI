@@ -198,26 +198,49 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     /**
-     * Get processed fields with unique keys
+     * Check if all filter questions have been answered
+     * Filter questions must be answered before other fields are shown
+     */
+    get allFiltersAnswered() {
+        if (!this.filterValues || Object.keys(this.filterValues).length === 0) {
+            // No filters configured, so all fields should be visible
+            return true;
+        }
+        // Check if all filter values are set (not empty)
+        return Object.values(this.filterValues).every(v => v && v.length > 0);
+    }
+
+    /**
+     * Get processed fields with unique keys and visibility control
      * Memoized for performance
+     * Fields are only visible if:
+     * 1. They are filter fields (isProgramFilter), OR
+     * 2. All filter questions have been answered
      */
     get fields() {
-        // Generate cache key from field state
-        const cacheKey = JSON.stringify(this._fields.map(f => ({
-            name: f.name,
-            value: f.value,
-            selectedLabel: f.selectedLabel
-        })));
+        // Generate cache key from field state and filter state
+        const cacheKey = JSON.stringify({
+            fields: this._fields.map(f => ({
+                name: f.name,
+                value: f.value,
+                selectedLabel: f.selectedLabel,
+                isProgramFilter: f.isProgramFilter
+            })),
+            filterValues: this.filterValues,
+            allFiltersAnswered: this.allFiltersAnswered
+        });
 
         // Return cached result if valid
         if (this._processedFieldsCacheKey === cacheKey && this._processedFieldsCache) {
             return this._processedFieldsCache;
         }
 
-        // Process fields with unique keys only - boolean type flags come from Apex
+        // Process fields with unique keys and visibility control
         this._processedFieldsCache = this._fields.map((field, index) => ({
             ...field,
-            key: field.fieldInteractionAPIName || field.name || `field-${index}`
+            key: field.fieldInteractionAPIName || field.name || `field-${index}`,
+            // Hide non-filter fields until all filters are answered
+            isVisible: field.isProgramFilter || this.allFiltersAnswered
         }));
 
         this._processedFieldsCacheKey = cacheKey;
@@ -368,6 +391,11 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         const name = event.target.name;
         // Update immediately for UI responsiveness
         this.filterValues = {...this.filterValues, [name]: value};
+
+        // Invalidate field cache so visibility updates immediately
+        this._processedFieldsCache = null;
+        this._processedFieldsCacheKey = null;
+
         // Debounce the expensive API call
         this._debouncedProgramFilterChange();
     }
@@ -385,22 +413,24 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 filters: this.filterValues
             });
 
-            // Skip if same request
-            if (this._programValuesCacheKey === cacheKey) {
-                return;
+            // Always fetch if cache key changed (even if filters were previously answered)
+            if (this._programValuesCacheKey !== cacheKey) {
+                try {
+                    this.programValues = await getPrograms({
+                        academic_level: this.rfiData.academicLevel,
+                        school_college: this.rfiData.schoolCollege,
+                        academic_interest_codes: this.rfiData.academicInterestCodes,
+                        filters: this.filterValues
+                    });
+                    this._programValuesCacheKey = cacheKey;
+                } catch (error) {
+                    console.error('Error fetching programs:', error);
+                }
             }
-
-            try {
-                this.programValues = await getPrograms({
-                    academic_level: this.rfiData.academicLevel,
-                    school_college: this.rfiData.schoolCollege,
-                    academic_interest_codes: this.rfiData.academicInterestCodes,
-                    filters: this.filterValues
-                });
-                this._programValuesCacheKey = cacheKey;
-            } catch (error) {
-                console.error('Error fetching programs:', error);
-            }
+        } else {
+            // If filters are incomplete, clear program values and cache
+            this.programValues = [];
+            this._programValuesCacheKey = null;
         }
     }
 

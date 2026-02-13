@@ -292,6 +292,8 @@ public with sharing class rfiFormController {
         Boolean addressAdded = false;
         // Lead field describes for dynamic picklist detection
         Map<String, Schema.SObjectField> leadFieldMap = Schema.SObjectType.Lead.fields.getMap();
+        // Interaction field describes to validate field existence
+        Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
 
         //Reorder fieldsToDisplay based on Fields_to_Display_Order__c
         List<String> orderedFields = new List<String>();
@@ -464,7 +466,7 @@ public with sharing class rfiFormController {
                 }
                 when 'I would like to receive text messages' {
                     newField.fieldLabel = String.isNotBlank(rfiController.Receive_Text_Messages_Label__c) ? rfiController.Receive_Text_Messages_Label__c : 'I would like to receive text messages';
-                    newField.fieldInteractionAPIName = 'Text_Message_Opt_In__c';
+                    newField.fieldInteractionAPIName = 'Receive_Texts__c';
                     newField.isCheckbox = true;
                 }
                 when 'Phone' {
@@ -510,7 +512,7 @@ public with sharing class rfiFormController {
                 }
                 when 'Title' {
                     newField.fieldLabel = String.isNotBlank(rfiController.Title_Label__c) ? rfiController.Title_Label__c : 'Title';
-                    newField.fieldInteractionAPIName = 'Title';
+                    newField.fieldInteractionAPIName = 'Contact_Title__c';
                 }
                 when 'When do you plan to start school' {
                     newField.fieldLabel = String.isNotBlank(rfiController.When_Start_School_Label__c) ? rfiController.When_Start_School_Label__c : 'When do you plan to start school';
@@ -527,7 +529,10 @@ public with sharing class rfiFormController {
             // If this maps to a real Lead field, detect picklist/multipicklist and populate options
             if (String.isNotBlank(newField.fieldInteractionAPIName) && newField.fieldInteractionAPIName != 'Address' && leadFieldMap.containsKey(newField.fieldInteractionAPIName)) {
                 Schema.DescribeFieldResult d = leadFieldMap.get(newField.fieldInteractionAPIName).getDescribe();
-                interactionAndRfi.interaction.put(newField.fieldInteractionAPIName, null);
+                // Only set field on Interaction if it exists on the Interaction object
+                if (interactionFieldMap.containsKey(newField.fieldInteractionAPIName)) {
+                    interactionAndRfi.interaction.put(newField.fieldInteractionAPIName, null);
+                }
                 if (d.getType() == Schema.DisplayType.MULTIPICKLIST || d.getType() == Schema.DisplayType.PICKLIST) {
                     newField.picklistValues = getPicklistOptions(d);
                     if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
@@ -730,7 +735,12 @@ public with sharing class rfiFormController {
 
     @AuraEnabled(Cacheable=true)
     public static List<programValues> getPrograms(String academic_level, String school_college, String academic_interest_codes, Map<String, String> filters) {
-        // reference filters to avoid compiler unused-parameter warning
+        // Debug logging
+        System.debug('=== getPrograms called ===');
+        System.debug('academic_level: ' + academic_level);
+        System.debug('school_college: ' + school_college);
+        System.debug('academic_interest_codes: ' + academic_interest_codes);
+        System.debug('filters: ' + JSON.serialize(filters));
 
         String query_string =
                 //Student type buckets
@@ -750,7 +760,9 @@ public with sharing class rfiFormController {
             query_string += ' AND (Program_Type__c INCLUDES (\'Major\') OR Program_Type__c INCLUDES (\'Pre-Professional\') OR Program_Type__c INCLUDES (\'Major Concentration\') OR Program_Type__c INCLUDES (\'Co-Major\')) ';
         } else {
             query_string += ' AND (Academic_Level__c = \'Graduate\' OR Academic_Level__c = \'G\')  ';
-            if (String.isNotBlank(school_college)) {
+            // Only apply school_college parameter if it's not in the filters map
+            // This prevents duplicate/conflicting WHERE clauses
+            if (String.isNotBlank(school_college) && (filters == null || !filters.containsKey('School_College__c'))) {
                 query_string += ' AND Associated_Schools__c INCLUDES (\'' + school_college + '\')';
                 if (school_college == 'School of Law') {
                     query_string += ' AND Banner_Program_Code__c LIKE \'LW_%\'';
@@ -766,7 +778,10 @@ public with sharing class rfiFormController {
 
         query_string += filterQuery(filters);
         query_string += ' ORDER BY Degree__c, Program_Name_on_Application__c ';
+
+        System.debug('Final query: ' + query_string);
         List<Program__c> programs = Database.query(query_string);
+        System.debug('Programs found: ' + programs.size());
 
         List<programValues> results = new List<programValues>();
         if (!programs.isEmpty()) {
@@ -802,23 +817,69 @@ public with sharing class rfiFormController {
     }
 
     private static String filterQuery(Map<String, String> filters) {
+        System.debug('=== filterQuery called ===');
+        System.debug('Input filters: ' + JSON.serialize(filters));
+
+        // Map Lead field names to Program field names
+        Map<String, String> leadToProgramFieldMap = new Map<String, String>{
+            'Citizenship__c' => 'Citizenship__c',
+            'Student_Type__c' => 'Student_Type__c',
+            'Degree_Type__c' => 'Degree_Type__c',
+            'Delivery_Type__c' => 'Delivery_Type__c',
+            'Generic_Filter_2__c' => 'Generic_Filter_2__c',
+            'Generic_Filter_3__c' => 'Generic_Filter_3__c',
+            'Generic_Filter_4__c' => 'Generic_Filter_4__c',
+            'Generic_Filter_5__c' => 'Program_Type__c',  // Program_Type maps to Generic_Filter_5 on Lead
+            'Generic_Filter_6__c' => 'Generic_Filter_6__c',
+            'Generic_Filter_7__c' => 'Generic_Filter_7__c',
+            'Generic_Filter_8__c' => 'Generic_Filter_8__c',
+            'School_College__c' => 'Associated_Schools__c'
+        };
+
         String query_string = '';
         if (filters != null) {
             for (String filterKey : filters.keySet()) {
                 String filterValue = filters.get(filterKey);
+                System.debug('Processing filter - Key: ' + filterKey + ', Value: ' + filterValue);
+
                 if (String.isNotBlank(filterValue)) {
+                    // Map Lead field to Program field
+                    String programField = leadToProgramFieldMap.get(filterKey);
+                    System.debug('Mapped to Program field: ' + programField);
+
+                    if (String.isBlank(programField)) {
+                        System.debug('No mapping found, skipping');
+                        continue;
+                    }
+
                     filterValue = filterValue.escapeHtml4();
-                    //Check filter key which is a Lead field to see if it is a picklist or a multipicklist
-                    Schema.DescribeFieldResult d = Schema.SObjectType.Program__c.fields.getMap().get(filterKey).getDescribe();
+
+                    // Get field describe for the Program field
+                    Map<String, Schema.SObjectField> programFieldMap = Schema.SObjectType.Program__c.fields.getMap();
+                    if (!programFieldMap.containsKey(programField)) {
+                        System.debug('Program field does not exist: ' + programField + ', skipping');
+                        continue;
+                    }
+
+                    Schema.DescribeFieldResult d = programFieldMap.get(programField).getDescribe();
+                    String fieldType = String.valueOf(d.getType());
+                    System.debug('Field type: ' + fieldType);
+
                     if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
-                        List<String> filterValues = filterValue.split(';');
-                        query_string += ' AND ' + filterKey + ' INCLUDES ( :filterValues) ';
+                        // For multipicklist, check if any of the selected values match
+                        String clause = ' AND ' + programField + ' INCLUDES (\'' + filterValue + '\') ';
+                        System.debug('Adding multipicklist clause: ' + clause);
+                        query_string += clause;
                     } else {
-                        query_string += ' AND ' + filterKey + ' = :filterValue ';
+                        // For regular picklist or text fields
+                        String clause = ' AND ' + programField + ' = \'' + filterValue + '\' ';
+                        System.debug('Adding regular clause: ' + clause);
+                        query_string += clause;
                     }
                 }
             }
         }
+        System.debug('Final filter query string: ' + query_string);
         return query_string;
     }
 
