@@ -92,14 +92,25 @@
 
                                 <!-- Picklist Program Lookup -->
                                 <template lwc:elseif={f.isProgramLookup}>
-                                    <c-multi-select-pills-groupable
-                                            label={f.fieldLabel}
-                                            name={f.fieldInteractionAPIName}
-                                            options={programValues}
-                                            required={f.isRequired}
-                                            max={f.max}
-                                            onchange={handleAcademicInterestChange}
-                                    ></c-multi-select-pills-groupable>
+                                    <template lwc:if={loadingPrograms}>
+                                        <div class="slds-m-bottom_x-small slds-form-element">
+                                            <div class="slds-form-element__label slds-text-heading_small slds-m-bottom_x-small">Academic Interest</div>
+                                            <div class="slds-align_absolute-center slds-p-around_medium">
+                                                <lightning-spinner alternative-text="Loading programs" size="small"></lightning-spinner>
+                                                <p class="slds-m-top_small slds-text-color_weak">Loading academic programs...</p>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template lwc:else>
+                                        <c-multi-select-pills-groupable
+                                                label={f.fieldLabel}
+                                                name={f.fieldInteractionAPIName}
+                                                options={programValues}
+                                                required={f.isRequired}
+                                                max={f.max}
+                                                onchange={handleAcademicInterestChange}
+                                        ></c-multi-select-pills-groupable>
+                                    </template>
                                 </template>
 
                                 <!-- Picklist (single-select) -->

@@ -55,6 +55,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @track programValues;
     @track cantFindSchool;
     @track iHaveAQuestion;
+    @track loadingPrograms = false;
 
     // Redirect settings from RFI Controller
     redirectUrl;
@@ -392,6 +393,20 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         // Update immediately for UI responsiveness
         this.filterValues = {...this.filterValues, [name]: value};
 
+        // IMPORTANT: Also update the interaction object so filter values are saved
+        // Filter questions map to interaction fields (e.g., St_Thomas_College_School__c, Citizenship__c, etc.)
+        this.interaction = {
+            ...this.interaction,
+            [name]: value,  // Store the filter value in the interaction
+            Major_Program_1__c: '',
+            Major_Program_2__c: '',
+            Major_Program_3__c: '',
+            Major_Program_4__c: ''
+        };
+
+        // Set loading state
+        this.loadingPrograms = true;
+
         // Invalidate field cache so visibility updates immediately
         this._processedFieldsCache = null;
         this._processedFieldsCacheKey = null;
@@ -425,12 +440,19 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                     this._programValuesCacheKey = cacheKey;
                 } catch (error) {
                     console.error('Error fetching programs:', error);
+                } finally {
+                    // Clear loading state after fetch completes
+                    this.loadingPrograms = false;
                 }
+            } else {
+                // Using cached values, no need to load
+                this.loadingPrograms = false;
             }
         } else {
             // If filters are incomplete, clear program values and cache
             this.programValues = [];
             this._programValuesCacheKey = null;
+            this.loadingPrograms = false;
         }
     }
 

@@ -214,7 +214,6 @@ public with sharing class rfiFormController {
         // Prefill sensible defaults
         interactionAndRfi.rfiFieldList = new List<rfiField>();
 
-
         //Get field information for all pre-filters for programs
         Map<String, String> mapFilterFields = new Map<String, String>{
                 'School_College_To_Display__c' => 'School_College_Question__c',
@@ -231,9 +230,9 @@ public with sharing class rfiFormController {
                 'Program_Types_To_Display__c' => 'Program_Type_Question__c'
         };
 
-        //Map the filter questions to the correct Lead field API names
-        Map<String, String> mapFilterToLeadField = new Map<String, String>{
-                'School_College_To_Display__c' => 'School_College__c',
+        //Map the filter questions to the correct Interaction field API names
+        Map<String, String> mapFilterToInteractionField = new Map<String, String>{
+                'School_College_To_Display__c' => 'St_Thomas_College_School__c',
                 'Citizen_Types_To_Display__c' => 'Citizenship__c',
                 'Degree_Types_To_Display__c' => 'Degree_Type__c',
                 'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2__c',
@@ -260,15 +259,21 @@ public with sharing class rfiFormController {
                     newField.isVisible = true;
                     newField.isRequired = true;
                     newField.isProgramFilter = true;
-                    newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
-                    newField.fieldInteractionAPIName = mapFilterToLeadField.get(key);
+
+                    // Special handling for School_College filter - return Account IDs instead of text values
+                    if (key == 'School_College_To_Display__c') {
+                        newField.picklistValues = getUSTSchoolList((String) rfiController.get(key));
+                    } else {
+                        newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
+                    }
+
+                    newField.fieldInteractionAPIName = mapFilterToInteractionField.get(key);
                     interactionAndRfi.rfiFieldList.add(newField);
                     interactionAndRfi.filterValues.put(newField.fieldInteractionAPIName, '');
                 }
 
             }
         }
-
 
         List<String> fieldsToDisplay = rfiController.Fields_to_Display__c != null
                 ? rfiController.Fields_to_Display__c.split(';')
@@ -542,8 +547,6 @@ public with sharing class rfiFormController {
                         newField.isPicklist = true;
                     }
                 }
-            } else {
-
             }
 
             Boolean forceRequired = (newField.fieldInteractionAPIName == 'First_Name__c' || newField.fieldInteractionAPIName == 'Last_Name__c');
@@ -705,16 +708,35 @@ public with sharing class rfiFormController {
         return opts;
     }
 
-    public static List<picklistOption> getUSTSchoolList() {
-        //Using the list of school names on School_College_To_Display__c field on RFI_Controller__c get the ids of the account ids with matching titles
-        Schema.DescribeFieldResult d = Schema.SObjectType.RFI_Controller__c.fields.getMap().get('School_College__c').getDescribe();
+    /**
+     * Get school list with Account IDs for use in picklists
+     * If schoolNames parameter is provided, returns only those schools (filtered list)
+     * If schoolNames is blank, returns all schools from School_College__c picklist (full list)
+     * @param schoolNames Optional semicolon-delimited list of school names to filter by
+     * @return List of picklistOption with Account IDs as values and school names as labels
+     */
+    public static List<picklistOption> getUSTSchoolList(String schoolNames) {
         List<String> schoolNameList = new List<String>();
-        for (Schema.PicklistEntry e : d.getPicklistValues()) {
-            if (e.isActive()) {
-                schoolNameList.add(String.valueOf(e.getValue()));
+
+        if (String.isBlank(schoolNames)) {
+            // No filter provided - get all schools from School_College__c picklist
+            Schema.DescribeFieldResult d = Schema.SObjectType.RFI_Controller__c.fields.getMap().get('School_College__c').getDescribe();
+            for (Schema.PicklistEntry e : d.getPicklistValues()) {
+                if (e.isActive()) {
+                    schoolNameList.add(String.valueOf(e.getValue()));
+                }
             }
+        } else {
+            // Filter provided - use only specified schools
+            schoolNameList = schoolNames.split(';');
         }
-        //Query for Account records matching the school names
+
+        // Return empty list if no schools to query
+        if (schoolNameList.isEmpty()) {
+            return new List<picklistOption>();
+        }
+
+        // Query for Account records matching the school names
         List<Account> schoolAccounts = [
                 SELECT Id, School_College_Name__c
                 FROM Account
@@ -723,6 +745,7 @@ public with sharing class rfiFormController {
                 AND Banner_Key__c LIKE 'STVCOLL-%'
                 AND Name != 'other'
         ];
+
         List<picklistOption> opts = new List<picklistOption>();
         for (Account acc : schoolAccounts) {
             picklistOption po = new picklistOption();
@@ -731,6 +754,14 @@ public with sharing class rfiFormController {
             opts.add(po);
         }
         return opts;
+    }
+
+    /**
+     * Overloaded method for backward compatibility - returns full school list
+     * @return List of picklistOption with all schools from School_College__c picklist
+     */
+    public static List<picklistOption> getUSTSchoolList() {
+        return getUSTSchoolList(null);
     }
 
     @AuraEnabled(Cacheable=true)
@@ -816,7 +847,7 @@ public with sharing class rfiFormController {
         return results;
     }
 
-    private static String filterQuery(Map<String, String> filters) {
+    private static String Z(Map<String, String> filters) {
         System.debug('=== filterQuery called ===');
         System.debug('Input filters: ' + JSON.serialize(filters));
 
@@ -833,7 +864,8 @@ public with sharing class rfiFormController {
             'Generic_Filter_6__c' => 'Generic_Filter_6__c',
             'Generic_Filter_7__c' => 'Generic_Filter_7__c',
             'Generic_Filter_8__c' => 'Generic_Filter_8__c',
-            'School_College__c' => 'Associated_Schools__c'
+            'School_College__c' => 'Associated_Schools__c',
+            'St_Thomas_College_School__c' => 'Associated_Schools__c'  // Filter question uses this field name
         };
 
         String query_string = '';
@@ -850,6 +882,29 @@ public with sharing class rfiFormController {
                     if (String.isBlank(programField)) {
                         System.debug('No mapping found, skipping');
                         continue;
+                    }
+
+                    // Special handling for St_Thomas_College_School__c - convert Account ID to School Name
+                    if (filterKey == 'St_Thomas_College_School__c') {
+                        // filterValue is an Account ID, we need to get the School_College_Name__c
+                        try {
+                            List<Account> accounts = [
+                                SELECT School_College_Name__c
+                                FROM Account
+                                WHERE Id = :filterValue
+                                LIMIT 1
+                            ];
+                            if (!accounts.isEmpty() && String.isNotBlank(accounts[0].School_College_Name__c)) {
+                                filterValue = accounts[0].School_College_Name__c;
+                                System.debug('Converted Account ID to School Name: ' + filterValue);
+                            } else {
+                                System.debug('Could not find School_College_Name__c for Account ID: ' + filterValue);
+                                continue;
+                            }
+                        } catch (Exception e) {
+                            System.debug('Error looking up School Name for ID ' + filterValue + ': ' + e.getMessage());
+                            continue;
+                        }
                     }
 
                     filterValue = filterValue.escapeHtml4();
