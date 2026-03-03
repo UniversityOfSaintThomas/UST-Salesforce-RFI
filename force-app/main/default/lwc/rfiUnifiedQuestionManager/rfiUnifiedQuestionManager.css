@@ -1,0 +1,28 @@
+.question-row {
+    cursor: move;
+    transition: background-color 0.2s ease;
+}
+
+.question-row.dragging {
+    opacity: 0.5;
+    background-color: #f3f2f2;
+}
+
+.question-row:hover {
+    background-color: #fafaf9;
+}
+
+.drag-handle {
+    cursor: grab;
+    margin-right: 0.5rem;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.slds-badge_lightest {
+    background-color: #e0f3ff;
+    color: #014486;
+}
+

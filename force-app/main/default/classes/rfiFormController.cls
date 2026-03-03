@@ -76,6 +76,7 @@ public with sharing class rfiFormController {
                         Multi_Select_Display_Type__c,
                         Additional_Questions__c,
                         Interaction_Questions__c,
+                        Unified_Questions__c,
                         Academic_Interest_Max_Selection__c,
                         Disable_fields_to_display__c,
                         School_College_Question__c,
@@ -278,6 +279,17 @@ public with sharing class rfiFormController {
         List<String> fieldsToDisplay = rfiController.Fields_to_Display__c != null
                 ? rfiController.Fields_to_Display__c.split(';')
                 : new List<String>();
+
+        // Check if using Unified Questions (new structure)
+        if (String.isNotBlank(rfiController.Unified_Questions__c)) {
+            System.debug('📦 Using Unified Questions structure');
+            // Process unified questions - they contain all questions in one ordered list
+            processUnifiedQuestions(rfiController, interactionAndRfi);
+            // Skip the legacy field processing below
+        } else {
+            System.debug('📦 Using legacy field structure (Fields_to_Display__c + Interaction_Questions__c)');
+            // LEGACY PATH: Continue with existing logic
+
         // If no fields configured on the controller record, use a sensible internal default
         if (fieldsToDisplay.isEmpty()) {
             fieldsToDisplay.addAll(new List<String>{
@@ -531,19 +543,17 @@ public with sharing class rfiFormController {
             }
 
 
-            // If this maps to a real Lead field, detect picklist/multipicklist and populate options
-            if (String.isNotBlank(newField.fieldInteractionAPIName) && newField.fieldInteractionAPIName != 'Address' && leadFieldMap.containsKey(newField.fieldInteractionAPIName)) {
-                Schema.DescribeFieldResult d = leadFieldMap.get(newField.fieldInteractionAPIName).getDescribe();
-                // Only set field on Interaction if it exists on the Interaction object
-                if (interactionFieldMap.containsKey(newField.fieldInteractionAPIName)) {
-                    interactionAndRfi.interaction.put(newField.fieldInteractionAPIName, null);
-                }
-                if (d.getType() == Schema.DisplayType.MULTIPICKLIST || d.getType() == Schema.DisplayType.PICKLIST) {
-                    newField.picklistValues = getPicklistOptions(d);
+            // If this maps to an Interaction field, detect picklist/multipicklist and populate options dynamically
+            if (String.isNotBlank(newField.fieldInteractionAPIName) && newField.fieldInteractionAPIName != 'Address' && newField.isPicklist != true && newField.isMultiSelect != true) {
+                String apiNameLower = newField.fieldInteractionAPIName.toLowerCase();
+                if (interactionFieldMap.containsKey(apiNameLower)) {
+                    Schema.DescribeFieldResult d = interactionFieldMap.get(apiNameLower).getDescribe();
                     if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
+                        newField.picklistValues = getPicklistOptions(d);
                         newField.isMultiSelect = true;
                         newField.max = 4;
-                    } else {
+                    } else if (d.getType() == Schema.DisplayType.PICKLIST) {
+                        newField.picklistValues = getPicklistOptions(d);
                         newField.isPicklist = true;
                     }
                 }
@@ -612,6 +622,7 @@ public with sharing class rfiFormController {
             }
 
         }
+        } // End of else block for legacy field processing
 
         return interactionAndRfi;
     }
@@ -847,7 +858,7 @@ public with sharing class rfiFormController {
         return results;
     }
 
-    private static String Z(Map<String, String> filters) {
+    private static String filterQuery(Map<String, String> filters) {
         System.debug('=== filterQuery called ===');
         System.debug('Input filters: ' + JSON.serialize(filters));
 
@@ -1142,5 +1153,146 @@ public with sharing class rfiFormController {
         }
 
         return result.getId();
+    }
+
+    /**
+     * Process Unified Questions structure (new approach)
+     * All questions (pre-configured and custom) are in one ordered JSON array
+     * @param rfiController The RFI Controller record with unified questions
+     * @param interactionAndRfi The wrapper object to populate with field data
+     */
+    private static void processUnifiedQuestions(RFI_Controller__c rfiController, interactionRFIFields interactionAndRfi) {
+        try {
+            List<Object> unifiedQuestions = (List<Object>) JSON.deserializeUntyped(rfiController.Unified_Questions__c);
+
+            // Cache field map outside loop — describe calls are expensive
+            Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
+
+            // Remap legacy/incorrect fieldInteractionAPIName values saved before the corrected map
+            Map<String, String> legacyApiNameRemap = new Map<String, String>{
+                'citizenship_type__c'       => 'Citizenship__c',
+                'degree_type__c'            => 'Admit_Type__c',
+                'how_did_you_hear__c'       => 'Heard_About_Us__c',
+                'timeline_to_enrollment__c' => 'Timeline__c',
+                'address_1__c'              => 'Mailing_Street__c',
+                'birth_date__c'             => 'Birthdate__c',
+                'company__c'               => 'Employer__c',
+                'expected_start_term__c'    => 'Intended_Start_Term__c',
+                'high_school_attended__c'   => 'High_School_or_College__c',
+                'high_school_grad_year__c'  => 'High_School_Graduation_Year__c',
+                'phone__c'                  => 'Home_Phone__c',
+                'comments__c'               => 'Has_Question__c',
+                'mail_me__c'                => 'Mail_Information__c',
+                'ok_to_text__c'             => 'Receive_Texts__c',
+                'school_college__c'         => 'St_Thomas_College_School__c',
+                'tell_us_about_yourself__c' => 'Description__c',
+                'title__c'                  => 'Salutation__c'
+            };
+
+            for (Object qObj : unifiedQuestions) {
+                Map<String, Object> q = (Map<String, Object>) qObj;
+                String questionType = (String) q.get('type');
+
+                rfiField newField = new rfiField();
+                newField.fieldLabel = (String) q.get('questionLabel');
+                newField.isRequired = q.get('isRequired') == true;
+                newField.isVisible = true;
+                newField.isSelected = false;
+
+                if (questionType == 'preconfigured') {
+                    String rawApiName = (String) q.get('fieldInteractionAPIName');
+                    // Remap any legacy incorrect API names saved before the corrected map
+                    if (String.isNotBlank(rawApiName) && legacyApiNameRemap.containsKey(rawApiName.toLowerCase())) {
+                        rawApiName = legacyApiNameRemap.get(rawApiName.toLowerCase());
+                    }
+                    newField.fieldInteractionAPIName = rawApiName;
+                    String fieldName = String.valueOf(q.get('fieldName') != null ? q.get('fieldName') : '');
+
+                    // Special handling for known field types
+                    if (fieldName == 'Academic Interest') {
+                        newField.isProgramLookup = true;
+                        newField.max = 4;
+                    } else if (fieldName == 'Address') {
+                        newField.isAddress = true;
+                    } else if (fieldName == 'Email') {
+                        newField.isEmail = true;
+                    } else if (fieldName.contains('Phone')) {
+                        newField.isTel = true;
+                    } else if (fieldName == 'I have a question' || fieldName == 'Tell us about yourself') {
+                        newField.isTextarea = true;
+                    } else if (fieldName == 'Receive Text Messages' || fieldName == 'Mail Information') {
+                        newField.isCheckbox = true;
+                    }
+
+                    // For remaining fields, check if the Interaction field is a picklist
+                    if (newField.isProgramLookup != true && newField.isAddress != true && newField.isEmail != true
+                            && newField.isTel != true && newField.isTextarea != true && newField.isCheckbox != true
+                            && String.isNotBlank(newField.fieldInteractionAPIName)) {
+                        Schema.SObjectField sField = interactionFieldMap.get(newField.fieldInteractionAPIName.toLowerCase());
+                        if (sField != null) {
+                            Schema.DescribeFieldResult d = sField.getDescribe();
+                            if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
+                                newField.picklistValues = getPicklistOptions(d);
+                                newField.isMultiSelect = true;
+                                newField.max = 4;
+                            } else if (d.getType() == Schema.DisplayType.PICKLIST) {
+                                newField.picklistValues = getPicklistOptions(d);
+                                newField.isPicklist = true;
+                            }
+                        }
+                    }
+
+                } else if (questionType == 'custom') {
+                    newField.fieldInteractionAPIName = (String) q.get('fieldToApplyTo');
+                    String qType = String.valueOf(q.get('questionType') != null ? q.get('questionType') : '');
+
+                    if (qType == 'Static content') {
+                        newField.isStaticContent = true;
+                        newField.staticContentHtml = (String) q.get('valuesFlat');
+                    } else if (qType.toLowerCase().contains('picklist') || qType.toLowerCase().contains('combobox')) {
+                        newField.isPicklist = true;
+                        List<picklistOption> opts = new List<picklistOption>();
+                        Object picklistValuesObj = q.get('picklistValues');
+                        if (picklistValuesObj != null) {
+                            for (Object pvObj : (List<Object>) picklistValuesObj) {
+                                Map<String, Object> pv = (Map<String, Object>) pvObj;
+                                picklistOption po = new picklistOption();
+                                po.label = (String) pv.get('label');
+                                po.value = (String) pv.get('value');
+                                opts.add(po);
+                            }
+                        }
+                        // Fall back to Interaction field schema if no stored values
+                        if (opts.isEmpty() && String.isNotBlank(newField.fieldInteractionAPIName)) {
+                            Schema.SObjectField sField = interactionFieldMap.get(newField.fieldInteractionAPIName.toLowerCase());
+                            if (sField != null) {
+                                for (Schema.PicklistEntry entry : sField.getDescribe().getPicklistValues()) {
+                                    if (entry.isActive()) {
+                                        picklistOption po = new picklistOption();
+                                        po.label = entry.getLabel();
+                                        po.value = entry.getValue();
+                                        opts.add(po);
+                                    }
+                                }
+                            }
+                        }
+                        newField.picklistValues = opts;
+                    } else if (qType.toLowerCase().contains('textarea')) {
+                        newField.isTextarea = true;
+                    } else if (qType.toLowerCase().contains('email')) {
+                        newField.isEmail = true;
+                    }
+                    // Default (text box) falls through to lightning-input in the template
+                }
+
+                interactionAndRfi.rfiFieldList.add(newField);
+            }
+
+            System.debug('✅ Processed ' + unifiedQuestions.size() + ' unified questions');
+
+        } catch (Exception e) {
+            System.debug('❌ Error processing unified questions: ' + e.getMessage());
+            System.debug(e.getStackTraceString());
+        }
     }
 }
