@@ -3,6 +3,12 @@
     position: relative;
 }
 
+/* Clearfix — prevents floated children bleeding into the next component on the page layout */
+:host {
+    display: block;
+    overflow: hidden;
+}
+
 .question-row.dragging {
     opacity: 0.4;
     background-color: #f3f2f2;
