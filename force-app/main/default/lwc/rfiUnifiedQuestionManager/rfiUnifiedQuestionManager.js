@@ -941,6 +941,19 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         const items = [...this.questions];
         [items[index - 1], items[index]] = [items[index], items[index - 1]];
         this.questions = this.stampComputedProps(items);
+
+        const landingIndex = index - 1;
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        requestAnimationFrame(() => {
+            const rows = this.template.querySelectorAll('tr[data-index]');
+            const landedRow = [...rows].find(r => parseInt(r.dataset.index) === landingIndex);
+            if (landedRow) {
+                landedRow.classList.add('just-dropped');
+                landedRow.addEventListener('animationend', () => {
+                    landedRow.classList.remove('just-dropped');
+                }, { once: true });
+            }
+        });
     }
 
     moveDown(event) {
@@ -950,6 +963,19 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         const items = [...this.questions];
         [items[index], items[index + 1]] = [items[index + 1], items[index]];
         this.questions = this.stampComputedProps(items);
+
+        const landingIndex = index + 1;
+        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        requestAnimationFrame(() => {
+            const rows = this.template.querySelectorAll('tr[data-index]');
+            const landedRow = [...rows].find(r => parseInt(r.dataset.index) === landingIndex);
+            if (landedRow) {
+                landedRow.classList.add('just-dropped');
+                landedRow.addEventListener('animationend', () => {
+                    landedRow.classList.remove('just-dropped');
+                }, { once: true });
+            }
+        });
     }
 
     // Save to Salesforce
