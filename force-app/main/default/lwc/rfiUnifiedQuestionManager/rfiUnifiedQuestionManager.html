@@ -25,6 +25,14 @@
                 </div>
                 <div class="slds-col">
                     <lightning-button
+                        label="Add Program Filter Question"
+                        icon-name="utility:filterList"
+                        onclick={openAddFilterModal}
+                        disabled={isLoading}>
+                    </lightning-button>
+                </div>
+                <div class="slds-col">
+                    <lightning-button
                         label="Add Custom Question"
                         icon-name="utility:new"
                         onclick={openAddCustomModal}
@@ -78,9 +86,14 @@
                                     <!-- Type Badge -->
                                     <td data-label="Type">
                                         <div class="slds-truncate">
-                                            <template if:true={question.type}>
-                                                <span class="slds-badge slds-badge_lightest" if:true={question.typePreconfigured}>Pre-configured</span>
-                                                <span class="slds-badge" if:false={question.typePreconfigured}>Custom</span>
+                                            <template if:true={question.typePreconfigured}>
+                                                <span class="slds-badge slds-badge_lightest">Pre-configured</span>
+                                            </template>
+                                            <template if:true={question.typeFilter}>
+                                                <span class="slds-badge badge-filter">Program Filter</span>
+                                            </template>
+                                            <template if:true={question.typeCustom}>
+                                                <span class="slds-badge">Custom</span>
                                             </template>
                                         </div>
                                     </td>
@@ -97,6 +110,11 @@
                                         <template if:true={question.fieldName}>
                                             <div class="slds-text-color_weak slds-text-body_small">
                                                 Field: {question.fieldName}
+                                            </div>
+                                        </template>
+                                        <template if:true={question.filterControllerField}>
+                                            <div class="slds-text-color_weak slds-text-body_small">
+                                                Filter: {question.filterControllerField} → {question.filterInteractionAPIName}
                                             </div>
                                         </template>
                                         <template if:true={question.questionType}>
@@ -218,6 +236,119 @@
                             onchange={handlePreconfiguredSelection}
                             required>
                         </lightning-combobox>
+                    </template>
+
+                    <!-- Edit Pre-configured Question -->
+                    <template lwc:elseif={isEditPreconfiguredMode}>
+                        <div class="slds-grid slds-gutters slds-wrap">
+                            <div class="slds-col slds-size_1-of-1">
+                                <lightning-input
+                                    name="questionLabel"
+                                    label="Question Label"
+                                    value={currentQuestion.questionLabel}
+                                    onchange={handlePreconfiguredLabelChange}
+                                    required>
+                                </lightning-input>
+                            </div>
+
+                            <div class="slds-col slds-size_1-of-1">
+                                <lightning-input
+                                    type="checkbox"
+                                    label="Required"
+                                    checked={currentQuestion.isRequired}
+                                    onchange={handleRequiredChange}>
+                                </lightning-input>
+                            </div>
+
+                            <div class="slds-col slds-size_1-of-1 slds-m-top_medium">
+                                <div class="slds-box slds-box_x-small slds-theme_shade">
+                                    <p class="slds-text-title_caps slds-m-bottom_x-small">Field Mapping Info</p>
+                                    <p class="slds-text-body_regular">
+                                        <strong>Pre-configured Field:</strong> {currentQuestion.fieldName}
+                                    </p>
+                                    <p class="slds-text-body_regular slds-m-top_xx-small">
+                                        <strong>Interaction Object API Name:</strong> {currentQuestion.fieldInteractionAPIName}
+                                    </p>
+                                    <p class="slds-text-body_small slds-text-color_weak slds-m-top_x-small">
+                                        This field is pre-configured and its mapping to the Interaction object cannot be changed here.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Add/Edit Filter Question -->
+                    <template lwc:elseif={isFilterMode}>
+                        <div class="slds-grid slds-gutters slds-wrap">
+                            <div class="slds-col slds-size_1-of-1">
+                                <lightning-combobox
+                                    name="filterControllerField"
+                                    label="Filter Field"
+                                    value={currentQuestion.filterControllerField}
+                                    options={availableFilterOptions}
+                                    onchange={handleFilterFieldSelection}
+                                    field-level-help="The RFI Controller filter slot this question uses to filter academic programs."
+                                    required>
+                                </lightning-combobox>
+                            </div>
+
+                            <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                                <lightning-input
+                                    name="questionLabel"
+                                    label="Question Label"
+                                    value={currentQuestion.questionLabel}
+                                    onchange={handleModalChange}
+                                    required>
+                                </lightning-input>
+                            </div>
+
+                            <!-- Value picker — shown once a filter field is chosen and its picklist options have loaded -->
+                            <template if:true={hasFilterPicklistOptions}>
+                                <div class="slds-col slds-size_1-of-1 slds-m-top_medium">
+                                    <lightning-dual-listbox
+                                        name="filterSelectedValues"
+                                        label="Values to Display on RFI Form"
+                                        field-level-help="Choose which values from this filter picklist will appear on the RFI form. Leave all selected to show all values."
+                                        source-label="Available Values"
+                                        selected-label="Show on Form"
+                                        options={currentFilterPicklistOptions}
+                                        value={currentFilterSelectedValues}
+                                        min="1"
+                                        onchange={handleFilterValuesChange}
+                                        required>
+                                    </lightning-dual-listbox>
+                                </div>
+                            </template>
+                            <template if:false={hasFilterPicklistOptions}>
+                                <template if:true={currentQuestion.filterControllerField}>
+                                    <div class="slds-col slds-size_1-of-1 slds-m-top_medium">
+                                        <div class="slds-box slds-box_x-small slds-theme_shade">
+                                            <p class="slds-text-color_weak slds-text-body_small">
+                                                <lightning-icon icon-name="utility:spinner" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                                                Loading available values...
+                                            </p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+
+                            <template if:true={currentQuestion.filterInteractionAPIName}>
+                                <div class="slds-col slds-size_1-of-1 slds-m-top_medium">
+                                    <div class="slds-box slds-box_x-small slds-theme_shade">
+                                        <p class="slds-text-title_caps slds-m-bottom_x-small">Filter Info</p>
+                                        <p class="slds-text-body_regular">
+                                            <strong>Controller Field:</strong> {currentQuestion.filterControllerField}
+                                        </p>
+                                        <p class="slds-text-body_regular slds-m-top_xx-small">
+                                            <strong>Interaction API Name:</strong> {currentQuestion.filterInteractionAPIName}
+                                        </p>
+                                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_x-small">
+                                            Selected values will be saved to the RFI Controller and shown as options on the RFI form. When a value is chosen, Academic Programs will be filtered to match.
+                                        </p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                     </template>
 
                     <!-- Add/Edit Custom Question -->

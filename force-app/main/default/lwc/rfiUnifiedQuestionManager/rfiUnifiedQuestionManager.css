@@ -1,15 +1,25 @@
 .question-row {
     cursor: move;
-    transition: background-color 0.2s ease;
+    position: relative;
 }
 
 .question-row.dragging {
-    opacity: 0.5;
+    opacity: 0.4;
     background-color: #f3f2f2;
 }
 
 .question-row:hover {
     background-color: #fafaf9;
+}
+
+.question-row.drag-over-above {
+    box-shadow: inset 0 3px 0 0 #0176d3;
+    background-color: #e8f4ff;
+}
+
+.question-row.drag-over-below {
+    box-shadow: inset 0 -3px 0 0 #0176d3;
+    background-color: #e8f4ff;
 }
 
 .drag-handle {
@@ -26,3 +36,17 @@
     color: #014486;
 }
 
+.badge-filter {
+    background-color: #f3e0ff;
+    color: #5a0a8a;
+}
+
+@keyframes drop-flash {
+    0%   { background-color: #fffacd; }
+    40%  { background-color: #fff0a0; }
+    100% { background-color: transparent; }
+}
+
+.question-row.just-dropped {
+    animation: drop-flash 0.6s ease-out forwards;
+}

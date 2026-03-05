@@ -19,6 +19,20 @@ import FIELDS_TO_DISPLAY_ORDER_FIELD from '@salesforce/schema/RFI_Controller__c.
 import REQUIRED_FIELDS_FIELD from '@salesforce/schema/RFI_Controller__c.Required_Fields__c';
 import INTERACTION_QUESTIONS_FIELD from '@salesforce/schema/RFI_Controller__c.Interaction_Questions__c';
 
+// Import all _To_Display__c filter fields for reading current values and writing selections
+import SCHOOL_COLLEGE_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.School_College_To_Display__c';
+import CITIZEN_TYPES_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Citizen_Types_To_Display__c';
+import DEGREE_TYPES_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Degree_Types_To_Display__c';
+import STUDENT_TYPES_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Student_Types_To_Display__c';
+import DELIVERY_TYPES_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Delivery_Types_To_Display__c';
+import PROGRAM_TYPES_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Program_Types_To_Display__c';
+import GENERIC_FILTER_2_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Generic_Filter_2_To_Display__c';
+import GENERIC_FILTER_3_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Generic_Filter_3_To_Display__c';
+import GENERIC_FILTER_4_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Generic_Filter_4_To_Display__c';
+import GENERIC_FILTER_6_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Generic_Filter_6_To_Display__c';
+import GENERIC_FILTER_7_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Generic_Filter_7_To_Display__c';
+import GENERIC_FILTER_8_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Generic_Filter_8_To_Display__c';
+
 // Import all label fields
 import ACADEMIC_INTEREST_LABEL from '@salesforce/schema/RFI_Controller__c.Academic_Interest_Label__c';
 import ADDRESS_LABEL from '@salesforce/schema/RFI_Controller__c.Address_Label__c';
@@ -77,7 +91,20 @@ const FIELDS = [
     TIMELINE_TO_ENROLLMENT_LABEL,
     TITLE_LABEL,
     WHEN_START_SCHOOL_LABEL,
-    APPLY_TO_ST_THOMAS_AS_LABEL
+    APPLY_TO_ST_THOMAS_AS_LABEL,
+    // Filter _To_Display__c fields — needed to read current selections and to save choices
+    SCHOOL_COLLEGE_TO_DISPLAY,
+    CITIZEN_TYPES_TO_DISPLAY,
+    DEGREE_TYPES_TO_DISPLAY,
+    STUDENT_TYPES_TO_DISPLAY,
+    DELIVERY_TYPES_TO_DISPLAY,
+    PROGRAM_TYPES_TO_DISPLAY,
+    GENERIC_FILTER_2_TO_DISPLAY,
+    GENERIC_FILTER_3_TO_DISPLAY,
+    GENERIC_FILTER_4_TO_DISPLAY,
+    GENERIC_FILTER_6_TO_DISPLAY,
+    GENERIC_FILTER_7_TO_DISPLAY,
+    GENERIC_FILTER_8_TO_DISPLAY
 ];
 
 export default class RfiUnifiedQuestionManager extends LightningElement {
@@ -85,7 +112,7 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     @track questions = [];
     @track isLoading = false;
     @track showModal = false;
-    @track modalMode = 'add'; // 'add', 'edit', 'addPreconfigured'
+    @track modalMode = 'add'; // 'add', 'edit', 'addPreconfigured', 'editPreconfigured', 'addFilter', 'editFilter'
     @track draggedIndex = null;
     @track isSaving = false;
     @track needsMigration = false;
@@ -94,10 +121,115 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     recordData;
     allPreconfiguredOptions = [];
     selectedPreconfiguredField = '';
+    selectedFilterField = '';
     objectInfo;
 
     // Current question being edited in modal
     @track currentQuestion = {};
+
+    // All available program filter slot definitions on RFI_Controller__c
+    // Each entry maps: controllerField (the _To_Display__c field) → question label field → interaction API name
+    filterFieldDefinitions = [
+        {
+            value: 'School_College_To_Display__c',
+            label: 'School / College',
+            questionField: 'School_College_Question__c',
+            interactionAPIName: 'St_Thomas_College_School__c',
+            isSchoolList: true,
+            schemaField: SCHOOL_COLLEGE_TO_DISPLAY
+        },
+        {
+            value: 'Citizen_Types_To_Display__c',
+            label: 'Citizenship Type',
+            questionField: 'Citizen_Type_Question__c',
+            interactionAPIName: 'Citizenship__c',
+            isSchoolList: false,
+            schemaField: CITIZEN_TYPES_TO_DISPLAY
+        },
+        {
+            value: 'Degree_Types_To_Display__c',
+            label: 'Degree Type',
+            questionField: 'Degree_Type_Question__c',
+            interactionAPIName: 'Degree_Type__c',
+            isSchoolList: false,
+            schemaField: DEGREE_TYPES_TO_DISPLAY
+        },
+        {
+            value: 'Student_Types_To_Display__c',
+            label: 'Student Type',
+            questionField: 'Student_Type_Question__c',
+            interactionAPIName: 'Student_Type__c',
+            isSchoolList: false,
+            schemaField: STUDENT_TYPES_TO_DISPLAY
+        },
+        {
+            value: 'Delivery_Types_To_Display__c',
+            label: 'Delivery Type',
+            questionField: 'Delivery_Type_Question__c',
+            interactionAPIName: 'Delivery_Type__c',
+            isSchoolList: false,
+            schemaField: DELIVERY_TYPES_TO_DISPLAY
+        },
+        {
+            value: 'Program_Types_To_Display__c',
+            label: 'Program Type',
+            questionField: 'Program_Type_Question__c',
+            interactionAPIName: 'Generic_Filter_5__c',
+            isSchoolList: false,
+            schemaField: PROGRAM_TYPES_TO_DISPLAY
+        },
+        {
+            value: 'Generic_Filter_2_To_Display__c',
+            label: 'Generic Filter 2',
+            questionField: 'Generic_Filter_2_Question__c',
+            interactionAPIName: 'Generic_Filter_2__c',
+            isSchoolList: false,
+            schemaField: GENERIC_FILTER_2_TO_DISPLAY
+        },
+        {
+            value: 'Generic_Filter_3_To_Display__c',
+            label: 'Generic Filter 3',
+            questionField: 'Generic_Filter_3_Question__c',
+            interactionAPIName: 'Generic_Filter_3__c',
+            isSchoolList: false,
+            schemaField: GENERIC_FILTER_3_TO_DISPLAY
+        },
+        {
+            value: 'Generic_Filter_4_To_Display__c',
+            label: 'Generic Filter 4',
+            questionField: 'Generic_Filter_4_Question__c',
+            interactionAPIName: 'Generic_Filter_4__c',
+            isSchoolList: false,
+            schemaField: GENERIC_FILTER_4_TO_DISPLAY
+        },
+        {
+            value: 'Generic_Filter_6_To_Display__c',
+            label: 'Generic Filter 6',
+            questionField: 'Generic_Filter_6_Question__c',
+            interactionAPIName: 'Generic_Filter_6__c',
+            isSchoolList: false,
+            schemaField: GENERIC_FILTER_6_TO_DISPLAY
+        },
+        {
+            value: 'Generic_Filter_7_To_Display__c',
+            label: 'Generic Filter 7',
+            questionField: 'Generic_Filter_7_Question__c',
+            interactionAPIName: 'Generic_Filter_7__c',
+            isSchoolList: false,
+            schemaField: GENERIC_FILTER_7_TO_DISPLAY
+        },
+        {
+            value: 'Generic_Filter_8_To_Display__c',
+            label: 'Generic Filter 8',
+            questionField: 'Generic_Filter_8_Question__c',
+            interactionAPIName: 'Generic_Filter_8__c',
+            isSchoolList: false,
+            schemaField: GENERIC_FILTER_8_TO_DISPLAY
+        }
+    ];
+
+    // Holds picklist options keyed by controller field API name, populated by wired getPicklistValues calls
+    _filterPicklistOptions = {};
 
     // Question type options for custom questions
     questionTypes = [
@@ -226,6 +358,43 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
             console.error('Error loading picklist values:', error);
         }
     }
+
+    // Wire getPicklistValues for each _To_Display__c filter field
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: SCHOOL_COLLEGE_TO_DISPLAY })
+    _wiredSchoolCollege({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'School_College_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: CITIZEN_TYPES_TO_DISPLAY })
+    _wiredCitizenTypes({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Citizen_Types_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: DEGREE_TYPES_TO_DISPLAY })
+    _wiredDegreeTypes({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Degree_Types_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: STUDENT_TYPES_TO_DISPLAY })
+    _wiredStudentTypes({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Student_Types_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: DELIVERY_TYPES_TO_DISPLAY })
+    _wiredDeliveryTypes({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Delivery_Types_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: PROGRAM_TYPES_TO_DISPLAY })
+    _wiredProgramTypes({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Program_Types_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: GENERIC_FILTER_2_TO_DISPLAY })
+    _wiredGenericFilter2({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Generic_Filter_2_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: GENERIC_FILTER_3_TO_DISPLAY })
+    _wiredGenericFilter3({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Generic_Filter_3_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: GENERIC_FILTER_4_TO_DISPLAY })
+    _wiredGenericFilter4({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Generic_Filter_4_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: GENERIC_FILTER_6_TO_DISPLAY })
+    _wiredGenericFilter6({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Generic_Filter_6_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: GENERIC_FILTER_7_TO_DISPLAY })
+    _wiredGenericFilter7({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Generic_Filter_7_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
+
+    @wire(getPicklistValues, { recordTypeId: '$objectInfo.defaultRecordTypeId', fieldApiName: GENERIC_FILTER_8_TO_DISPLAY })
+    _wiredGenericFilter8({ data }) { if (data) { this._filterPicklistOptions = { ...this._filterPicklistOptions, 'Generic_Filter_8_To_Display__c': data.values.map(v => ({ label: v.label, value: v.value })) }; } }
 
     @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
     wiredRecord(result) {
@@ -429,10 +598,41 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         this.showModal = true;
     }
 
+    openAddFilterModal() {
+        this.modalMode = 'addFilter';
+        this.selectedFilterField = '';
+        this.currentQuestion = {
+            type: 'filter',
+            questionLabel: '',
+            filterControllerField: '',
+            filterInteractionAPIName: '',
+            isFilterSchoolList: false,
+            filterSelectedValues: [],
+            isRequired: true
+        };
+        this.showModal = true;
+    }
+
     openEditModal(event) {
         const questionId = parseInt(event.currentTarget.dataset.id);
-        this.modalMode = 'edit';
-        this.currentQuestion = { ...this.questions[questionId] };
+        const question = this.questions[questionId];
+        if (question.type === 'preconfigured') {
+            this.modalMode = 'editPreconfigured';
+        } else if (question.type === 'filter') {
+            this.modalMode = 'editFilter';
+        } else {
+            this.modalMode = 'edit';
+        }
+        this.currentQuestion = { ...question };
+        // Ensure filterSelectedValues is an array (may be missing in older saved data)
+        if (question.type === 'filter' && !Array.isArray(this.currentQuestion.filterSelectedValues)) {
+            // Try to read from existing controller field value as fallback
+            const existing = this._getExistingFilterValue(question.filterControllerField);
+            this.currentQuestion = {
+                ...this.currentQuestion,
+                filterSelectedValues: existing ? existing.split(';').filter(v => v) : []
+            };
+        }
         this.showModal = true;
     }
 
@@ -444,6 +644,40 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     // Handle changes in modal form
     handlePreconfiguredSelection(event) {
         this.selectedPreconfiguredField = event.detail.value;
+    }
+
+    handleFilterFieldSelection(event) {
+        const chosen = event.detail.value;
+        const def = this.filterFieldDefinitions.find(d => d.value === chosen);
+
+        // Pre-populate selected values from the existing controller record field
+        const existingValue = this._getExistingFilterValue(chosen);
+        const preSelected = existingValue ? existingValue.split(';').filter(v => v) : [];
+
+        this.currentQuestion = {
+            ...this.currentQuestion,
+            filterControllerField: chosen,
+            filterInteractionAPIName: def ? def.interactionAPIName : '',
+            isFilterSchoolList: def ? def.isSchoolList : false,
+            filterSelectedValues: preSelected,
+            // Pre-fill label from definition only if user hasn't typed one yet
+            questionLabel: this.currentQuestion.questionLabel || (def ? def.label : '')
+        };
+    }
+
+    // Read the current semicolon-delimited value of a _To_Display__c field from the loaded record
+    _getExistingFilterValue(controllerFieldApiName) {
+        if (!this.recordData || !controllerFieldApiName) return '';
+        const def = this.filterFieldDefinitions.find(d => d.value === controllerFieldApiName);
+        if (!def || !def.schemaField) return '';
+        return getFieldValue(this.recordData, def.schemaField) || '';
+    }
+
+    handleFilterValuesChange(event) {
+        this.currentQuestion = {
+            ...this.currentQuestion,
+            filterSelectedValues: event.detail.value
+        };
     }
 
     handleModalChange(event) {
@@ -493,6 +727,8 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
             ...q,
             id: index,
             typePreconfigured: q.type === 'preconfigured',
+            typeCustom: q.type === 'custom',
+            typeFilter: q.type === 'filter',
             isStaticContent: q.questionType === 'Static content',
             isFirst: index === 0,
             isLast: index === last
@@ -504,13 +740,65 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         this.currentQuestion = { ...this.currentQuestion };
     }
 
+    handlePreconfiguredLabelChange(event) {
+        this.currentQuestion = { ...this.currentQuestion, questionLabel: event.target.value };
+    }
+
     // Save question from modal
     saveQuestion() {
         if (this.modalMode === 'addPreconfigured') {
             this.addPreconfiguredField();
+        } else if (this.modalMode === 'editPreconfigured') {
+            this.savePreconfiguredQuestion();
+        } else if (this.modalMode === 'addFilter' || this.modalMode === 'editFilter') {
+            this.saveFilterQuestion();
         } else {
             this.saveCustomQuestion();
         }
+    }
+
+    saveFilterQuestion() {
+        if (!this.currentQuestion.filterControllerField) {
+            this.showToast('Warning', 'Please select a filter field', 'warning');
+            return;
+        }
+        if (!this.currentQuestion.questionLabel) {
+            this.showToast('Warning', 'Please enter a question label', 'warning');
+            return;
+        }
+
+        if (this.modalMode === 'addFilter') {
+            // Check not already added
+            const exists = this.questions.some(q =>
+                q.type === 'filter' && q.filterControllerField === this.currentQuestion.filterControllerField
+            );
+            if (exists) {
+                this.showToast('Warning', 'This filter is already in the list', 'warning');
+                return;
+            }
+            this.questions = this.stampComputedProps([...this.questions, { ...this.currentQuestion }]);
+            this.showToast('Success', 'Filter question added', 'success');
+        } else {
+            const index = this.questions.findIndex(q => q.id === this.currentQuestion.id);
+            if (index !== -1) {
+                const updated = [...this.questions];
+                updated[index] = { ...this.currentQuestion };
+                this.questions = this.stampComputedProps(updated);
+                this.showToast('Success', 'Filter question updated', 'success');
+            }
+        }
+        this.closeModal();
+    }
+
+    savePreconfiguredQuestion() {
+        const index = this.questions.findIndex(q => q.id === this.currentQuestion.id);
+        if (index !== -1) {
+            const updated = [...this.questions];
+            updated[index] = { ...this.currentQuestion };
+            this.questions = this.stampComputedProps(updated);
+            this.showToast('Success', 'Question updated', 'success');
+        }
+        this.closeModal();
     }
 
     addPreconfiguredField() {
@@ -615,31 +903,92 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     handleDragStart(event) {
         this.draggedIndex = parseInt(event.currentTarget.dataset.index);
         event.currentTarget.classList.add('dragging');
+        this._draggingEl = event.currentTarget;
+        this._dropIndicatorEl = null;
     }
 
     handleDragEnd(event) {
         event.currentTarget.classList.remove('dragging');
+        this._draggingEl = null;
+        this._clearDropIndicators();
     }
 
     handleDragOver(event) {
         event.preventDefault();
+        const row = event.currentTarget;
+        const targetIndex = parseInt(row.dataset.index);
+
+        if (this.draggedIndex === null || targetIndex === this.draggedIndex) {
+            this._clearDropIndicators();
+            return;
+        }
+
+        const rect = row.getBoundingClientRect();
+        const isAbove = event.clientY < rect.top + rect.height / 2;
+        const newClass = isAbove ? 'drag-over-above' : 'drag-over-below';
+        const oldClass = isAbove ? 'drag-over-below' : 'drag-over-above';
+
+        // Only touch the DOM if something actually changed
+        if (this._dropIndicatorEl !== row || this._dropIndicatorClass !== newClass) {
+            if (this._dropIndicatorEl) {
+                this._dropIndicatorEl.classList.remove('drag-over-above', 'drag-over-below');
+            }
+            row.classList.remove(oldClass);
+            row.classList.add(newClass);
+            this._dropIndicatorEl = row;
+            this._dropIndicatorClass = newClass;
+        }
     }
 
     handleDrop(event) {
         event.preventDefault();
-        const dropIndex = parseInt(event.currentTarget.dataset.index);
+        this._clearDropIndicators();
 
-        if (this.draggedIndex !== null && this.draggedIndex !== dropIndex) {
+        const row = event.currentTarget;
+        const targetIndex = parseInt(row.dataset.index);
+
+        if (this.draggedIndex !== null && this.draggedIndex !== targetIndex) {
+            const rect = row.getBoundingClientRect();
+            const insertBefore = event.clientY < rect.top + rect.height / 2;
+
             const items = [...this.questions];
-            const draggedItem = items[this.draggedIndex];
+            const draggedItem = items.splice(this.draggedIndex, 1)[0];
 
-            items.splice(this.draggedIndex, 1);
-            items.splice(dropIndex, 0, draggedItem);
+            let insertAt = targetIndex;
+            if (this.draggedIndex < targetIndex) {
+                insertAt = targetIndex - 1;
+            }
+            if (!insertBefore) {
+                insertAt += 1;
+            }
 
+            items.splice(insertAt, 0, draggedItem);
             this.questions = this.stampComputedProps(items);
+
+            // Flash the dropped row after LWC re-renders
+            const landingIndex = insertAt;
+            // eslint-disable-next-line @lwc/lwc/no-async-operation
+            requestAnimationFrame(() => {
+                const rows = this.template.querySelectorAll('tr[data-index]');
+                const landedRow = [...rows].find(r => parseInt(r.dataset.index) === landingIndex);
+                if (landedRow) {
+                    landedRow.classList.add('just-dropped');
+                    landedRow.addEventListener('animationend', () => {
+                        landedRow.classList.remove('just-dropped');
+                    }, { once: true });
+                }
+            });
         }
 
         this.draggedIndex = null;
+    }
+
+    _clearDropIndicators() {
+        if (this._dropIndicatorEl) {
+            this._dropIndicatorEl.classList.remove('drag-over-above', 'drag-over-below');
+            this._dropIndicatorEl = null;
+            this._dropIndicatorClass = null;
+        }
     }
 
     // Move up/down buttons
@@ -671,6 +1020,16 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
                 Id: this.recordId,
                 [UNIFIED_QUESTIONS_FIELD.fieldApiName]: JSON.stringify(this.questions)
             };
+
+            // Write each filter question's selected values back to its _To_Display__c field on the controller
+            this.questions
+                .filter(q => q.type === 'filter' && q.filterControllerField && Array.isArray(q.filterSelectedValues) && q.filterSelectedValues.length > 0)
+                .forEach(q => {
+                    const def = this.filterFieldDefinitions.find(d => d.value === q.filterControllerField);
+                    if (def && def.schemaField) {
+                        fields[def.schemaField.fieldApiName] = q.filterSelectedValues.join(';');
+                    }
+                });
 
             const recordInput = { fields };
             await updateRecord(recordInput);
@@ -727,6 +1086,12 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     get modalTitle() {
         if (this.modalMode === 'addPreconfigured') {
             return 'Add Pre-configured Field';
+        } else if (this.modalMode === 'editPreconfigured') {
+            return `Edit Pre-configured Question: ${this.currentQuestion.fieldName || ''}`;
+        } else if (this.modalMode === 'addFilter') {
+            return 'Add Program Filter Question';
+        } else if (this.modalMode === 'editFilter') {
+            return `Edit Filter Question: ${this.currentQuestion.questionLabel || ''}`;
         } else if (this.modalMode === 'add') {
             return 'Add Custom Question';
         } else {
@@ -738,9 +1103,55 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         return this.modalMode === 'addPreconfigured';
     }
 
+    get isEditPreconfiguredMode() {
+        return this.modalMode === 'editPreconfigured';
+    }
+
+    get isAddFilterMode() {
+        return this.modalMode === 'addFilter';
+    }
+
+    get isEditFilterMode() {
+        return this.modalMode === 'editFilter';
+    }
+
+    get isFilterMode() {
+        return this.modalMode === 'addFilter' || this.modalMode === 'editFilter';
+    }
+
     get isCustomQuestion() {
         return this.modalMode === 'add' ||
-               this.modalMode === 'edit' && this.currentQuestion.type === 'custom';
+               (this.modalMode === 'edit' && this.currentQuestion.type === 'custom');
+    }
+
+    // Available filter fields (exclude ones already added, unless editing that one)
+    get availableFilterOptions() {
+        const usedFields = this.questions
+            .filter(q => q.type === 'filter' && q.id !== (this.currentQuestion.id ?? -1))
+            .map(q => q.filterControllerField);
+
+        const available = this.filterFieldDefinitions.filter(d => !usedFields.includes(d.value));
+        return [
+            { label: '-- Select a filter field --', value: '' },
+            ...available
+        ];
+    }
+
+    // Picklist options for the currently selected filter field (for dual-listbox)
+    get currentFilterPicklistOptions() {
+        const field = this.currentQuestion.filterControllerField;
+        if (!field) return [];
+        return this._filterPicklistOptions[field] || [];
+    }
+
+    get hasFilterPicklistOptions() {
+        return this.currentFilterPicklistOptions.length > 0;
+    }
+
+    get currentFilterSelectedValues() {
+        return Array.isArray(this.currentQuestion.filterSelectedValues)
+            ? this.currentQuestion.filterSelectedValues
+            : [];
     }
 
     get isPicklist() {

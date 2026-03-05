@@ -25,6 +25,7 @@ public with sharing class rfiFormController {
         @AuraEnabled public String fieldInteractionAPIName { get; set; }
         @AuraEnabled public List<picklistOption> picklistValues { get; set; }
         @AuraEnabled public Boolean isVisible { get; set; }
+        @AuraEnabled public Boolean isDisabled { get; set; }
         @AuraEnabled public Boolean isRequired { get; set; }
         @AuraEnabled public Boolean isSelected { get; set; }
         @AuraEnabled public Integer max { get; set; }
@@ -214,6 +215,16 @@ public with sharing class rfiFormController {
 
         // Prefill sensible defaults
         interactionAndRfi.rfiFieldList = new List<rfiField>();
+        interactionAndRfi.filterValues = new Map<String, String>();
+
+        // Check if using Unified Questions (new structure)
+        if (String.isNotBlank(rfiController.Unified_Questions__c)) {
+            System.debug('📦 Using Unified Questions structure');
+            // Filter questions are embedded in the unified list — processUnifiedQuestions handles them
+            processUnifiedQuestions(rfiController, interactionAndRfi);
+            // Skip the legacy filter + field processing below
+        } else {
+            System.debug('📦 Using legacy field structure (Fields_to_Display__c + Interaction_Questions__c)');
 
         //Get field information for all pre-filters for programs
         Map<String, String> mapFilterFields = new Map<String, String>{
@@ -248,7 +259,6 @@ public with sharing class rfiFormController {
         };
 
         //Create rfiField entries for each valid filter field configured on the controller
-        interactionAndRfi.filterValues = new Map<String, String>();
         for (String key : mapFilterFields.keySet()) {
             if (String.isNotBlank((String) rfiController.get(key))) {
                 // valid filter field
@@ -274,21 +284,11 @@ public with sharing class rfiFormController {
                 }
 
             }
-        }
+        } // end of filter for loop
 
         List<String> fieldsToDisplay = rfiController.Fields_to_Display__c != null
                 ? rfiController.Fields_to_Display__c.split(';')
                 : new List<String>();
-
-        // Check if using Unified Questions (new structure)
-        if (String.isNotBlank(rfiController.Unified_Questions__c)) {
-            System.debug('📦 Using Unified Questions structure');
-            // Process unified questions - they contain all questions in one ordered list
-            processUnifiedQuestions(rfiController, interactionAndRfi);
-            // Skip the legacy field processing below
-        } else {
-            System.debug('📦 Using legacy field structure (Fields_to_Display__c + Interaction_Questions__c)');
-            // LEGACY PATH: Continue with existing logic
 
         // If no fields configured on the controller record, use a sensible internal default
         if (fieldsToDisplay.isEmpty()) {
@@ -622,7 +622,7 @@ public with sharing class rfiFormController {
             }
 
         }
-        } // End of else block for legacy field processing
+        } // End of legacy else block
 
         return interactionAndRfi;
     }
@@ -1242,6 +1242,50 @@ public with sharing class rfiFormController {
                         }
                     }
 
+                } else if (questionType == 'filter') {
+                    // Program filter question — drives Academic Programs picklist filtering
+                    String controllerField = (String) q.get('filterControllerField');
+                    String interactionApiName = (String) q.get('filterInteractionAPIName');
+                    Boolean isSchoolList = q.get('isFilterSchoolList') == true;
+
+                    newField.fieldInteractionAPIName = interactionApiName;
+                    newField.isProgramFilter = true;
+                    newField.isRequired = true;
+
+                    // Determine the display values to use:
+                    // 1. Prefer filterSelectedValues from the JSON (the admin-chosen subset)
+                    // 2. Fall back to the full _To_Display__c field value on the controller
+                    String displayValues = '';
+                    Object selectedValsObj = q.get('filterSelectedValues');
+                    if (selectedValsObj != null) {
+                        List<Object> selectedList = (List<Object>) selectedValsObj;
+                        if (!selectedList.isEmpty()) {
+                            List<String> selectedStrings = new List<String>();
+                            for (Object sv : selectedList) {
+                                selectedStrings.add(String.valueOf(sv));
+                            }
+                            displayValues = String.join(selectedStrings, ';');
+                        }
+                    }
+                    // Fall back to controller field if JSON values weren't available
+                    if (String.isBlank(displayValues) && String.isNotBlank(controllerField)) {
+                        displayValues = (String) rfiController.get(controllerField);
+                    }
+
+                    // Build picklist options from the resolved display values
+                    if (String.isNotBlank(displayValues)) {
+                        if (isSchoolList) {
+                            newField.picklistValues = getUSTSchoolList(displayValues);
+                        } else {
+                            newField.picklistValues = getOptionsFromDelineatedString(displayValues);
+                        }
+                    }
+
+                    // Register this filter in the filterValues map so the JS knows to wait for it
+                    if (String.isNotBlank(interactionApiName)) {
+                        interactionAndRfi.filterValues.put(interactionApiName, '');
+                    }
+
                 } else if (questionType == 'custom') {
                     newField.fieldInteractionAPIName = (String) q.get('fieldToApplyTo');
                     String qType = String.valueOf(q.get('questionType') != null ? q.get('questionType') : '');
@@ -1289,6 +1333,16 @@ public with sharing class rfiFormController {
             }
 
             System.debug('✅ Processed ' + unifiedQuestions.size() + ' unified questions');
+
+            // If there are filter questions, initially disable the program lookup so the
+            // front-end can re-enable it only after all filters are selected
+            if (!interactionAndRfi.filterValues.isEmpty()) {
+                for (rfiField f : interactionAndRfi.rfiFieldList) {
+                    if (f.isProgramLookup == true) {
+                        f.isDisabled = true;
+                    }
+                }
+            }
 
         } catch (Exception e) {
             System.debug('❌ Error processing unified questions: ' + e.getMessage());

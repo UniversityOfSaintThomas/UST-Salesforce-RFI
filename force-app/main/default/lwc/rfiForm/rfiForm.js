@@ -200,23 +200,18 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
     /**
      * Check if all filter questions have been answered
-     * Filter questions must be answered before other fields are shown
      */
     get allFiltersAnswered() {
         if (!this.filterValues || Object.keys(this.filterValues).length === 0) {
-            // No filters configured, so all fields should be visible
             return true;
         }
-        // Check if all filter values are set (not empty)
         return Object.values(this.filterValues).every(v => v && v.length > 0);
     }
 
     /**
-     * Get processed fields with unique keys and visibility control
-     * Memoized for performance
-     * Fields are only visible if:
-     * 1. They are filter fields (isProgramFilter), OR
-     * 2. All filter questions have been answered
+     * Get processed fields with unique keys.
+     * All fields are always visible. The program lookup is disabled until all filters answered.
+     * Memoized for performance.
      */
     get fields() {
         // Generate cache key from field state and filter state
@@ -225,23 +220,24 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 name: f.name,
                 value: f.value,
                 selectedLabel: f.selectedLabel,
-                isProgramFilter: f.isProgramFilter
+                isProgramFilter: f.isProgramFilter,
+                isProgramLookup: f.isProgramLookup
             })),
             filterValues: this.filterValues,
             allFiltersAnswered: this.allFiltersAnswered
         });
 
-        // Return cached result if valid
         if (this._processedFieldsCacheKey === cacheKey && this._processedFieldsCache) {
             return this._processedFieldsCache;
         }
 
-        // Process fields with unique keys and visibility control
+        const filtersAnswered = this.allFiltersAnswered;
         this._processedFieldsCache = this._fields.map((field, index) => ({
             ...field,
             key: field.fieldInteractionAPIName || field.name || `field-${index}`,
-            // Hide non-filter fields until all filters are answered
-            isVisible: field.isProgramFilter || this.allFiltersAnswered
+            isVisible: true,
+            // Program lookup is disabled (locked) until all filters are selected
+            isDisabled: field.isProgramLookup ? !filtersAnswered : (field.isDisabled || false)
         }));
 
         this._processedFieldsCacheKey = cacheKey;
