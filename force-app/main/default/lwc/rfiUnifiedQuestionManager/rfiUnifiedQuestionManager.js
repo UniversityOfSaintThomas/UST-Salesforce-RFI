@@ -131,7 +131,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'School_College_To_Display__c',
             label: 'School / College',
-            questionField: 'School_College_Question__c',
             interactionAPIName: 'St_Thomas_College_School__c',
             isSchoolList: true,
             schemaField: SCHOOL_COLLEGE_TO_DISPLAY
@@ -139,7 +138,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Citizen_Types_To_Display__c',
             label: 'Citizenship Type',
-            questionField: 'Citizen_Type_Question__c',
             interactionAPIName: 'Citizenship__c',
             isSchoolList: false,
             schemaField: CITIZEN_TYPES_TO_DISPLAY
@@ -147,7 +145,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Degree_Types_To_Display__c',
             label: 'Degree Type',
-            questionField: 'Degree_Type_Question__c',
             interactionAPIName: 'Degree_Type__c',
             isSchoolList: false,
             schemaField: DEGREE_TYPES_TO_DISPLAY
@@ -155,7 +152,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Student_Types_To_Display__c',
             label: 'Student Type',
-            questionField: 'Student_Type_Question__c',
             interactionAPIName: 'Student_Type__c',
             isSchoolList: false,
             schemaField: STUDENT_TYPES_TO_DISPLAY
@@ -163,7 +159,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Delivery_Types_To_Display__c',
             label: 'Delivery Type',
-            questionField: 'Delivery_Type_Question__c',
             interactionAPIName: 'Delivery_Type__c',
             isSchoolList: false,
             schemaField: DELIVERY_TYPES_TO_DISPLAY
@@ -171,7 +166,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Program_Types_To_Display__c',
             label: 'Program Type',
-            questionField: 'Program_Type_Question__c',
             interactionAPIName: 'Generic_Filter_5__c',
             isSchoolList: false,
             schemaField: PROGRAM_TYPES_TO_DISPLAY
@@ -179,7 +173,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Generic_Filter_2_To_Display__c',
             label: 'Generic Filter 2',
-            questionField: 'Generic_Filter_2_Question__c',
             interactionAPIName: 'Generic_Filter_2__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_2_TO_DISPLAY
@@ -187,7 +180,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Generic_Filter_3_To_Display__c',
             label: 'Generic Filter 3',
-            questionField: 'Generic_Filter_3_Question__c',
             interactionAPIName: 'Generic_Filter_3__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_3_TO_DISPLAY
@@ -195,7 +187,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Generic_Filter_4_To_Display__c',
             label: 'Generic Filter 4',
-            questionField: 'Generic_Filter_4_Question__c',
             interactionAPIName: 'Generic_Filter_4__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_4_TO_DISPLAY
@@ -203,7 +194,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Generic_Filter_6_To_Display__c',
             label: 'Generic Filter 6',
-            questionField: 'Generic_Filter_6_Question__c',
             interactionAPIName: 'Generic_Filter_6__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_6_TO_DISPLAY
@@ -211,7 +201,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Generic_Filter_7_To_Display__c',
             label: 'Generic Filter 7',
-            questionField: 'Generic_Filter_7_Question__c',
             interactionAPIName: 'Generic_Filter_7__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_7_TO_DISPLAY
@@ -219,7 +208,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'Generic_Filter_8_To_Display__c',
             label: 'Generic Filter 8',
-            questionField: 'Generic_Filter_8_Question__c',
             interactionAPIName: 'Generic_Filter_8__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_8_TO_DISPLAY

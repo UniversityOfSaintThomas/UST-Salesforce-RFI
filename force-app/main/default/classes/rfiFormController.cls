@@ -78,29 +78,17 @@ public with sharing class rfiFormController {
                         Unified_Questions__c,
                         Academic_Interest_Max_Selection__c,
                         Disable_fields_to_display__c,
-                        School_College_Question__c,
                         School_College_To_Display__c,
-                        Citizen_Type_Question__c,
                         Citizen_Types_To_Display__c,
-                        Degree_Type_Question__c,
                         Degree_Types_To_Display__c,
-                        Generic_Filter_2_Question__c,
                         Generic_Filter_2_To_Display__c,
-                        Generic_Filter_3_Question__c,
                         Generic_Filter_3_To_Display__c,
-                        Generic_Filter_4_Question__c,
                         Generic_Filter_4_To_Display__c,
-                        Generic_Filter_6_Question__c,
                         Generic_Filter_6_To_Display__c,
-                        Generic_Filter_7_Question__c,
                         Generic_Filter_7_To_Display__c,
-                        Generic_Filter_8_Question__c,
                         Generic_Filter_8_To_Display__c,
-                        Student_Type_Question__c,
                         Student_Types_To_Display__c,
-                        Delivery_Type_Question__c,
                         Delivery_Types_To_Display__c,
-                        Program_Type_Question__c,
                         Program_Types_To_Display__c,
                         Academic_Interest_Label__c,
                         Address_Label__c,
@@ -225,22 +213,23 @@ public with sharing class rfiFormController {
             System.debug('📦 Using legacy field structure (Fields_to_Display__c)');
 
             //Get field information for all pre-filters for programs
-            Map<String, String> mapFilterFields = new Map<String, String>{
-                    'School_College_To_Display__c' => 'School_College_Question__c',
-                    'Citizen_Types_To_Display__c' => 'Citizen_Type_Question__c',
-                    'Degree_Types_To_Display__c' => 'Degree_Type_Question__c',
-                    'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2_Question__c',
-                    'Generic_Filter_3_To_Display__c' => 'Generic_Filter_3_Question__c',
-                    'Generic_Filter_4_To_Display__c' => 'Generic_Filter_4_Question__c',
-                    'Generic_Filter_6_To_Display__c' => 'Generic_Filter_6_Question__c',
-                    'Generic_Filter_7_To_Display__c' => 'Generic_Filter_7_Question__c',
-                    'Generic_Filter_8_To_Display__c' => 'Generic_Filter_8_Question__c',
-                    'Student_Types_To_Display__c' => 'Student_Type_Question__c',
-                    'Delivery_Types_To_Display__c' => 'Delivery_Type_Question__c',
-                    'Program_Types_To_Display__c' => 'Program_Type_Question__c'
+            // Default labels for legacy path — unified path uses labels stored in Unified_Questions__c JSON
+            Map<String, String> mapFilterLabels = new Map<String, String>{
+                    'School_College_To_Display__c' => 'School / College',
+                    'Citizen_Types_To_Display__c' => 'Citizenship Type',
+                    'Degree_Types_To_Display__c' => 'Degree Type',
+                    'Generic_Filter_2_To_Display__c' => 'Generic Filter 2',
+                    'Generic_Filter_3_To_Display__c' => 'Generic Filter 3',
+                    'Generic_Filter_4_To_Display__c' => 'Generic Filter 4',
+                    'Generic_Filter_6_To_Display__c' => 'Generic Filter 6',
+                    'Generic_Filter_7_To_Display__c' => 'Generic Filter 7',
+                    'Generic_Filter_8_To_Display__c' => 'Generic Filter 8',
+                    'Student_Types_To_Display__c' => 'Student Type',
+                    'Delivery_Types_To_Display__c' => 'Delivery Type',
+                    'Program_Types_To_Display__c' => 'Program Type'
             };
 
-            //Map the filter questions to the correct Interaction field API names
+            //Map the filter display fields to the correct Interaction field API names
             Map<String, String> mapFilterToInteractionField = new Map<String, String>{
                     'School_College_To_Display__c' => 'St_Thomas_College_School__c',
                     'Citizen_Types_To_Display__c' => 'Citizenship__c',
@@ -257,30 +246,24 @@ public with sharing class rfiFormController {
             };
 
             //Create rfiField entries for each valid filter field configured on the controller
-            for (String key : mapFilterFields.keySet()) {
+            for (String key : mapFilterLabels.keySet()) {
                 if (String.isNotBlank((String) rfiController.get(key))) {
-                    // valid filter field
-                    String questionField = mapFilterFields.get(key);
-                    String questionText = (String) rfiController.get(questionField);
-                    if (String.isNotBlank(questionText)) {
-                        rfiField newField = new rfiField();
-                        newField.fieldLabel = questionText;
-                        newField.isVisible = true;
-                        newField.isRequired = true;
-                        newField.isProgramFilter = true;
+                    rfiField newField = new rfiField();
+                    newField.fieldLabel = mapFilterLabels.get(key);
+                    newField.isVisible = true;
+                    newField.isRequired = true;
+                    newField.isProgramFilter = true;
 
-                        // Special handling for School_College filter - return Account IDs instead of text values
-                        if (key == 'School_College_To_Display__c') {
-                            newField.picklistValues = getUSTSchoolList((String) rfiController.get(key));
-                        } else {
-                            newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
-                        }
-
-                        newField.fieldInteractionAPIName = mapFilterToInteractionField.get(key);
-                        interactionAndRfi.rfiFieldList.add(newField);
-                        interactionAndRfi.filterValues.put(newField.fieldInteractionAPIName, '');
+                    // Special handling for School_College filter - return Account IDs instead of text values
+                    if (key == 'School_College_To_Display__c') {
+                        newField.picklistValues = getUSTSchoolList((String) rfiController.get(key));
+                    } else {
+                        newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
                     }
 
+                    newField.fieldInteractionAPIName = mapFilterToInteractionField.get(key);
+                    interactionAndRfi.rfiFieldList.add(newField);
+                    interactionAndRfi.filterValues.put(newField.fieldInteractionAPIName, '');
                 }
             } // end of filter for loop
 
