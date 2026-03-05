@@ -58,6 +58,7 @@ public with sharing class rfiFormController {
         @AuraEnabled public String value { get; set; }
     }
 
+
     @AuraEnabled(Cacheable=true)
     public static interactionRFIFields getRFIForm(String rfiControllerName) {
         RFI_Controller__c rfiController = [

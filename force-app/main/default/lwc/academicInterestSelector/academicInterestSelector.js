@@ -10,12 +10,11 @@
  */
 
 import {LightningElement, api, wire, track} from 'lwc';
-import {getRecord, updateRecord, getRecordNotifyChange} from 'lightning/uiRecordApi';
+import {getRecord, notifyRecordUpdateAvailable} from 'lightning/uiRecordApi';
 import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 import {refreshApex} from '@salesforce/apex';
-import getProgramsWithShortCodes from '@salesforce/apex/rfiFormController.getProgramsWithShortCodes';
-import ACADEMIC_INTERESTS_FIELD from '@salesforce/schema/RFI_Controller__c.Academic_Interests_To_Display__c';
-import ID_FIELD from '@salesforce/schema/RFI_Controller__c.Id';
+import getSelectablePrograms from '@salesforce/apex/AcademicInterestSelectorController.getSelectablePrograms';
+import saveAcademicInterests from '@salesforce/apex/AcademicInterestSelectorController.saveAcademicInterests';
 
 const FIELDS = [
     'RFI_Controller__c.Academic_Level__c',
@@ -70,12 +69,10 @@ export default class AcademicInterestSelector extends LightningElement {
         try {
             this.isLoading = true;
 
-            // Load ALL programs that meet RFI criteria (don't filter by Academic_Interests_To_Display__c)
-            const programs = await getProgramsWithShortCodes({
+            // Load programs scoped to only valid Academic_Interests_To_Display__c picklist entries
+            const programs = await getSelectablePrograms({
                 academic_level: this.academicLevel,
-                school_college: this.schoolCollege,
-                academic_interest_codes: null, // Get all programs
-                filters: null
+                school_college: this.schoolCollege
             });
 
             // Store all programs with display labels
@@ -380,24 +377,18 @@ export default class AcademicInterestSelector extends LightningElement {
         try {
             this.isSaving = true;
 
-            // Prepare record update
-            const fields = {};
-            fields[ID_FIELD.fieldApiName] = this.recordId;
-            fields[ACADEMIC_INTERESTS_FIELD.fieldApiName] = this.selectedValues.join(';');
+            // Use Apex — LDS updateRecord cannot write MultiselectPicklist fields
+            await saveAcademicInterests({
+                recordId: this.recordId,
+                codes: this.selectedValues.join(';')
+            });
 
-            const recordInput = {fields};
+            // Notify LDS so any other wired components (e.g. rfiForm) pick up the change
+            notifyRecordUpdateAvailable([{recordId: this.recordId}]);
 
-            // Update the record
-            await updateRecord(recordInput);
-
-            // Notify Lightning Data Service that this record has changed
-            console.log('Notifying LDS of record change for recordId:', this.recordId);
-            await getRecordNotifyChange([{recordId: this.recordId}]);
-
-            // Refresh the wired data
+            // Refresh our own wired record data
             await refreshApex(this.wiredRecordResult);
 
-            // Show success message
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'Success',
@@ -410,8 +401,6 @@ export default class AcademicInterestSelector extends LightningElement {
         } catch (error) {
             this.isSaving = false;
             console.error('Error saving selections:', error);
-
-            // Show error message
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'Error saving selections',
@@ -425,21 +414,11 @@ export default class AcademicInterestSelector extends LightningElement {
     // Save selections without showing toast notification (used for automatic cleanup)
     async saveSelectionsQuietly() {
         try {
-            // Prepare record update
-            const fields = {};
-            fields[ID_FIELD.fieldApiName] = this.recordId;
-            fields[ACADEMIC_INTERESTS_FIELD.fieldApiName] = this.selectedValues.join(';');
-
-            const recordInput = {fields};
-
-            // Update the record
-            await updateRecord(recordInput);
-
-            // Notify Lightning Data Service that this record has changed
-            console.log('Notifying LDS of record change (quiet save) for recordId:', this.recordId);
-            await getRecordNotifyChange([{recordId: this.recordId}]);
-
-            // Refresh the wired data
+            await saveAcademicInterests({
+                recordId: this.recordId,
+                codes: this.selectedValues.join(';')
+            });
+            notifyRecordUpdateAvailable([{recordId: this.recordId}]);
             await refreshApex(this.wiredRecordResult);
         } catch (error) {
             console.error('Error saving cleaned selections:', error);
