@@ -17,7 +17,6 @@ import UNIFIED_QUESTIONS_FIELD from '@salesforce/schema/RFI_Controller__c.Unifie
 import FIELDS_TO_DISPLAY_FIELD from '@salesforce/schema/RFI_Controller__c.Fields_to_Display__c';
 import FIELDS_TO_DISPLAY_ORDER_FIELD from '@salesforce/schema/RFI_Controller__c.Fields_to_Display_Order__c';
 import REQUIRED_FIELDS_FIELD from '@salesforce/schema/RFI_Controller__c.Required_Fields__c';
-import INTERACTION_QUESTIONS_FIELD from '@salesforce/schema/RFI_Controller__c.Interaction_Questions__c';
 
 // Import all _To_Display__c filter fields for reading current values and writing selections
 import SCHOOL_COLLEGE_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.School_College_To_Display__c';
@@ -66,7 +65,6 @@ const FIELDS = [
     FIELDS_TO_DISPLAY_FIELD,
     FIELDS_TO_DISPLAY_ORDER_FIELD,
     REQUIRED_FIELDS_FIELD,
-    INTERACTION_QUESTIONS_FIELD,
     ACADEMIC_INTEREST_LABEL,
     ADDRESS_LABEL,
     BIRTHDATE_LABEL,
@@ -454,46 +452,17 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         const fieldsToDisplayOrder = this.getFieldValue(FIELDS_TO_DISPLAY_ORDER_FIELD);
         const fieldsToDisplay = this.getFieldValue(FIELDS_TO_DISPLAY_FIELD);
         const requiredFields = this.getFieldValue(REQUIRED_FIELDS_FIELD);
-        const interactionQuestionsJSON = this.getFieldValue(INTERACTION_QUESTIONS_FIELD);
-
         const requiredFieldsArray = requiredFields ? requiredFields.split(';') : [];
 
-        // Step 1: Add "top" questions from Interaction_Questions
-        if (interactionQuestionsJSON) {
-            try {
-                const interactionQuestions = JSON.parse(interactionQuestionsJSON);
-                const topQuestions = interactionQuestions.filter(q => q.position === 'top');
-
-                topQuestions.forEach(q => {
-                    migratedQuestions.push({
-                        id: migratedQuestions.length,
-                        type: 'custom',
-                        questionLabel: q.questionLabel || '',
-                        questionType: q.questionType || 'Text box',
-                        fieldToApplyTo: q.fieldToApplyTo || '',
-                        isRequired: q.isRequired || false,
-                        picklistValues: q.picklistValues || [],
-                        valuesFlat: q.valuesFlat || '',
-                        assistiveText: q.assistiveText || ''
-                    });
-                });
-            } catch (e) {
-                console.error('Error parsing Interaction_Questions__c:', e);
-            }
-        }
-
-        // Step 2: Add pre-configured fields (middle section)
-        // Use Fields_to_Display_Order__c if available, otherwise fall back to Fields_to_Display__c
+        // Add pre-configured fields from Fields_to_Display_Order__c or Fields_to_Display__c
         const fieldsSource = fieldsToDisplayOrder || fieldsToDisplay;
 
-        // Address sub-fields from the old system that get collapsed into a single 'Address' entry
+        // Address sub-fields from the old system get collapsed into a single 'Address' entry
         const ADDRESS_SUB_FIELDS = new Set(['Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country']);
 
-        // Build the ordered field list; always ensure First Name and Last Name are present
-        // (they were hard-coded in the old form and never stored in the picklist fields)
         let rawFields = fieldsSource ? fieldsSource.split(';').map(f => f.trim()).filter(f => f) : [];
 
-        // Collapse address sub-fields: replace the first occurrence with 'Address', drop the rest
+        // Collapse address sub-fields
         let addressAdded = false;
         let orderedFields = [];
         for (const fieldName of rawFields) {
@@ -502,13 +471,12 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
                     orderedFields.push('Address');
                     addressAdded = true;
                 }
-                // Skip subsequent address sub-fields
             } else {
                 orderedFields.push(fieldName);
             }
         }
 
-        // Prepend First Name and Last Name if not already present
+        // Always ensure First Name and Last Name are present
         if (!orderedFields.includes('First Name')) {
             orderedFields.unshift('First Name');
         }
@@ -533,35 +501,9 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
             });
         });
 
-        console.log(`📋 Migrated ${orderedFields.length} pre-configured fields (address sub-fields collapsed to single Address entry)`);
-
-        // Step 3: Add "bottom" questions from Interaction_Questions
-        if (interactionQuestionsJSON) {
-            try {
-                const interactionQuestions = JSON.parse(interactionQuestionsJSON);
-                const bottomQuestions = interactionQuestions.filter(q => q.position === 'bottom' || !q.position);
-
-                bottomQuestions.forEach(q => {
-                    migratedQuestions.push({
-                        id: migratedQuestions.length,
-                        type: 'custom',
-                        questionLabel: q.questionLabel || '',
-                        questionType: q.questionType || 'Text box',
-                        fieldToApplyTo: q.fieldToApplyTo || '',
-                        isRequired: q.isRequired || false,
-                        picklistValues: q.picklistValues || [],
-                        valuesFlat: q.valuesFlat || '',
-                        assistiveText: q.assistiveText || ''
-                    });
-                });
-            } catch (e) {
-                console.error('Error parsing Interaction_Questions__c:', e);
-            }
-        }
-
         this.questions = migratedQuestions;
         this.needsMigration = true;
-        console.log(`✅ Migrated ${migratedQuestions.length} questions from legacy structure`);
+        console.log(`✅ Migrated ${migratedQuestions.length} pre-configured fields from legacy structure`);
     }
 
     getFieldValue(field) {

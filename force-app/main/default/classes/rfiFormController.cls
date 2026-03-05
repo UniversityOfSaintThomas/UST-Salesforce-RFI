@@ -75,8 +75,6 @@ public with sharing class rfiFormController {
                         Lead_Source__c,
                         Redirect_After_Form_Submission__c,
                         Multi_Select_Display_Type__c,
-                        Additional_Questions__c,
-                        Interaction_Questions__c,
                         Unified_Questions__c,
                         Academic_Interest_Max_Selection__c,
                         Disable_fields_to_display__c,
@@ -224,404 +222,347 @@ public with sharing class rfiFormController {
             processUnifiedQuestions(rfiController, interactionAndRfi);
             // Skip the legacy filter + field processing below
         } else {
-            System.debug('📦 Using legacy field structure (Fields_to_Display__c + Interaction_Questions__c)');
+            System.debug('📦 Using legacy field structure (Fields_to_Display__c)');
 
-        //Get field information for all pre-filters for programs
-        Map<String, String> mapFilterFields = new Map<String, String>{
-                'School_College_To_Display__c' => 'School_College_Question__c',
-                'Citizen_Types_To_Display__c' => 'Citizen_Type_Question__c',
-                'Degree_Types_To_Display__c' => 'Degree_Type_Question__c',
-                'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2_Question__c',
-                'Generic_Filter_3_To_Display__c' => 'Generic_Filter_3_Question__c',
-                'Generic_Filter_4_To_Display__c' => 'Generic_Filter_4_Question__c',
-                'Generic_Filter_6_To_Display__c' => 'Generic_Filter_6_Question__c',
-                'Generic_Filter_7_To_Display__c' => 'Generic_Filter_7_Question__c',
-                'Generic_Filter_8_To_Display__c' => 'Generic_Filter_8_Question__c',
-                'Student_Types_To_Display__c' => 'Student_Type_Question__c',
-                'Delivery_Types_To_Display__c' => 'Delivery_Type_Question__c',
-                'Program_Types_To_Display__c' => 'Program_Type_Question__c'
-        };
-
-        //Map the filter questions to the correct Interaction field API names
-        Map<String, String> mapFilterToInteractionField = new Map<String, String>{
-                'School_College_To_Display__c' => 'St_Thomas_College_School__c',
-                'Citizen_Types_To_Display__c' => 'Citizenship__c',
-                'Degree_Types_To_Display__c' => 'Degree_Type__c',
-                'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2__c',
-                'Generic_Filter_3_To_Display__c' => 'Generic_Filter_3__c',
-                'Generic_Filter_4_To_Display__c' => 'Generic_Filter_4__c',
-                'Generic_Filter_6_To_Display__c' => 'Generic_Filter_6__c',
-                'Generic_Filter_7_To_Display__c' => 'Generic_Filter_7__c',
-                'Generic_Filter_8_To_Display__c' => 'Generic_Filter_8__c',
-                'Student_Types_To_Display__c' => 'Student_Type__c',
-                'Delivery_Types_To_Display__c' => 'Delivery_Type__c',
-                'Program_Types_To_Display__c' => 'Generic_Filter_5__c'
-        };
-
-        //Create rfiField entries for each valid filter field configured on the controller
-        for (String key : mapFilterFields.keySet()) {
-            if (String.isNotBlank((String) rfiController.get(key))) {
-                // valid filter field
-                String questionField = mapFilterFields.get(key);
-                String questionText = (String) rfiController.get(questionField);
-                if (String.isNotBlank(questionText)) {
-                    rfiField newField = new rfiField();
-                    newField.fieldLabel = questionText;
-                    newField.isVisible = true;
-                    newField.isRequired = true;
-                    newField.isProgramFilter = true;
-
-                    // Special handling for School_College filter - return Account IDs instead of text values
-                    if (key == 'School_College_To_Display__c') {
-                        newField.picklistValues = getUSTSchoolList((String) rfiController.get(key));
-                    } else {
-                        newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
-                    }
-
-                    newField.fieldInteractionAPIName = mapFilterToInteractionField.get(key);
-                    interactionAndRfi.rfiFieldList.add(newField);
-                    interactionAndRfi.filterValues.put(newField.fieldInteractionAPIName, '');
-                }
-
-            }
-        } // end of filter for loop
-
-        List<String> fieldsToDisplay = rfiController.Fields_to_Display__c != null
-                ? rfiController.Fields_to_Display__c.split(';')
-                : new List<String>();
-
-        // If no fields configured on the controller record, use a sensible internal default
-        if (fieldsToDisplay.isEmpty()) {
-            fieldsToDisplay.addAll(new List<String>{
-                    'First Name', 'Last Name', 'Email'
-            });
-        }
-        // Always include First/Last Name even if not configured
-        if (!fieldsToDisplay.contains('Last Name')) {
-            fieldsToDisplay.add(0, 'Last Name');
-        }
-        if (!fieldsToDisplay.contains('First Name')) {
-            fieldsToDisplay.add(0, 'First Name');
-        }
-        List<String> requiredFields = rfiController.Required_Fields__c != null ? rfiController.Required_Fields__c.split(';') : new List<String>();
-
-
-        Boolean addressAdded = false;
-        // Lead field describes for dynamic picklist detection
-        Map<String, Schema.SObjectField> leadFieldMap = Schema.SObjectType.Lead.fields.getMap();
-        // Interaction field describes to validate field existence
-        Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
-
-        //Reorder fieldsToDisplay based on Fields_to_Display_Order__c
-        List<String> orderedFields = new List<String>();
-        if (String.isNotBlank(rfiController.Fields_to_Display_Order__c)) {
-            // Use the explicit order from Fields_to_Display_Order__c
-            List<String> orderList = rfiController.Fields_to_Display_Order__c.split(';');
-            for (String orderedField : orderList) {
-                if (fieldsToDisplay.contains(orderedField) && !orderedFields.contains(orderedField)) {
-                    orderedFields.add(orderedField);
-                }
-            }
-            // Add any remaining fields that were not in the order list
-            for (String fieldName : fieldsToDisplay) {
-                if (!orderedFields.contains(fieldName)) {
-                    orderedFields.add(fieldName);
-                }
-            }
-            fieldsToDisplay = orderedFields;
-        } else {
-            // LEGACY SUPPORT: Apply hard-coded order from old requestForInformationForm component
-            // This ensures backward compatibility with existing RFI Controller records created
-            // before Fields_to_Display_Order__c was implemented
-            List<String> legacyOrder = new List<String>{
-                'I will apply to St Thomas as a',
-                'I will apply to St Thomas Law as a',
-                'St Thomas Colleges',
-                'Citizenship',
-                'Academic Interest',
-                'Title',
-                'First Name',
-                'Last Name',
-                'Email',
-                'Home and Mobile Phone',
-                'Home Phone',
-                'Phone',
-                'I would like to receive text messages',
-                'Birthdate',
-                'Employer',
-                'Company',
-                'Expected Start Term at St Thomas',
-                'Timeline to Enrollment',
-                'When do you want to start school',
-                'High School Attended',
-                'High School Graduation Year',
-                'Address 1',
-                'Address 2',
-                'Address 3',
-                'City',
-                'State',
-                'Country',
-                'Zipcode',
-                'Mail me information',
-                'How did you hear about us',
-                'Scholarship of Interest',
-                'Tell us about yourself',
-                'I have a question'
+            //Get field information for all pre-filters for programs
+            Map<String, String> mapFilterFields = new Map<String, String>{
+                    'School_College_To_Display__c' => 'School_College_Question__c',
+                    'Citizen_Types_To_Display__c' => 'Citizen_Type_Question__c',
+                    'Degree_Types_To_Display__c' => 'Degree_Type_Question__c',
+                    'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2_Question__c',
+                    'Generic_Filter_3_To_Display__c' => 'Generic_Filter_3_Question__c',
+                    'Generic_Filter_4_To_Display__c' => 'Generic_Filter_4_Question__c',
+                    'Generic_Filter_6_To_Display__c' => 'Generic_Filter_6_Question__c',
+                    'Generic_Filter_7_To_Display__c' => 'Generic_Filter_7_Question__c',
+                    'Generic_Filter_8_To_Display__c' => 'Generic_Filter_8_Question__c',
+                    'Student_Types_To_Display__c' => 'Student_Type_Question__c',
+                    'Delivery_Types_To_Display__c' => 'Delivery_Type_Question__c',
+                    'Program_Types_To_Display__c' => 'Program_Type_Question__c'
             };
 
-            // Apply legacy order
-            for (String legacyField : legacyOrder) {
-                if (fieldsToDisplay.contains(legacyField) && !orderedFields.contains(legacyField)) {
-                    orderedFields.add(legacyField);
-                }
-            }
-            // Add any remaining fields not in legacy order (in case new fields were added)
-            for (String fieldName : fieldsToDisplay) {
-                if (!orderedFields.contains(fieldName)) {
-                    orderedFields.add(fieldName);
-                }
-            }
-            fieldsToDisplay = orderedFields;
+            //Map the filter questions to the correct Interaction field API names
+            Map<String, String> mapFilterToInteractionField = new Map<String, String>{
+                    'School_College_To_Display__c' => 'St_Thomas_College_School__c',
+                    'Citizen_Types_To_Display__c' => 'Citizenship__c',
+                    'Degree_Types_To_Display__c' => 'Degree_Type__c',
+                    'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2__c',
+                    'Generic_Filter_3_To_Display__c' => 'Generic_Filter_3__c',
+                    'Generic_Filter_4_To_Display__c' => 'Generic_Filter_4__c',
+                    'Generic_Filter_6_To_Display__c' => 'Generic_Filter_6__c',
+                    'Generic_Filter_7_To_Display__c' => 'Generic_Filter_7__c',
+                    'Generic_Filter_8_To_Display__c' => 'Generic_Filter_8__c',
+                    'Student_Types_To_Display__c' => 'Student_Type__c',
+                    'Delivery_Types_To_Display__c' => 'Delivery_Type__c',
+                    'Program_Types_To_Display__c' => 'Generic_Filter_5__c'
+            };
 
-            System.debug('Applied legacy field order for backward compatibility');
-        }
+            //Create rfiField entries for each valid filter field configured on the controller
+            for (String key : mapFilterFields.keySet()) {
+                if (String.isNotBlank((String) rfiController.get(key))) {
+                    // valid filter field
+                    String questionField = mapFilterFields.get(key);
+                    String questionText = (String) rfiController.get(questionField);
+                    if (String.isNotBlank(questionText)) {
+                        rfiField newField = new rfiField();
+                        newField.fieldLabel = questionText;
+                        newField.isVisible = true;
+                        newField.isRequired = true;
+                        newField.isProgramFilter = true;
 
-        for (String fieldName : fieldsToDisplay) {
-            rfiField newField = new rfiField();
-            // default visibility/selection
-            newField.isVisible = true;
-            newField.isSelected = false;
-            newField.max = 4;
-            switch on fieldName {
-                when 'Academic Interest' {
-                    newField.fieldInteractionAPIName = 'Major_Program_1__c';
-                    newField.isProgramLookup = true;
-                    if (rfiController.Academic_Interest_Max_Selection__c != null) {
-                        newField.max = Integer.valueOf(String.valueOf(rfiController.Academic_Interest_Max_Selection__c));
-                    } else {
-                        newField.max = 4;
-                    }
-
-                    // Use custom label if provided, otherwise use default
-                    if (String.isNotBlank(rfiController.Academic_Interest_Label__c)) {
-                        if (newField.max == 1) {
-                            newField.fieldLabel = rfiController.Academic_Interest_Label__c;
-                        } else if (newField.max > 1) {
-                            newField.fieldLabel = rfiController.Academic_Interest_Label__c + ' (Max ' + newField.max + ' selections)';
+                        // Special handling for School_College filter - return Account IDs instead of text values
+                        if (key == 'School_College_To_Display__c') {
+                            newField.picklistValues = getUSTSchoolList((String) rfiController.get(key));
+                        } else {
+                            newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
                         }
-                    } else {
-                        if (newField.max == 1) {
-                            newField.fieldLabel = 'Academic Interest';
-                        } else if (newField.max > 1) {
-                            newField.fieldLabel = 'Academic Interest (Max ' + newField.max + ' selections)';
-                        }
-                    }
-                }
-                when 'Address 1', 'Address 2', 'Address 3', 'City', 'Country', 'State', 'Zipcode' {
-                    if (!addressAdded) {
-                        newField.fieldInteractionAPIName = 'Address';
-                        newField.isAddress = true;
-                        addressAdded = true;
-                        // mark required if present in Required_Fields__c using any of the address tokens
-                        newField.isRequired = requiredFields.contains('Address 1') || requiredFields.contains('City') ||
-                                requiredFields.contains('Country') || requiredFields.contains('State') || requiredFields.contains('Zipcode');
+
+                        newField.fieldInteractionAPIName = mapFilterToInteractionField.get(key);
                         interactionAndRfi.rfiFieldList.add(newField);
+                        interactionAndRfi.filterValues.put(newField.fieldInteractionAPIName, '');
                     }
-                    continue; // skip adding duplicates for address tokens
+
                 }
-                when 'Birthdate' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Birthdate_Label__c) ? rfiController.Birthdate_Label__c : 'Birthday (MM/DD/YYYY)';
-                    newField.fieldInteractionAPIName = 'Birthdate__c';
-                    newField.isDate = true;
-                }
-                when 'Citizenship' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Citizenship_Label__c) ? rfiController.Citizenship_Label__c : 'Citizenship';
-                    newField.fieldInteractionAPIName = 'Citizenship__c';
-                }
-                when 'Email' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Email_Label__c) ? rfiController.Email_Label__c : 'Email';
-                    newField.fieldInteractionAPIName = 'Email__c';
-                    newField.isEmail = true;
-                }
-                when 'Employer' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Employer_Label__c) ? rfiController.Employer_Label__c : 'Employer';
-                    newField.fieldInteractionAPIName = 'Employer__c';
-                }
-                when 'Expected Start Term at St Thomas' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Expected_Start_Term_Label__c) ? rfiController.Expected_Start_Term_Label__c : 'Expected Start Term at St. Thomas';
-                    newField.isPicklist = true;
-                    newField.picklistValues = getTerms();
-                    newField.fieldInteractionAPIName = 'Intended_Start_Term__c';
-                }
-                when 'High School Attended' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.High_School_Attended_Label__c) ? rfiController.High_School_Attended_Label__c : 'High School Attended';
-                    newField.fieldInteractionAPIName = 'High_School_or_College__c';
-                    newField.isSchoolLookup = true;
-                }
-                when 'High School Graduation Year' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.High_School_Graduation_Year_Label__c) ? rfiController.High_School_Graduation_Year_Label__c : 'High School Graduation (YYYY)';
-                    newField.fieldInteractionAPIName = 'High_School_Graduation_Year__c';
-                }
-                when 'How did you hear about us' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.How_Did_You_Hear_About_Us_Label__c) ? rfiController.How_Did_You_Hear_About_Us_Label__c : 'How did you hear about us?';
-                    newField.fieldInteractionAPIName = 'Heard_About_Us__c';
-                }
-                when 'I have a question' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.I_Have_A_Question_Label__c) ? rfiController.I_Have_A_Question_Label__c : 'I have a question';
-                    newField.fieldInteractionAPIName = 'Has_Question__c';
-                    newField.isCheckbox = true;
-                    newField.showDependentField = true; // Show Questions/Comments textarea when checked
-                }
-                when 'I will apply to St Thomas as a' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Apply_To_St_Thomas_As_Label__c) ? rfiController.Apply_To_St_Thomas_As_Label__c : 'I will apply to St. Thomas as a';
-                    newField.fieldInteractionAPIName = 'Admit_Type__c';
-                }
-                when 'I would like program information to be mailed to me' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Mail_Information_Label__c) ? rfiController.Mail_Information_Label__c : 'I would like program information to be mailed to me';
-                    newField.fieldInteractionAPIName = 'Mail_Information__c';
-                    newField.isCheckbox = true;
-                }
-                when 'I would like to receive text messages' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Receive_Text_Messages_Label__c) ? rfiController.Receive_Text_Messages_Label__c : 'I would like to receive text messages';
-                    newField.fieldInteractionAPIName = 'Receive_Texts__c';
-                    newField.isCheckbox = true;
-                }
-                when 'Phone' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Phone_Label__c) ? rfiController.Phone_Label__c : 'Phone';
-                    newField.fieldInteractionAPIName = 'Home_Phone__c';
-                    newField.isTel = true;
-                }
-                when 'Home Phone' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Home_Phone_Label__c) ? rfiController.Home_Phone_Label__c : 'Home Phone';
-                    newField.fieldInteractionAPIName = 'Home_Phone__c';
-                    newField.isTel = true;
-                }
-                when 'First Name' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.First_Name_Label__c) ? rfiController.First_Name_Label__c : 'First Name';
-                    newField.fieldInteractionAPIName = 'First_Name__c';
-                }
-                when 'Last Name' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Last_Name_Label__c) ? rfiController.Last_Name_Label__c : 'Last Name';
-                    newField.fieldInteractionAPIName = 'Last_Name__c';
-                }
-                when 'Company' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Company_Label__c) ? rfiController.Company_Label__c : 'Company';
-                    newField.fieldInteractionAPIName = 'Employer__c';
-                }
-                when 'Scholarship of Interest' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Scholarship_Of_Interest_Label__c) ? rfiController.Scholarship_Of_Interest_Label__c : 'Scholarship of Interest';
-                    newField.fieldInteractionAPIName = 'Scholarship_of_Interest__c';
-                }
-                when 'St Thomas Colleges' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.St_Thomas_Colleges_Label__c) ? rfiController.St_Thomas_Colleges_Label__c : 'College\\School';
-                    newField.isPicklist = true;
-                    newField.picklistValues = getUSTSchoolList();
-                    newField.fieldInteractionAPIName = 'St_Thomas_College_School__c';
-                }
-                when 'Tell us about yourself' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Tell_Us_About_Yourself_Label__c) ? rfiController.Tell_Us_About_Yourself_Label__c : 'Tell us about yourself and why you are interested in this program. (150 words or less)';
-                    newField.fieldInteractionAPIName = 'Description__c';
-                    newField.isTextarea = true;
-                }
-                when 'Timeline to Enrollment' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Timeline_To_Enrollment_Label__c) ? rfiController.Timeline_To_Enrollment_Label__c : 'Timeline to Enrollment';
-                    newField.fieldInteractionAPIName = 'Timeline__c';
-                }
-                when 'Title' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.Title_Label__c) ? rfiController.Title_Label__c : 'Title';
-                    newField.fieldInteractionAPIName = 'Contact_Title__c';
-                }
-                when 'When do you plan to start school' {
-                    newField.fieldLabel = String.isNotBlank(rfiController.When_Start_School_Label__c) ? rfiController.When_Start_School_Label__c : 'When do you plan to start school';
-                    newField.fieldInteractionAPIName = 'High_School_Graduation_Year__c';
-                }
-                when else {
-                    newField.fieldLabel = 'Field Label Not Found';
-                    newField.fieldInteractionAPIName = 'Description__c';
-                    newField.isTextarea = true;
-                }
+            } // end of filter for loop
+
+            List<String> fieldsToDisplay = rfiController.Fields_to_Display__c != null
+                    ? rfiController.Fields_to_Display__c.split(';')
+                    : new List<String>();
+
+            // If no fields configured on the controller record, use a sensible internal default
+            if (fieldsToDisplay.isEmpty()) {
+                fieldsToDisplay.addAll(new List<String>{
+                        'First Name', 'Last Name', 'Email'
+                });
             }
+            // Always include First/Last Name even if not configured
+            if (!fieldsToDisplay.contains('Last Name')) {
+                fieldsToDisplay.add(0, 'Last Name');
+            }
+            if (!fieldsToDisplay.contains('First Name')) {
+                fieldsToDisplay.add(0, 'First Name');
+            }
+            List<String> requiredFields = rfiController.Required_Fields__c != null ? rfiController.Required_Fields__c.split(';') : new List<String>();
 
 
-            // If this maps to an Interaction field, detect picklist/multipicklist and populate options dynamically
-            if (String.isNotBlank(newField.fieldInteractionAPIName) && newField.fieldInteractionAPIName != 'Address' && newField.isPicklist != true && newField.isMultiSelect != true) {
-                String apiNameLower = newField.fieldInteractionAPIName.toLowerCase();
-                if (interactionFieldMap.containsKey(apiNameLower)) {
-                    Schema.DescribeFieldResult d = interactionFieldMap.get(apiNameLower).getDescribe();
-                    if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
-                        newField.picklistValues = getPicklistOptions(d);
-                        newField.isMultiSelect = true;
-                        newField.max = 4;
-                    } else if (d.getType() == Schema.DisplayType.PICKLIST) {
-                        newField.picklistValues = getPicklistOptions(d);
-                        newField.isPicklist = true;
+            Boolean addressAdded = false;
+            // Lead field describes for dynamic picklist detection
+            Map<String, Schema.SObjectField> leadFieldMap = Schema.SObjectType.Lead.fields.getMap();
+            // Interaction field describes to validate field existence
+            Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
+
+            //Reorder fieldsToDisplay based on Fields_to_Display_Order__c
+            List<String> orderedFields = new List<String>();
+            if (String.isNotBlank(rfiController.Fields_to_Display_Order__c)) {
+                // Use the explicit order from Fields_to_Display_Order__c
+                List<String> orderList = rfiController.Fields_to_Display_Order__c.split(';');
+                for (String orderedField : orderList) {
+                    if (fieldsToDisplay.contains(orderedField) && !orderedFields.contains(orderedField)) {
+                        orderedFields.add(orderedField);
                     }
                 }
+                // Add any remaining fields that were not in the order list
+                for (String fieldName : fieldsToDisplay) {
+                    if (!orderedFields.contains(fieldName)) {
+                        orderedFields.add(fieldName);
+                    }
+                }
+                fieldsToDisplay = orderedFields;
+            } else {
+                // LEGACY SUPPORT: Apply hard-coded order from old requestForInformationForm component
+                // This ensures backward compatibility with existing RFI Controller records created
+                // before Fields_to_Display_Order__c was implemented
+                List<String> legacyOrder = new List<String>{
+                        'I will apply to St Thomas as a',
+                        'I will apply to St Thomas Law as a',
+                        'St Thomas Colleges',
+                        'Citizenship',
+                        'Academic Interest',
+                        'Title',
+                        'First Name',
+                        'Last Name',
+                        'Email',
+                        'Home and Mobile Phone',
+                        'Home Phone',
+                        'Phone',
+                        'I would like to receive text messages',
+                        'Birthdate',
+                        'Employer',
+                        'Company',
+                        'Expected Start Term at St Thomas',
+                        'Timeline to Enrollment',
+                        'When do you want to start school',
+                        'High School Attended',
+                        'High School Graduation Year',
+                        'Address 1',
+                        'Address 2',
+                        'Address 3',
+                        'City',
+                        'State',
+                        'Country',
+                        'Zipcode',
+                        'Mail me information',
+                        'How did you hear about us',
+                        'Scholarship of Interest',
+                        'Tell us about yourself',
+                        'I have a question'
+                };
+
+                // Apply legacy order
+                for (String legacyField : legacyOrder) {
+                    if (fieldsToDisplay.contains(legacyField) && !orderedFields.contains(legacyField)) {
+                        orderedFields.add(legacyField);
+                    }
+                }
+                // Add any remaining fields not in legacy order (in case new fields were added)
+                for (String fieldName : fieldsToDisplay) {
+                    if (!orderedFields.contains(fieldName)) {
+                        orderedFields.add(fieldName);
+                    }
+                }
+                fieldsToDisplay = orderedFields;
+
+                System.debug('Applied legacy field order for backward compatibility');
             }
 
-            Boolean forceRequired = (newField.fieldInteractionAPIName == 'First_Name__c' || newField.fieldInteractionAPIName == 'Last_Name__c');
-            newField.isRequired = forceRequired || requiredFields.contains(fieldName);
-            interactionAndRfi.rfiFieldList.add(newField);
+            for (String fieldName : fieldsToDisplay) {
+                rfiField newField = new rfiField();
+                // default visibility/selection
+                newField.isVisible = true;
+                newField.isSelected = false;
+                newField.max = 4;
+                switch on fieldName {
+                    when 'Academic Interest' {
+                        newField.fieldInteractionAPIName = 'Major_Program_1__c';
+                        newField.isProgramLookup = true;
+                        if (rfiController.Academic_Interest_Max_Selection__c != null) {
+                            newField.max = Integer.valueOf(String.valueOf(rfiController.Academic_Interest_Max_Selection__c));
+                        } else {
+                            newField.max = 4;
+                        }
 
-        }
-
-        // Additional Questions - Read from Interaction_Questions__c for Interaction forms
-        /* Data example stored in Interaction_Questions__c field:
-        [{"id":0,"questionLabel":"TEST","questionType":"Picklist","fieldToApplyTo":"Description","assistiveText":"","position":"bottom","isPicklist":true,"isRequired":false,"isTextBox":false,"isTextarea":false,"isRichText":false,"isStaticContent":false,"isEmail":false,"picklistValues":[{"label":"Test1","value":"Test1"},{"label":"Test2","value":"Test2"},{"label":"Test3","value":"Test3"},{"label":"Test4","value":"Test4"},{"label":"Test5","value":"Test5"}],"valuesFlat":"Test1;Test2;Test3;Test4;Test5"}]
-         */
-        List<rfiField> additionalFieldsTop = new List<rfiField>();
-        List<rfiField> additionalFieldsBottom = new List<rfiField>();
-        if (String.isNotBlank(rfiController.Interaction_Questions__c)) {
-            try {
-                List<Object> additionalQuestions = (List<Object>) JSON.deserializeUntyped(rfiController.Interaction_Questions__c);
-                for (Object qObj : additionalQuestions) {
-                    if (!(qObj instanceof Map<String, Object>)) continue;
-                    Map<String, Object> qMap = (Map<String, Object>) qObj;
-                    rfiField newField = new rfiField();
-                    newField.fieldLabel = qMap.containsKey('questionLabel') ? String.valueOf(qMap.get('questionLabel')) : 'Question';
-                    newField.fieldInteractionAPIName = qMap.containsKey('fieldToApplyTo') ? String.valueOf(qMap.get('fieldToApplyTo')) : 'Description';
-                    newField.isRequired = qMap.containsKey('isRequired') ? (Boolean) qMap.get('isRequired') : false;
-                    // Determine field type
-                    if (qMap.containsKey('isPicklist') && (Boolean) qMap.get('isPicklist')) {
-                        newField.isPicklist = true;
-                        newField.picklistValues = getOptionsFromDelineatedString((String) qMap.get('valuesFlat'));
-                    } else if (qMap.containsKey('isTextarea') && (Boolean) qMap.get('isTextarea')) {
-                        newField.isTextarea = true;
-                    } else if (qMap.containsKey('isStaticContent') && (Boolean) qMap.get('isStaticContent')) {
-                        newField.isStaticContent = true;
-                        newField.staticContentHtml = qMap.containsKey('valuesFlat') ? String.valueOf(qMap.get('valuesFlat')) : '';
-                    } else if (qMap.containsKey('isRichText') && (Boolean) qMap.get('isRichText')) {
-                        // Legacy support for isRichText (older data structure)
-                        newField.isStaticContent = true;
-                        newField.staticContentHtml = qMap.containsKey('valuesFlat') ? String.valueOf(qMap.get('valuesFlat')) : '';
-                    } else if (qMap.containsKey('isEmail') && (Boolean) qMap.get('isEmail')) {
+                        // Use custom label if provided, otherwise use default
+                        if (String.isNotBlank(rfiController.Academic_Interest_Label__c)) {
+                            if (newField.max == 1) {
+                                newField.fieldLabel = rfiController.Academic_Interest_Label__c;
+                            } else if (newField.max > 1) {
+                                newField.fieldLabel = rfiController.Academic_Interest_Label__c + ' (Max ' + newField.max + ' selections)';
+                            }
+                        } else {
+                            if (newField.max == 1) {
+                                newField.fieldLabel = 'Academic Interest';
+                            } else if (newField.max > 1) {
+                                newField.fieldLabel = 'Academic Interest (Max ' + newField.max + ' selections)';
+                            }
+                        }
+                    }
+                    when 'Address 1', 'Address 2', 'Address 3', 'City', 'Country', 'State', 'Zipcode' {
+                        if (!addressAdded) {
+                            newField.fieldInteractionAPIName = 'Address';
+                            newField.isAddress = true;
+                            addressAdded = true;
+                            // mark required if present in Required_Fields__c using any of the address tokens
+                            newField.isRequired = requiredFields.contains('Address 1') || requiredFields.contains('City') ||
+                                    requiredFields.contains('Country') || requiredFields.contains('State') || requiredFields.contains('Zipcode');
+                            interactionAndRfi.rfiFieldList.add(newField);
+                        }
+                        continue; // skip adding duplicates for address tokens
+                    }
+                    when 'Birthdate' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Birthdate_Label__c) ? rfiController.Birthdate_Label__c : 'Birthday (MM/DD/YYYY)';
+                        newField.fieldInteractionAPIName = 'Birthdate__c';
+                        newField.isDate = true;
+                    }
+                    when 'Citizenship' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Citizenship_Label__c) ? rfiController.Citizenship_Label__c : 'Citizenship';
+                        newField.fieldInteractionAPIName = 'Citizenship__c';
+                    }
+                    when 'Email' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Email_Label__c) ? rfiController.Email_Label__c : 'Email';
+                        newField.fieldInteractionAPIName = 'Email__c';
                         newField.isEmail = true;
-                    } else if (qMap.containsKey('isTextBox') && (Boolean) qMap.get('isTextBox')) {
+                    }
+                    when 'Employer' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Employer_Label__c) ? rfiController.Employer_Label__c : 'Employer';
+                        newField.fieldInteractionAPIName = 'Employer__c';
+                    }
+                    when 'Expected Start Term at St Thomas' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Expected_Start_Term_Label__c) ? rfiController.Expected_Start_Term_Label__c : 'Expected Start Term at St. Thomas';
+                        newField.isPicklist = true;
+                        newField.picklistValues = getTerms();
+                        newField.fieldInteractionAPIName = 'Intended_Start_Term__c';
+                    }
+                    when 'High School Attended' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.High_School_Attended_Label__c) ? rfiController.High_School_Attended_Label__c : 'High School Attended';
+                        newField.fieldInteractionAPIName = 'High_School_or_College__c';
+                        newField.isSchoolLookup = true;
+                    }
+                    when 'High School Graduation Year' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.High_School_Graduation_Year_Label__c) ? rfiController.High_School_Graduation_Year_Label__c : 'High School Graduation (YYYY)';
+                        newField.fieldInteractionAPIName = 'High_School_Graduation_Year__c';
+                    }
+                    when 'How did you hear about us' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.How_Did_You_Hear_About_Us_Label__c) ? rfiController.How_Did_You_Hear_About_Us_Label__c : 'How did you hear about us?';
+                        newField.fieldInteractionAPIName = 'Heard_About_Us__c';
+                    }
+                    when 'I have a question' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.I_Have_A_Question_Label__c) ? rfiController.I_Have_A_Question_Label__c : 'I have a question';
+                        newField.fieldInteractionAPIName = 'Has_Question__c';
+                        newField.isCheckbox = true;
+                        newField.showDependentField = true; // Show Questions/Comments textarea when checked
+                    }
+                    when 'I will apply to St Thomas as a' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Apply_To_St_Thomas_As_Label__c) ? rfiController.Apply_To_St_Thomas_As_Label__c : 'I will apply to St. Thomas as a';
+                        newField.fieldInteractionAPIName = 'Admit_Type__c';
+                    }
+                    when 'I would like program information to be mailed to me' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Mail_Information_Label__c) ? rfiController.Mail_Information_Label__c : 'I would like program information to be mailed to me';
+                        newField.fieldInteractionAPIName = 'Mail_Information__c';
+                        newField.isCheckbox = true;
+                    }
+                    when 'I would like to receive text messages' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Receive_Text_Messages_Label__c) ? rfiController.Receive_Text_Messages_Label__c : 'I would like to receive text messages';
+                        newField.fieldInteractionAPIName = 'Receive_Texts__c';
+                        newField.isCheckbox = true;
+                    }
+                    when 'Phone' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Phone_Label__c) ? rfiController.Phone_Label__c : 'Phone';
+                        newField.fieldInteractionAPIName = 'Home_Phone__c';
+                        newField.isTel = true;
+                    }
+                    when 'Home Phone' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Home_Phone_Label__c) ? rfiController.Home_Phone_Label__c : 'Home Phone';
+                        newField.fieldInteractionAPIName = 'Home_Phone__c';
+                        newField.isTel = true;
+                    }
+                    when 'First Name' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.First_Name_Label__c) ? rfiController.First_Name_Label__c : 'First Name';
+                        newField.fieldInteractionAPIName = 'First_Name__c';
+                    }
+                    when 'Last Name' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Last_Name_Label__c) ? rfiController.Last_Name_Label__c : 'Last Name';
+                        newField.fieldInteractionAPIName = 'Last_Name__c';
+                    }
+                    when 'Company' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Company_Label__c) ? rfiController.Company_Label__c : 'Company';
+                        newField.fieldInteractionAPIName = 'Employer__c';
+                    }
+                    when 'Scholarship of Interest' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Scholarship_Of_Interest_Label__c) ? rfiController.Scholarship_Of_Interest_Label__c : 'Scholarship of Interest';
+                        newField.fieldInteractionAPIName = 'Scholarship_of_Interest__c';
+                    }
+                    when 'St Thomas Colleges' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.St_Thomas_Colleges_Label__c) ? rfiController.St_Thomas_Colleges_Label__c : 'College\\School';
+                        newField.isPicklist = true;
+                        newField.picklistValues = getUSTSchoolList();
+                        newField.fieldInteractionAPIName = 'St_Thomas_College_School__c';
+                    }
+                    when 'Tell us about yourself' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Tell_Us_About_Yourself_Label__c) ? rfiController.Tell_Us_About_Yourself_Label__c : 'Tell us about yourself and why you are interested in this program. (150 words or less)';
+                        newField.fieldInteractionAPIName = 'Description__c';
                         newField.isTextarea = true;
                     }
-                    //if position is top add to the start of interactionAndRfi.rfiFieldList
-                    if (qMap.containsKey('position') && String.valueOf(qMap.get('position')).toLowerCase() == 'top') {
-                        additionalFieldsTop.add(newField);
-                    } else {
-                        additionalFieldsBottom.add(newField);
+                    when 'Timeline to Enrollment' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Timeline_To_Enrollment_Label__c) ? rfiController.Timeline_To_Enrollment_Label__c : 'Timeline to Enrollment';
+                        newField.fieldInteractionAPIName = 'Timeline__c';
+                    }
+                    when 'Title' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.Title_Label__c) ? rfiController.Title_Label__c : 'Title';
+                        newField.fieldInteractionAPIName = 'Contact_Title__c';
+                    }
+                    when 'When do you plan to start school' {
+                        newField.fieldLabel = String.isNotBlank(rfiController.When_Start_School_Label__c) ? rfiController.When_Start_School_Label__c : 'When do you plan to start school';
+                        newField.fieldInteractionAPIName = 'High_School_Graduation_Year__c';
+                    }
+                    when else {
+                        newField.fieldLabel = 'Field Label Not Found';
+                        newField.fieldInteractionAPIName = 'Description__c';
+                        newField.isTextarea = true;
                     }
                 }
-            } catch (Exception ex) {
-                // ignore JSON parse errors
+
+
+                // If this maps to an Interaction field, detect picklist/multipicklist and populate options dynamically
+                if (String.isNotBlank(newField.fieldInteractionAPIName) && newField.fieldInteractionAPIName != 'Address' && newField.isPicklist != true && newField.isMultiSelect != true) {
+                    String apiNameLower = newField.fieldInteractionAPIName.toLowerCase();
+                    if (interactionFieldMap.containsKey(apiNameLower)) {
+                        Schema.DescribeFieldResult d = interactionFieldMap.get(apiNameLower).getDescribe();
+                        if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
+                            newField.picklistValues = getPicklistOptions(d);
+                            newField.isMultiSelect = true;
+                            newField.max = 4;
+                        } else if (d.getType() == Schema.DisplayType.PICKLIST) {
+                            newField.picklistValues = getPicklistOptions(d);
+                            newField.isPicklist = true;
+                        }
+                    }
+                }
+
+                Boolean forceRequired = (newField.fieldInteractionAPIName == 'First_Name__c' || newField.fieldInteractionAPIName == 'Last_Name__c');
+                newField.isRequired = forceRequired || requiredFields.contains(fieldName);
+                interactionAndRfi.rfiFieldList.add(newField);
+
             }
 
-            // Add additional fields to the main list in the correct position
-            if (!additionalFieldsTop.isEmpty()) {
-                List<rfiField> merged = new List<rfiField>();
-                merged.addAll(additionalFieldsTop);
-                merged.addAll(interactionAndRfi.rfiFieldList);
-                interactionAndRfi.rfiFieldList = merged;
-            }
-            if (!additionalFieldsBottom.isEmpty()) {
-                interactionAndRfi.rfiFieldList.addAll(additionalFieldsBottom);
-            }
-
-        }
         } // End of legacy else block
 
         return interactionAndRfi;
@@ -864,19 +805,19 @@ public with sharing class rfiFormController {
 
         // Map Lead field names to Program field names
         Map<String, String> leadToProgramFieldMap = new Map<String, String>{
-            'Citizenship__c' => 'Citizenship__c',
-            'Student_Type__c' => 'Student_Type__c',
-            'Degree_Type__c' => 'Degree_Type__c',
-            'Delivery_Type__c' => 'Delivery_Type__c',
-            'Generic_Filter_2__c' => 'Generic_Filter_2__c',
-            'Generic_Filter_3__c' => 'Generic_Filter_3__c',
-            'Generic_Filter_4__c' => 'Generic_Filter_4__c',
-            'Generic_Filter_5__c' => 'Program_Type__c',  // Program_Type maps to Generic_Filter_5 on Lead
-            'Generic_Filter_6__c' => 'Generic_Filter_6__c',
-            'Generic_Filter_7__c' => 'Generic_Filter_7__c',
-            'Generic_Filter_8__c' => 'Generic_Filter_8__c',
-            'School_College__c' => 'Associated_Schools__c',
-            'St_Thomas_College_School__c' => 'Associated_Schools__c'  // Filter question uses this field name
+                'Citizenship__c' => 'Citizenship__c',
+                'Student_Type__c' => 'Student_Type__c',
+                'Degree_Type__c' => 'Degree_Type__c',
+                'Delivery_Type__c' => 'Delivery_Type__c',
+                'Generic_Filter_2__c' => 'Generic_Filter_2__c',
+                'Generic_Filter_3__c' => 'Generic_Filter_3__c',
+                'Generic_Filter_4__c' => 'Generic_Filter_4__c',
+                'Generic_Filter_5__c' => 'Program_Type__c',  // Program_Type maps to Generic_Filter_5 on Lead
+                'Generic_Filter_6__c' => 'Generic_Filter_6__c',
+                'Generic_Filter_7__c' => 'Generic_Filter_7__c',
+                'Generic_Filter_8__c' => 'Generic_Filter_8__c',
+                'School_College__c' => 'Associated_Schools__c',
+                'St_Thomas_College_School__c' => 'Associated_Schools__c'  // Filter question uses this field name
         };
 
         String query_string = '';
@@ -900,10 +841,10 @@ public with sharing class rfiFormController {
                         // filterValue is an Account ID, we need to get the School_College_Name__c
                         try {
                             List<Account> accounts = [
-                                SELECT School_College_Name__c
-                                FROM Account
-                                WHERE Id = :filterValue
-                                LIMIT 1
+                                    SELECT School_College_Name__c
+                                    FROM Account
+                                    WHERE Id = :filterValue
+                                    LIMIT 1
                             ];
                             if (!accounts.isEmpty() && String.isNotBlank(accounts[0].School_College_Name__c)) {
                                 filterValue = accounts[0].School_College_Name__c;
@@ -1170,23 +1111,23 @@ public with sharing class rfiFormController {
 
             // Remap legacy/incorrect fieldInteractionAPIName values saved before the corrected map
             Map<String, String> legacyApiNameRemap = new Map<String, String>{
-                'citizenship_type__c'       => 'Citizenship__c',
-                'degree_type__c'            => 'Admit_Type__c',
-                'how_did_you_hear__c'       => 'Heard_About_Us__c',
-                'timeline_to_enrollment__c' => 'Timeline__c',
-                'address_1__c'              => 'Mailing_Street__c',
-                'birth_date__c'             => 'Birthdate__c',
-                'company__c'               => 'Employer__c',
-                'expected_start_term__c'    => 'Intended_Start_Term__c',
-                'high_school_attended__c'   => 'High_School_or_College__c',
-                'high_school_grad_year__c'  => 'High_School_Graduation_Year__c',
-                'phone__c'                  => 'Home_Phone__c',
-                'comments__c'               => 'Has_Question__c',
-                'mail_me__c'                => 'Mail_Information__c',
-                'ok_to_text__c'             => 'Receive_Texts__c',
-                'school_college__c'         => 'St_Thomas_College_School__c',
-                'tell_us_about_yourself__c' => 'Description__c',
-                'title__c'                  => 'Salutation__c'
+                    'citizenship_type__c' => 'Citizenship__c',
+                    'degree_type__c' => 'Admit_Type__c',
+                    'how_did_you_hear__c' => 'Heard_About_Us__c',
+                    'timeline_to_enrollment__c' => 'Timeline__c',
+                    'address_1__c' => 'Mailing_Street__c',
+                    'birth_date__c' => 'Birthdate__c',
+                    'company__c' => 'Employer__c',
+                    'expected_start_term__c' => 'Intended_Start_Term__c',
+                    'high_school_attended__c' => 'High_School_or_College__c',
+                    'high_school_grad_year__c' => 'High_School_Graduation_Year__c',
+                    'phone__c' => 'Home_Phone__c',
+                    'comments__c' => 'Has_Question__c',
+                    'mail_me__c' => 'Mail_Information__c',
+                    'ok_to_text__c' => 'Receive_Texts__c',
+                    'school_college__c' => 'St_Thomas_College_School__c',
+                    'tell_us_about_yourself__c' => 'Description__c',
+                    'title__c' => 'Salutation__c'
             };
 
             for (Object qObj : unifiedQuestions) {
