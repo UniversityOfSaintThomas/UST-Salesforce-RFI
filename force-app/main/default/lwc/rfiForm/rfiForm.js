@@ -14,6 +14,7 @@ import RFI_CONTROLLER_ID from '@salesforce/schema/RFI_Controller__c.Id';
 import RFI_CONTROLLER_FIELDS_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Fields_to_Display__c';
 import RFI_CONTROLLER_FIELDS_ORDER from '@salesforce/schema/RFI_Controller__c.Fields_to_Display_Order__c';
 import RFI_CONTROLLER_ACADEMIC_INTERESTS from '@salesforce/schema/RFI_Controller__c.Academic_Interests_To_Display__c';
+import RFI_CONTROLLER_UNIFIED_QUESTIONS from '@salesforce/schema/RFI_Controller__c.Unified_Questions__c';
 import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
 
 const RFI_CONTROLLER_FIELDS = [
@@ -21,7 +22,8 @@ const RFI_CONTROLLER_FIELDS = [
     RFI_CONTROLLER_ID,
     RFI_CONTROLLER_FIELDS_TO_DISPLAY,
     RFI_CONTROLLER_FIELDS_ORDER,
-    RFI_CONTROLLER_ACADEMIC_INTERESTS
+    RFI_CONTROLLER_ACADEMIC_INTERESTS,
+    RFI_CONTROLLER_UNIFIED_QUESTIONS
 ];
 
 
@@ -81,6 +83,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     _lastFieldsToDisplay;
     _lastFieldsOrder;
     _lastAcademicInterests;
+    _lastUnifiedQuestions;
 
     // Memoization caches
     _processedFieldsCache = null;
@@ -117,17 +120,20 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             const newFieldsToDisplay = getFieldValue(data, RFI_CONTROLLER_FIELDS_TO_DISPLAY);
             const newFieldsOrder = getFieldValue(data, RFI_CONTROLLER_FIELDS_ORDER);
             const newAcademicInterests = getFieldValue(data, RFI_CONTROLLER_ACADEMIC_INTERESTS);
+            const newUnifiedQuestions = getFieldValue(data, RFI_CONTROLLER_UNIFIED_QUESTIONS);
 
             // Check if this is an update (not initial load)
             const isUpdate = this._lastFieldsToDisplay !== undefined ||
                            this._lastFieldsOrder !== undefined ||
-                           this._lastAcademicInterests !== undefined;
+                           this._lastAcademicInterests !== undefined ||
+                           this._lastUnifiedQuestions !== undefined;
 
             // Check if any relevant fields have changed
             const hasChanges = isUpdate && (
                 newFieldsToDisplay !== this._lastFieldsToDisplay ||
                 newFieldsOrder !== this._lastFieldsOrder ||
-                newAcademicInterests !== this._lastAcademicInterests
+                newAcademicInterests !== this._lastAcademicInterests ||
+                newUnifiedQuestions !== this._lastUnifiedQuestions
             );
 
             if (hasChanges) {
@@ -141,6 +147,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             this._lastFieldsToDisplay = newFieldsToDisplay;
             this._lastFieldsOrder = newFieldsOrder;
             this._lastAcademicInterests = newAcademicInterests;
+            this._lastUnifiedQuestions = newUnifiedQuestions;
         }
     }
 
@@ -196,6 +203,15 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this._processedFieldsCache = null;
         this._processedFieldsCacheKey = null;
         this._programValuesCacheKey = null;
+    }
+
+    /**
+     * Refresh the form wire data — called when RFI Controller fields change
+     * (e.g. after Unified Question Manager saves new configuration)
+     */
+    async refreshFormData() {
+        this._lastDataString = null;
+        await refreshApex(this.wiredFormResult);
     }
 
     /**
