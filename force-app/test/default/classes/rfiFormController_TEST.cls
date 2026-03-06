@@ -48,6 +48,68 @@ private class rfiFormController_TEST {
                 Email_Label__c = 'Email Address'
         );
 
+        // Third controller: legacy with filter fields set — gives the filter loop a unique name to hit
+        RFI_Controller__c filterCtrl = new RFI_Controller__c(
+                Academic_Level__c    = 'U',
+                Fields_to_Display__c = fieldsToDisplay,
+                Redirect_URL__c      = 'https://test-filter-fields.example.com'
+        );
+        String citizenVal   = firstPicklistValue(ctrlFm.get('Citizen_Types_To_Display__c'));
+        String schoolColVal = firstPicklistValue(ctrlFm.get('School_College_To_Display__c'));
+        String degreeVal    = firstPicklistValue(ctrlFm.get('Degree_Types_To_Display__c'));
+        String studentVal   = firstPicklistValue(ctrlFm.get('Student_Types_To_Display__c'));
+        if (String.isNotBlank(citizenVal))   filterCtrl.Citizen_Types_To_Display__c  = citizenVal;
+        if (String.isNotBlank(schoolColVal)) filterCtrl.School_College_To_Display__c = schoolColVal;
+        if (String.isNotBlank(degreeVal))    filterCtrl.Degree_Types_To_Display__c   = degreeVal;
+        if (String.isNotBlank(studentVal))   filterCtrl.Student_Types_To_Display__c  = studentVal;
+        insert filterCtrl;
+
+        // Fourth controller: legacy with all field types — for manyFieldTypes coverage
+        Set<String> wantedFields = new Set<String>{
+                'First Name', 'Last Name', 'Email', 'Phone', 'Birthdate',
+                'Expected Start Term at St Thomas', 'High School Attended',
+                'High School Graduation Year', 'How did you hear about us',
+                'I have a question', 'Tell us about yourself',
+                'I would like to receive text messages', 'Employer', 'Company',
+                'Scholarship of Interest', 'Timeline to Enrollment', 'Title',
+                'I will apply to St Thomas as a', 'St Thomas Colleges',
+                'Address 1', 'City', 'State', 'Country', 'Zipcode',
+                'I would like program information to be mailed to me',
+                'When do you plan to start school', 'Home Phone',
+                'Academic Interest', 'Citizenship'
+        };
+        List<String> manyFields = new List<String>();
+        for (Schema.PicklistEntry e : ctrlFm.get('Fields_to_Display__c').getDescribe().getPicklistValues()) {
+            if (e.isActive() && wantedFields.contains(e.getValue())) manyFields.add(e.getValue());
+        }
+        if (manyFields.isEmpty()) manyFields.add(fieldsToDisplay);
+        String manyFieldsStr = String.join(manyFields, ';');
+        insert new RFI_Controller__c(
+                Academic_Level__c                = 'U',
+                Fields_to_Display__c             = manyFieldsStr,
+                Fields_to_Display_Order__c       = manyFieldsStr,
+                Redirect_URL__c                  = 'https://test-many-fields.example.com',
+                Academic_Interest_Max_Selection__c = '1',
+                Birthdate_Label__c               = 'Date of Birth',
+                Phone_Label__c                   = 'Mobile Number',
+                How_Did_You_Hear_About_Us_Label__c = 'How did you find us?',
+                Tell_Us_About_Yourself_Label__c  = 'About You',
+                Expected_Start_Term_Label__c     = 'When do you start?',
+                High_School_Attended_Label__c    = 'High School',
+                High_School_Graduation_Year_Label__c = 'Grad Year',
+                Employer_Label__c                = 'Your Employer',
+                Company_Label__c                 = 'Company Name',
+                Timeline_To_Enrollment_Label__c  = 'Enrollment Timeline',
+                Title_Label__c                   = 'Your Title',
+                Scholarship_Of_Interest_Label__c = 'Scholarship',
+                St_Thomas_Colleges_Label__c      = 'College/School',
+                Apply_To_St_Thomas_As_Label__c   = 'I apply as',
+                I_Have_A_Question_Label__c        = 'Got a question?',
+                Receive_Text_Messages_Label__c   = 'OK to text?',
+                Mail_Information_Label__c        = 'Mail me info',
+                Required_Fields__c               = 'Email'
+        );
+
         List<Map<String, Object>> unifiedQ = new List<Map<String, Object>>{
                 new Map<String, Object>{
                         'id' => 0, 'type' => 'preconfigured', 'fieldName' => 'First Name',
@@ -271,47 +333,9 @@ private class rfiFormController_TEST {
 
     @IsTest
     static void getRFIForm_legacyPath_manyFieldTypes_TEST() {
-        Map<String, Schema.SObjectField> ctrlFm = Schema.SObjectType.RFI_Controller__c.fields.getMap();
-        Set<String> wantedFields = new Set<String>{
-                'First Name', 'Last Name', 'Email', 'Phone', 'Birthdate',
-                'Expected Start Term at St Thomas', 'High School Attended',
-                'High School Graduation Year', 'How did you hear about us',
-                'I have a question', 'Tell us about yourself',
-                'I would like to receive text messages', 'Employer', 'Company',
-                'Scholarship of Interest', 'Timeline to Enrollment', 'Title',
-                'I will apply to St Thomas as a', 'St Thomas Colleges',
-                'Address 1', 'City', 'State', 'Country', 'Zipcode'
-        };
-        List<String> availableFields = new List<String>();
-        for (Schema.PicklistEntry e : ctrlFm.get('Fields_to_Display__c').getDescribe().getPicklistValues()) {
-            if (e.isActive() && wantedFields.contains(e.getValue())) availableFields.add(e.getValue());
-        }
-        if (availableFields.isEmpty()) availableFields.add(fieldsToDisplayDefault());
-        String fieldsStr = String.join(availableFields, ';');
-        String ctrlName = insertCtrlAndGetName(new RFI_Controller__c(
-                Academic_Level__c = 'U',
-                Fields_to_Display__c = fieldsStr,
-                Fields_to_Display_Order__c = fieldsStr,
-                Redirect_URL__c = 'https://example.com',
-                Academic_Interest_Max_Selection__c = '1',
-                Birthdate_Label__c = 'Date of Birth',
-                Phone_Label__c = 'Mobile Number',
-                How_Did_You_Hear_About_Us_Label__c = 'How did you find us?',
-                Tell_Us_About_Yourself_Label__c = 'About You',
-                Expected_Start_Term_Label__c = 'When do you start?',
-                High_School_Attended_Label__c = 'High School',
-                High_School_Graduation_Year_Label__c = 'Grad Year',
-                Employer_Label__c = 'Your Employer',
-                Company_Label__c = 'Company Name',
-                Timeline_To_Enrollment_Label__c = 'Enrollment Timeline',
-                Title_Label__c = 'Your Title',
-                Scholarship_Of_Interest_Label__c = 'Scholarship',
-                St_Thomas_Colleges_Label__c = 'College/School',
-                Apply_To_St_Thomas_As_Label__c = 'I apply as',
-                I_Have_A_Question_Label__c = 'Got a question?',
-                Receive_Text_Messages_Label__c = 'OK to text?',
-                Required_Fields__c = 'Email'
-        ));
+        // Uses @TestSetup controller with all field types — guaranteed to be found first (no cacheable collision)
+        String ctrlName = [SELECT Name FROM RFI_Controller__c
+            WHERE Redirect_URL__c = 'https://test-many-fields.example.com' LIMIT 1].Name;
         Test.startTest();
         rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
         Test.stopTest();
@@ -411,19 +435,16 @@ private class rfiFormController_TEST {
 
     @IsTest
     static void getRFIForm_legacyFilterField_mapIsBuilt_TEST() {
-        String ctrlName = insertCtrlAndGetName(new RFI_Controller__c(
-                Academic_Level__c = 'U',
-                Fields_to_Display__c = fieldsToDisplayDefault(),
-                Redirect_URL__c = 'https://example.com'
-        ));
+        // Covers legacy filter loop body (lines 252-267)
+        // Uses @TestSetup filter controller which is guaranteed to be found (no cacheable collision)
+        String ctrlName = [SELECT Name FROM RFI_Controller__c
+            WHERE Redirect_URL__c = 'https://test-filter-fields.example.com' LIMIT 1].Name;
         Test.startTest();
         rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
         Test.stopTest();
         System.assertNotEquals(null, wrap);
         System.assertNotEquals(null, wrap.rfiFieldList);
-        for (rfiFormController.rfiField f : wrap.rfiFieldList) {
-            System.assertNotEquals(null, f.fieldInteractionAPIName);
-        }
+        System.assertNotEquals(null, wrap.filterValues);
     }
 
     // ─── getRFIForm unified path ───────────────────────────────────────────────
@@ -1111,13 +1132,73 @@ private class rfiFormController_TEST {
 
     @IsTest
     static void getPrograms_stThomasSchoolFilter_TEST() {
-        // Covers filterQuery St_Thomas_College_School__c branch — passes an Account Id to trigger that code path
-        // Use a synthetic Id (won't match any Account, but covers the INCLUDES clause build path)
+        // Covers filterQuery St_Thomas_College_School__c branch
         String fakeAccountId = '001000000000001AAA';
         Test.startTest();
         List<rfiFormController.programValues> p = rfiFormController.getPrograms(
                 'U', null, null, new Map<String, String>{ 'St_Thomas_College_School__c' => fakeAccountId });
         Test.stopTest();
         System.assertNotEquals(null, p);
+    }
+
+    // ─── getStateProvince ─────────────────────────────────────────────────────
+
+    @IsTest
+    static void getStateProvince_blankCode_returnsNull_TEST() {
+        // Covers line 562-564: blank countryCode returns null
+        Test.startTest();
+        List<rfiFormController.picklistOption> result = rfiFormController.getStateProvince('');
+        Test.stopTest();
+        System.assertEquals(null, result);
+    }
+
+    @IsTest
+    static void getStateProvince_invalidCode_returnsNull_TEST() {
+        // Covers line 566-568: invalid country code returns null (getCountryIndex returns -1)
+        Test.startTest();
+        List<rfiFormController.picklistOption> result = rfiFormController.getStateProvince('ZZ');
+        Test.stopTest();
+        System.assertEquals(null, result);
+    }
+
+    @IsTest
+    static void getStateProvince_validCode_returnsOptions_TEST() {
+        // Covers the state loop — valid country code that has states
+        Test.startTest();
+        List<rfiFormController.picklistOption> result = rfiFormController.getStateProvince('CA');
+        Test.stopTest();
+        System.assertNotEquals(null, result);
+        System.assert(result.size() > 0, 'Canada should have provinces');
+    }
+
+    @IsTest
+    static void getStateProvince_cachedCode_TEST() {
+        // Covers countryIndexCache hit path (call same code twice)
+        Test.startTest();
+        rfiFormController.getStateProvince('US');
+        List<rfiFormController.picklistOption> result = rfiFormController.getStateProvince('US');
+        Test.stopTest();
+        System.assertNotEquals(null, result);
+    }
+
+    // ─── getUSTSchoolList ─────────────────────────────────────────────────────
+
+    @IsTest
+    static void getUSTSchoolList_withSchoolNames_TEST() {
+        // Covers the else branch (line 665-666): schoolNames is not blank
+        Test.startTest();
+        List<rfiFormController.picklistOption> result = rfiFormController.getUSTSchoolList('College of Arts and Sciences;Opus College of Business');
+        Test.stopTest();
+        // Returns empty list (no matching Accounts in test) but covers the code path
+        System.assertNotEquals(null, result);
+    }
+
+    @IsTest
+    static void getUSTSchoolList_noArgs_TEST() {
+        // Covers the no-arg overload and the blank-schoolNames path
+        Test.startTest();
+        List<rfiFormController.picklistOption> result = rfiFormController.getUSTSchoolList();
+        Test.stopTest();
+        System.assertNotEquals(null, result);
     }
 }
