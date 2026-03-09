@@ -82,3 +82,4 @@ robot/UST-RFI/results/
 *.iml
 
 **/graphql.config.yml
+code-analyzer.yml

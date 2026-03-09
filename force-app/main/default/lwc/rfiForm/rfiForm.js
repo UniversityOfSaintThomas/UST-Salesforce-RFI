@@ -205,14 +205,6 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this._programValuesCacheKey = null;
     }
 
-    /**
-     * Refresh the form wire data — called when RFI Controller fields change
-     * (e.g. after Unified Question Manager saves new configuration)
-     */
-    async refreshFormData() {
-        this._lastDataString = null;
-        await refreshApex(this.wiredFormResult);
-    }
 
     /**
      * Check if all filter questions have been answered
@@ -275,6 +267,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
      */
     async refreshFormData() {
         try {
+            this._lastDataString = null;
             if (this.wiredFormResult) {
                 await refreshApex(this.wiredFormResult);
             }
@@ -669,7 +662,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
      */
     getUrlParamValue(param) {
         // Return cached value if available
-        if (this._urlParamsCache.hasOwnProperty(param)) {
+        if (Object.prototype.hasOwnProperty.call(this._urlParamsCache, param)) {
             return this._urlParamsCache[param];
         }
 

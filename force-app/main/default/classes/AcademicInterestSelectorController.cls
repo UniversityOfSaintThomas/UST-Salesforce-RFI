@@ -70,14 +70,15 @@ public with sharing class AcademicInterestSelectorController {
         } else {
             query_string += 'AND (Academic_Level__c = \'Graduate\' OR Academic_Level__c = \'G\') ';
             if (String.isNotBlank(school_college)) {
-                query_string += 'AND Associated_Schools__c INCLUDES (\'' + school_college + '\') ';
+                String safeSchool = String.escapeSingleQuotes(school_college);
+                query_string += 'AND Associated_Schools__c INCLUDES (\'' + safeSchool + '\') ';
                 if (school_college == 'School of Law') {
                     query_string += 'AND Banner_Program_Code__c LIKE \'LW_%\' ';
                 }
             }
         }
 
-        query_string += 'ORDER BY Primary_School_College_for_Assignment__c, Degree__c, Program_Name_on_Application__c';
+        query_string += 'WITH USER_MODE ORDER BY Primary_School_College_for_Assignment__c, Degree__c, Program_Name_on_Application__c';
 
         List<Program__c> programs = Database.query(query_string);
 
@@ -147,6 +148,10 @@ public with sharing class AcademicInterestSelectorController {
      */
     @AuraEnabled
     public static void saveAcademicInterests(Id recordId, String codes) {
+        if (!Schema.sObjectType.RFI_Controller__c.isUpdateable()) {
+            throw new AuraHandledException('Insufficient permissions to update RFI Controller records.');
+        }
+
         if (String.isBlank(codes)) {
             RFI_Controller__c ctrl = new RFI_Controller__c(
                 Id = recordId,

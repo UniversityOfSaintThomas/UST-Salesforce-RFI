@@ -43,10 +43,11 @@ public with sharing class ReusableLookupController {
                         String type = inputWrapper.type.trim().escapeHtml4();
                         String query = fieldsToQuery + ' FROM ' + inputWrapper.objectApiName;
                         String filterCriteria = inputWrapper.fieldApiName + ' LIKE :searchString ';
+                        String parentRecordId = inputWrapper.parentRecordId;
                         if (String.isNotBlank(inputWrapper.selectedRecordId)) {
                             query += ' WHERE Id = : inputWrapper.selectedRecordId ';
-                        } else if (String.isNotBlank(inputWrapper.parentFieldApiName) && String.isNotBlank(inputWrapper.parentRecordId)) {
-                            query += ' WHERE ' + inputWrapper.parentFieldApiName + ' = \'' + inputWrapper.parentRecordId + '\'';
+                        } else if (String.isNotBlank(inputWrapper.parentFieldApiName) && String.isNotBlank(parentRecordId)) {
+                            query += ' WHERE ' + inputWrapper.parentFieldApiName + ' = :parentRecordId';
                             query += ' AND ' + filterCriteria;
                         } else {
                             query += ' WHERE ' + filterCriteria;
@@ -58,7 +59,7 @@ public with sharing class ReusableLookupController {
                         if (String.isNotBlank(type)) {
                             query += ' AND Type = :type';
                         }
-                        query += ' LIMIT 50';
+                        query += ' WITH USER_MODE LIMIT 50';
                         System.debug(query);
 
                         for (SObject s : Database.query(query)) {

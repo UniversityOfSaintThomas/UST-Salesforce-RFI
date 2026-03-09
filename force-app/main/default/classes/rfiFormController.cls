@@ -118,6 +118,7 @@ public with sharing class rfiFormController {
                         When_Start_School_Label__c
                 FROM RFI_Controller__c
                 WHERE Name = :rfiControllerName
+                WITH USER_MODE
                 LIMIT 1
         ];
 
@@ -154,6 +155,7 @@ public with sharing class rfiFormController {
                     AND RecordType.DeveloperName = 'University_Department'
                     AND Banner_Key__c LIKE 'STVCOLL-%'
                     AND Name != 'other'
+                    WITH USER_MODE
             ];
             if (school_college_accounts.size() > 0) {
                 interactionAndRfi.interaction.St_Thomas_College_School__c = school_college_accounts[0].Id;
@@ -170,6 +172,7 @@ public with sharing class rfiFormController {
                     WHERE Program_Major_Concentration__c IN :rfiController.Academic_Interests_To_Display__c.split(';')
                     AND RecordType.DeveloperName = 'Recruitment_Program'
                     AND Active__c = TRUE
+                    WITH USER_MODE
             ];
             System.debug('Found ' + programRecords.size() + ' matching Program records for Academic Interest codes.');
             if (programRecords.size() > 0) {
@@ -680,6 +683,7 @@ public with sharing class rfiFormController {
                 AND RecordType.DeveloperName = 'University_Department'
                 AND Banner_Key__c LIKE 'STVCOLL-%'
                 AND Name != 'other'
+                WITH USER_MODE
         ];
 
         List<picklistOption> opts = new List<picklistOption>();
@@ -730,7 +734,8 @@ public with sharing class rfiFormController {
             // Only apply school_college parameter if it's not in the filters map
             // This prevents duplicate/conflicting WHERE clauses
             if (String.isNotBlank(school_college) && (filters == null || !filters.containsKey('School_College__c'))) {
-                query_string += ' AND Associated_Schools__c INCLUDES (\'' + school_college + '\')';
+                String safeSchool = String.escapeSingleQuotes(school_college);
+                query_string += ' AND Associated_Schools__c INCLUDES (\'' + safeSchool + '\')';
                 if (school_college == 'School of Law') {
                     query_string += ' AND Banner_Program_Code__c LIKE \'LW_%\'';
                 }
@@ -744,7 +749,7 @@ public with sharing class rfiFormController {
         }
 
         query_string += filterQuery(filters);
-        query_string += ' ORDER BY Degree__c, Program_Name_on_Application__c ';
+        query_string += ' WITH USER_MODE ORDER BY Degree__c, Program_Name_on_Application__c ';
 
         System.debug('Final query: ' + query_string);
         List<Program__c> programs = Database.query(query_string);
@@ -828,6 +833,7 @@ public with sharing class rfiFormController {
                                     SELECT School_College_Name__c
                                     FROM Account
                                     WHERE Id = :filterValue
+                                    WITH USER_MODE
                                     LIMIT 1
                             ];
                             if (!accounts.isEmpty() && String.isNotBlank(accounts[0].School_College_Name__c)) {
@@ -889,6 +895,7 @@ public with sharing class rfiFormController {
                 WHERE Term_Start_Date__c >= :today
                 AND Term_Start_Date__c <= :today_plus_four_years
                 AND (Name LIKE 'Fall%' OR Name LIKE 'Spring%')
+                WITH USER_MODE
                 ORDER BY Term_Start_Date__c
         ]);
         for (Academic_Term__c term : terms.values()) {
@@ -930,7 +937,8 @@ public with sharing class rfiFormController {
         } else {
             query_string += ' AND (Academic_Level__c = \'Graduate\' OR Academic_Level__c = \'G\')  ';
             if (String.isNotBlank(school_college)) {
-                query_string += ' AND Associated_Schools__c INCLUDES (\'' + school_college + '\')';
+                String safeSchool = String.escapeSingleQuotes(school_college);
+                query_string += ' AND Associated_Schools__c INCLUDES (\'' + safeSchool + '\')';
                 if (school_college == 'School of Law') {
                     query_string += ' AND Banner_Program_Code__c LIKE \'LW_%\'';
                 }
@@ -957,7 +965,7 @@ public with sharing class rfiFormController {
         }
 
         query_string += filterQuery(filters);
-        query_string += ' ORDER BY Primary_School_College_for_Assignment__c, Degree__c, Program_Name_on_Application__c ';
+        query_string += ' WITH USER_MODE ORDER BY Primary_School_College_for_Assignment__c, Degree__c, Program_Name_on_Application__c ';
         List<Program__c> programs = Database.query(query_string);
 
         List<programValues> results = new List<programValues>();
@@ -1038,6 +1046,7 @@ public with sharing class rfiFormController {
                     WHERE Recruitment_Program__c = :interaction.Major_Program_1__c
                     AND RecordType.DeveloperName = 'Academic_Program'
                     AND Active__c = TRUE
+                    WITH USER_MODE
                     LIMIT 1
             ];
             if (!programs.isEmpty()) {
@@ -1062,6 +1071,10 @@ public with sharing class rfiFormController {
             } else {
                 System.debug('Field ' + fieldName + ' does not exist on Interaction__c or is not creatable.');
             }
+        }
+
+        if (!Schema.sObjectType.Interaction__c.isCreateable()) {
+            throw new AuraHandledException('Insufficient permissions to submit RFI form.');
         }
 
         Database.DMLOptions dml = new Database.DMLOptions();
