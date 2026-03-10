@@ -390,12 +390,11 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         // Add pre-configured fields from Fields_to_Display_Order__c or Fields_to_Display__c
         const fieldsSource = fieldsToDisplayOrder || fieldsToDisplay;
 
-        // Address sub-fields from the old system get collapsed into a single 'Address' entry
-        const ADDRESS_SUB_FIELDS = new Set(['Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country']);
-
         let rawFields = fieldsSource ? fieldsSource.split(';').map(f => f.trim()).filter(f => f) : [];
 
-        // Collapse address sub-fields
+        // Collapse any legacy address sub-fields (Address 1/2/3, City, State, Zipcode, Country)
+        // into a single 'Address' entry for controllers that were saved before the simplification
+        const ADDRESS_SUB_FIELDS = new Set(['Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country']);
         let addressAdded = false;
         let orderedFields = [];
         for (const fieldName of rawFields) {

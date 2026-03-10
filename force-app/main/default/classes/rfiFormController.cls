@@ -265,8 +265,6 @@ public with sharing class rfiFormController {
             }
             List<String> requiredFields = rfiController.Required_Fields__c != null ? rfiController.Required_Fields__c.split(';') : new List<String>();
 
-
-            Boolean addressAdded = false;
             // Lead field describes for dynamic picklist detection
             Map<String, Schema.SObjectField> leadFieldMap = Schema.SObjectType.Lead.fields.getMap();
             // Interaction field describes to validate field existence
@@ -315,13 +313,7 @@ public with sharing class rfiFormController {
                         'When do you want to start school',
                         'High School Attended',
                         'High School Graduation Year',
-                        'Address 1',
-                        'Address 2',
-                        'Address 3',
-                        'City',
-                        'State',
-                        'Country',
-                        'Zipcode',
+                        'Address',
                         'Mail me information',
                         'How did you hear about us',
                         'Scholarship of Interest',
@@ -367,16 +359,9 @@ public with sharing class rfiFormController {
                             newField.fieldLabel = 'Academic Interest (Max ' + newField.max + ' selections)';
                         }
                     }
-                    when 'Address 1', 'Address 2', 'Address 3', 'City', 'Country', 'State', 'Zipcode' {
-                        if (!addressAdded) {
-                            newField.fieldInteractionAPIName = 'Address';
-                            newField.isAddress = true;
-                            addressAdded = true;
-                            newField.isRequired = requiredFields.contains('Address 1') || requiredFields.contains('City') ||
-                                    requiredFields.contains('Country') || requiredFields.contains('State') || requiredFields.contains('Zipcode');
-                            interactionAndRfi.rfiFieldList.add(newField);
-                        }
-                        continue;
+                    when 'Address' {
+                        newField.fieldInteractionAPIName = 'Address';
+                        newField.isAddress = true;
                     }
                     when 'Birthdate' {
                         newField.fieldLabel = 'Birthday (MM/DD/YYYY)';
@@ -1116,6 +1101,8 @@ public with sharing class rfiFormController {
                         newField.max = 4;
                     } else if (fieldName == 'Address') {
                         newField.isAddress = true;
+                    } else if (fieldName == 'High School Attended') {
+                        newField.isSchoolLookup = true;
                     } else if (fieldName == 'Email') {
                         newField.isEmail = true;
                     } else if (fieldName.contains('Phone')) {
@@ -1129,6 +1116,7 @@ public with sharing class rfiFormController {
                     // For remaining fields, check if the Interaction field is a picklist
                     if (newField.isProgramLookup != true && newField.isAddress != true && newField.isEmail != true
                             && newField.isTel != true && newField.isTextarea != true && newField.isCheckbox != true
+                            && newField.isSchoolLookup != true
                             && String.isNotBlank(newField.fieldInteractionAPIName)) {
                         Schema.SObjectField sField = interactionFieldMap.get(newField.fieldInteractionAPIName.toLowerCase());
                         if (sField != null) {
