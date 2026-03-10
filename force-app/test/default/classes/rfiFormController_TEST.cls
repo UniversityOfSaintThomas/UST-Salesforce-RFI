@@ -43,9 +43,7 @@ private class rfiFormController_TEST {
                 Fields_to_Display_Order__c = String.join(selectedFields, ';'),
                 Required_Fields__c = hasEmailField ? 'Email' : selectedFields[0],
                 Redirect_URL__c = 'https://test-legacy.example.com',
-                Academic_Interest_Max_Selection__c = '2',
-                First_Name_Label__c = 'Given Name',
-                Email_Label__c = 'Email Address'
+                Academic_Interest_Max_Selection__c = '2'
         );
 
         // Third controller: legacy with filter fields set — gives the filter loop a unique name to hit
@@ -90,23 +88,6 @@ private class rfiFormController_TEST {
                 Fields_to_Display_Order__c       = manyFieldsStr,
                 Redirect_URL__c                  = 'https://test-many-fields.example.com',
                 Academic_Interest_Max_Selection__c = '1',
-                Birthdate_Label__c               = 'Date of Birth',
-                Phone_Label__c                   = 'Mobile Number',
-                How_Did_You_Hear_About_Us_Label__c = 'How did you find us?',
-                Tell_Us_About_Yourself_Label__c  = 'About You',
-                Expected_Start_Term_Label__c     = 'When do you start?',
-                High_School_Attended_Label__c    = 'High School',
-                High_School_Graduation_Year_Label__c = 'Grad Year',
-                Employer_Label__c                = 'Your Employer',
-                Company_Label__c                 = 'Company Name',
-                Timeline_To_Enrollment_Label__c  = 'Enrollment Timeline',
-                Title_Label__c                   = 'Your Title',
-                Scholarship_Of_Interest_Label__c = 'Scholarship',
-                St_Thomas_Colleges_Label__c      = 'College/School',
-                Apply_To_St_Thomas_As_Label__c   = 'I apply as',
-                I_Have_A_Question_Label__c        = 'Got a question?',
-                Receive_Text_Messages_Label__c   = 'OK to text?',
-                Mail_Information_Label__c        = 'Mail me info',
                 Required_Fields__c               = 'Email'
         );
 
@@ -293,7 +274,7 @@ private class rfiFormController_TEST {
         RFI_Controller__c ctrl = [
                 SELECT Id
                 FROM RFI_Controller__c
-                WHERE First_Name_Label__c = 'Given Name'
+                WHERE Redirect_URL__c = 'https://test-legacy.example.com'
                 LIMIT 1
         ];
         ctrl.Fields_to_Display_Order__c = 'First Name;Last Name;Email;Address 1;City;State;Zipcode;Country';
@@ -364,8 +345,7 @@ private class rfiFormController_TEST {
                 Fields_to_Display__c = String.join(selected, ';'),
                 Fields_to_Display_Order__c = String.join(selected, ';'),
                 Redirect_URL__c = 'https://example.com',
-                Academic_Interest_Max_Selection__c = '1',
-                Academic_Interest_Label__c = 'Choose a Major'
+                Academic_Interest_Max_Selection__c = '1'
         ));
         Test.startTest();
         rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
@@ -1047,10 +1027,7 @@ private class rfiFormController_TEST {
                 Academic_Level__c = 'U',
                 Fields_to_Display__c = fieldsStr,
                 Fields_to_Display_Order__c = fieldsStr,
-                Redirect_URL__c = 'https://example.com',
-                Birthdate_Label__c = 'Date of Birth',
-                Mail_Information_Label__c = 'Mail me info',
-                Citizenship_Label__c = 'Citizenship Status'
+                Redirect_URL__c = 'https://example.com'
         );
         insert ctrl;
         String ctrlName = [SELECT Name FROM RFI_Controller__c WHERE Id = :ctrl.Id].Name;

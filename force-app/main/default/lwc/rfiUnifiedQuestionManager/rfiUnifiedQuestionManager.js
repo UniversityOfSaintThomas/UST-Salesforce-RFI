@@ -8,7 +8,7 @@ import { LightningElement, api, track, wire } from 'lwc';
 import { getRecord, updateRecord, getFieldValue, notifyRecordUpdateAvailable } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
-import { getObjectInfo, getPicklistValues } from 'lightning/uiObjectInfoApi';
+import { getObjectInfo, getPicklistValues, getPicklistValuesByRecordType } from 'lightning/uiObjectInfoApi';
 
 import RFI_CONTROLLER_OBJECT from '@salesforce/schema/RFI_Controller__c';
 import INTERACTION_OBJECT from '@salesforce/schema/Interaction__c';
@@ -32,64 +32,12 @@ import GENERIC_FILTER_6_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Ge
 import GENERIC_FILTER_7_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Generic_Filter_7_To_Display__c';
 import GENERIC_FILTER_8_TO_DISPLAY from '@salesforce/schema/RFI_Controller__c.Generic_Filter_8_To_Display__c';
 
-// Import all label fields
-import ACADEMIC_INTEREST_LABEL from '@salesforce/schema/RFI_Controller__c.Academic_Interest_Label__c';
-import ADDRESS_LABEL from '@salesforce/schema/RFI_Controller__c.Address_Label__c';
-import BIRTHDATE_LABEL from '@salesforce/schema/RFI_Controller__c.Birthdate_Label__c';
-import CITIZENSHIP_LABEL from '@salesforce/schema/RFI_Controller__c.Citizenship_Label__c';
-import COMPANY_LABEL from '@salesforce/schema/RFI_Controller__c.Company_Label__c';
-import EMAIL_LABEL from '@salesforce/schema/RFI_Controller__c.Email_Label__c';
-import EMPLOYER_LABEL from '@salesforce/schema/RFI_Controller__c.Employer_Label__c';
-import EXPECTED_START_TERM_LABEL from '@salesforce/schema/RFI_Controller__c.Expected_Start_Term_Label__c';
-import FIRST_NAME_LABEL from '@salesforce/schema/RFI_Controller__c.First_Name_Label__c';
-import HIGH_SCHOOL_ATTENDED_LABEL from '@salesforce/schema/RFI_Controller__c.High_School_Attended_Label__c';
-import HIGH_SCHOOL_GRADUATION_YEAR_LABEL from '@salesforce/schema/RFI_Controller__c.High_School_Graduation_Year_Label__c';
-import HOW_DID_YOU_HEAR_ABOUT_US_LABEL from '@salesforce/schema/RFI_Controller__c.How_Did_You_Hear_About_Us_Label__c';
-import I_HAVE_A_QUESTION_LABEL from '@salesforce/schema/RFI_Controller__c.I_Have_A_Question_Label__c';
-import LAST_NAME_LABEL from '@salesforce/schema/RFI_Controller__c.Last_Name_Label__c';
-import MAIL_INFORMATION_LABEL from '@salesforce/schema/RFI_Controller__c.Mail_Information_Label__c';
-import PHONE_LABEL from '@salesforce/schema/RFI_Controller__c.Phone_Label__c';
-import HOME_PHONE_LABEL from '@salesforce/schema/RFI_Controller__c.Home_Phone_Label__c';
-import RECEIVE_TEXT_MESSAGES_LABEL from '@salesforce/schema/RFI_Controller__c.Receive_Text_Messages_Label__c';
-import SCHOLARSHIP_OF_INTEREST_LABEL from '@salesforce/schema/RFI_Controller__c.Scholarship_Of_Interest_Label__c';
-import ST_THOMAS_COLLEGES_LABEL from '@salesforce/schema/RFI_Controller__c.St_Thomas_Colleges_Label__c';
-import TELL_US_ABOUT_YOURSELF_LABEL from '@salesforce/schema/RFI_Controller__c.Tell_Us_About_Yourself_Label__c';
-import TIMELINE_TO_ENROLLMENT_LABEL from '@salesforce/schema/RFI_Controller__c.Timeline_To_Enrollment_Label__c';
-import TITLE_LABEL from '@salesforce/schema/RFI_Controller__c.Title_Label__c';
-import WHEN_START_SCHOOL_LABEL from '@salesforce/schema/RFI_Controller__c.When_Start_School_Label__c';
-import APPLY_TO_ST_THOMAS_AS_LABEL from '@salesforce/schema/RFI_Controller__c.Apply_To_St_Thomas_As_Label__c';
-
 const FIELDS = [
     ID_FIELD,
     UNIFIED_QUESTIONS_FIELD,
     FIELDS_TO_DISPLAY_FIELD,
     FIELDS_TO_DISPLAY_ORDER_FIELD,
     REQUIRED_FIELDS_FIELD,
-    ACADEMIC_INTEREST_LABEL,
-    ADDRESS_LABEL,
-    BIRTHDATE_LABEL,
-    CITIZENSHIP_LABEL,
-    COMPANY_LABEL,
-    EMAIL_LABEL,
-    EMPLOYER_LABEL,
-    EXPECTED_START_TERM_LABEL,
-    FIRST_NAME_LABEL,
-    HIGH_SCHOOL_ATTENDED_LABEL,
-    HIGH_SCHOOL_GRADUATION_YEAR_LABEL,
-    HOW_DID_YOU_HEAR_ABOUT_US_LABEL,
-    I_HAVE_A_QUESTION_LABEL,
-    LAST_NAME_LABEL,
-    MAIL_INFORMATION_LABEL,
-    PHONE_LABEL,
-    HOME_PHONE_LABEL,
-    RECEIVE_TEXT_MESSAGES_LABEL,
-    SCHOLARSHIP_OF_INTEREST_LABEL,
-    ST_THOMAS_COLLEGES_LABEL,
-    TELL_US_ABOUT_YOURSELF_LABEL,
-    TIMELINE_TO_ENROLLMENT_LABEL,
-    TITLE_LABEL,
-    WHEN_START_SCHOOL_LABEL,
-    APPLY_TO_ST_THOMAS_AS_LABEL,
     // Filter _To_Display__c fields — needed to read current selections and to save choices
     SCHOOL_COLLEGE_TO_DISPLAY,
     CITIZEN_TYPES_TO_DISPLAY,
@@ -217,6 +165,10 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     // Holds picklist options keyed by controller field API name, populated by wired getPicklistValues calls
     _filterPicklistOptions = {};
 
+    // Holds picklist options keyed by Interaction__c field API name for picklist-type custom questions
+    _interactionPicklistOptions = {};
+    _interactionDefaultRecordTypeId;
+
     // Question type options for custom questions
     questionTypes = [
         { label: 'Email', value: 'Email' },
@@ -230,35 +182,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         { label: 'Textarea required', value: 'Textarea required' }
     ];
 
-    // Map field API names to label field schema references
-    fieldLabelMap = {
-        'Academic Interest': ACADEMIC_INTEREST_LABEL,
-        'Address': ADDRESS_LABEL,
-        'Birthdate': BIRTHDATE_LABEL,
-        'Citizenship': CITIZENSHIP_LABEL,
-        'Email': EMAIL_LABEL,
-        'Employer': EMPLOYER_LABEL,
-        'Expected Start Term at St Thomas': EXPECTED_START_TERM_LABEL,
-        'High School Attended': HIGH_SCHOOL_ATTENDED_LABEL,
-        'High School Graduation Year': HIGH_SCHOOL_GRADUATION_YEAR_LABEL,
-        'Phone': PHONE_LABEL,
-        'Home Phone': HOME_PHONE_LABEL,
-        'How did you hear about us': HOW_DID_YOU_HEAR_ABOUT_US_LABEL,
-        'I have a question': I_HAVE_A_QUESTION_LABEL,
-        'I will apply to St Thomas as a': APPLY_TO_ST_THOMAS_AS_LABEL,
-        'I will apply to St Thomas Law as a': APPLY_TO_ST_THOMAS_AS_LABEL,
-        'Mail Information': MAIL_INFORMATION_LABEL,
-        'Scholarship of Interest': SCHOLARSHIP_OF_INTEREST_LABEL,
-        'St Thomas Colleges': ST_THOMAS_COLLEGES_LABEL,
-        'Tell us about yourself': TELL_US_ABOUT_YOURSELF_LABEL,
-        'Timeline to Enrollment': TIMELINE_TO_ENROLLMENT_LABEL,
-        'Title': TITLE_LABEL,
-        'When Start School': WHEN_START_SCHOOL_LABEL,
-        'Company': COMPANY_LABEL,
-        'First Name': FIRST_NAME_LABEL,
-        'Last Name': LAST_NAME_LABEL,
-        'Receive Text Messages': RECEIVE_TEXT_MESSAGES_LABEL
-    };
 
     // Default labels for pre-configured fields
     defaultLabels = {
@@ -328,7 +251,29 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     }
 
     @wire(getObjectInfo, { objectApiName: INTERACTION_OBJECT })
-    interactionObjectInfo;
+    _wiredInteractionObjectInfo(result) {
+        if (result.data) {
+            this.interactionObjectInfo = result;
+            this._interactionDefaultRecordTypeId = result.data.defaultRecordTypeId;
+        }
+    }
+
+    @wire(getPicklistValuesByRecordType, {
+        objectApiName: INTERACTION_OBJECT,
+        recordTypeId: '$_interactionDefaultRecordTypeId'
+    })
+    _wiredInteractionPicklistValues({ data }) {
+        if (data && data.picklistFieldValues) {
+            const opts = {};
+            Object.keys(data.picklistFieldValues).forEach(fieldApiName => {
+                opts[fieldApiName] = data.picklistFieldValues[fieldApiName].values.map(v => ({
+                    label: v.label,
+                    value: v.value
+                }));
+            });
+            this._interactionPicklistOptions = opts;
+        }
+    }
 
     @wire(getPicklistValues, {
         recordTypeId: '$objectInfo.defaultRecordTypeId',
@@ -499,10 +444,8 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     }
 
     getStoredLabel(fieldName) {
-        const labelField = this.fieldLabelMap[fieldName];
-        if (labelField && this.recordData) {
-            return this.getFieldValue(labelField);
-        }
+        // Labels are managed via defaultLabels defaults and the Unified_Questions__c JSON.
+        // The legacy _Label__c fields have been removed.
         return null;
     }
 
@@ -554,6 +497,25 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
             this.modalMode = 'edit';
         }
         this.currentQuestion = { ...question };
+
+        // For custom picklist questions, detect whether the mapped field is an org picklist
+        // so the HTML can show the read-only org values instead of the textarea
+        if (question.type === 'custom' && question.fieldToApplyTo &&
+            this.interactionObjectInfo && this.interactionObjectInfo.data) {
+            const fieldMeta = this.interactionObjectInfo.data.fields[question.fieldToApplyTo];
+            const isOrgPicklist = fieldMeta && fieldMeta.dataType.toLowerCase() === 'picklist';
+            if (isOrgPicklist && !this.currentQuestion.isMappedPicklist) {
+                // Re-hydrate org values in case they were saved as mapped
+                const orgOptions = this._interactionPicklistOptions[question.fieldToApplyTo] || [];
+                this.currentQuestion = {
+                    ...this.currentQuestion,
+                    isMappedPicklist: true,
+                    picklistValues: orgOptions.length > 0 ? orgOptions : question.picklistValues,
+                    valuesFlat: orgOptions.length > 0 ? orgOptions.map(o => o.value).join(';') : question.valuesFlat
+                };
+            }
+        }
+
         // Ensure filterSelectedValues is an array (may be missing in older saved data)
         if (question.type === 'filter' && !Array.isArray(this.currentQuestion.filterSelectedValues)) {
             // Try to read from existing controller field value as fallback
@@ -623,14 +585,32 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
                 this.currentQuestion.isRequired = value.includes('required');
                 // Clear field mapping — the compatible fields change with question type
                 this.currentQuestion.fieldToApplyTo = '';
+                this.currentQuestion.isMappedPicklist = false;
+                this.currentQuestion.picklistValues = [];
+                this.currentQuestion.valuesFlat = '';
                 break;
-            case 'fieldToApplyTo':
+            case 'fieldToApplyTo': {
                 this.currentQuestion.fieldToApplyTo = value;
+                // If this field is a picklist on Interaction__c, auto-populate from org values
+                if (value && this.interactionObjectInfo && this.interactionObjectInfo.data) {
+                    const fieldMeta = this.interactionObjectInfo.data.fields[value];
+                    const isOrgPicklist = fieldMeta && fieldMeta.dataType.toLowerCase() === 'picklist';
+                    if (isOrgPicklist) {
+                        const orgOptions = this._interactionPicklistOptions[value] || [];
+                        this.currentQuestion.isMappedPicklist = true;
+                        this.currentQuestion.picklistValues = orgOptions;
+                        this.currentQuestion.valuesFlat = orgOptions.map(o => o.value).join(';');
+                    } else {
+                        this.currentQuestion.isMappedPicklist = false;
+                    }
+                }
                 break;
+            }
             case 'picklistValues': {
+                // Only reachable when NOT a mapped picklist (textarea is hidden for mapped ones)
                 const pickValues = value.split('\n').filter(v => v.trim() !== '');
-                this.currentQuestion.picklistValues = pickValues.map(v => ({ label: v, value: v }));
-                this.currentQuestion.valuesFlat = pickValues.join(';');
+                this.currentQuestion.picklistValues = pickValues.map(v => ({ label: v.trim(), value: v.trim() }));
+                this.currentQuestion.valuesFlat = pickValues.map(v => v.trim()).join(';');
                 break;
             }
             case 'staticContent':
@@ -653,16 +633,24 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     // Stamps display-only computed flags onto each question after any mutation
     stampComputedProps(questions) {
         const last = questions.length - 1;
-        return questions.map((q, index) => ({
-            ...q,
-            id: index,
-            typePreconfigured: q.type === 'preconfigured',
-            typeCustom: q.type === 'custom',
-            typeFilter: q.type === 'filter',
-            isStaticContent: q.questionType === 'Static content',
-            isFirst: index === 0,
-            isLast: index === last
-        }));
+        return questions.map((q, index) => {
+            const qt = (q.questionType || '').toLowerCase();
+            return {
+                ...q,
+                id: index,
+                typePreconfigured: q.type === 'preconfigured',
+                typeCustom: q.type === 'custom',
+                typeFilter: q.type === 'filter',
+                // Consumer flags for requestForInformationAdditionalQuestionForm
+                isPicklist: qt === 'picklist' || qt === 'picklist required',
+                isTextBox: qt === 'text box' || qt === 'text box required',
+                isTextarea: qt === 'textarea' || qt === 'textarea required',
+                isEmail: qt === 'email' || qt === 'email required',
+                isStaticContent: qt === 'static content',
+                isFirst: index === 0,
+                isLast: index === last
+            };
+        });
     }
 
     handleStaticContentChange(event) {
@@ -1111,12 +1099,30 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     }
 
     get isPicklist() {
-        return this.currentQuestion.questionType === 'Picklist' ||
-               this.currentQuestion.questionType === 'Picklist required';
+        const qt = (this.currentQuestion.questionType || '').toLowerCase();
+        return qt === 'picklist' || qt === 'picklist required';
+    }
+
+    // True when the mapped Interaction field is itself a picklist — values come from org, no textarea needed
+    get isMappedPicklist() {
+        return !!(this.currentQuestion.isMappedPicklist);
+    }
+
+    // True when creator should enter values manually (picklist type but NOT mapped to an org picklist field)
+    get showPicklistTextarea() {
+        return this.isPicklist && !this.isMappedPicklist;
+    }
+
+    // Newline-separated value for the textarea — converts stored ';' delimiter back to newlines for display
+    get picklistValuesText() {
+        const flat = this.currentQuestion.valuesFlat || '';
+        if (!flat) return '';
+        return flat.split(';').filter(v => v.trim()).join('\n');
     }
 
     get isStaticContent() {
-        return this.currentQuestion.questionType === 'Static content';
+        const qt = (this.currentQuestion.questionType || '').toLowerCase();
+        return qt === 'static content';
     }
 
     get needsFieldMapping() {

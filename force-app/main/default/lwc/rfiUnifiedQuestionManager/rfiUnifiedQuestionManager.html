@@ -389,15 +389,32 @@
                             </template>
 
                             <template if:true={isPicklist}>
-                                <div class="slds-col slds-size_1-of-1">
-                                    <lightning-textarea
-                                        name="picklistValues"
-                                        label="Picklist Values (one per line)"
-                                        value={currentQuestion.valuesFlat}
-                                        onchange={handleModalChange}
-                                        required>
-                                    </lightning-textarea>
-                                </div>
+                                <!-- Mapped to an org picklist field — values come from the org, not manually entered -->
+                                <template if:true={isMappedPicklist}>
+                                    <div class="slds-col slds-size_1-of-1">
+                                        <div class="slds-box slds-box_x-small slds-theme_shade">
+                                            <p class="slds-text-title_caps slds-m-bottom_x-small">Picklist Values (from Interaction field)</p>
+                                            <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_x-small">
+                                                This field maps to a picklist on Interaction__c. The values below are pulled directly from the org and cannot be edited here.
+                                            </p>
+                                            <template for:each={currentQuestion.picklistValues} for:item="pv">
+                                                <p key={pv.value} class="slds-text-body_regular">{pv.label}</p>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                                <!-- Custom picklist — creator enters values, one per line -->
+                                <template if:false={isMappedPicklist}>
+                                    <div class="slds-col slds-size_1-of-1">
+                                        <lightning-textarea
+                                            name="picklistValues"
+                                            label="Picklist Values (one per line)"
+                                            value={picklistValuesText}
+                                            onchange={handleModalChange}
+                                            required>
+                                        </lightning-textarea>
+                                    </div>
+                                </template>
                             </template>
 
                             <template if:true={isStaticContent}>
