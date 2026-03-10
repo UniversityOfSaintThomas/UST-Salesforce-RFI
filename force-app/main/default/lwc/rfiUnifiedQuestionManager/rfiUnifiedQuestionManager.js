@@ -203,6 +203,10 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         'I will apply to St Thomas as a': 'I will apply to St Thomas as a',
         'I will apply to St Thomas Law as a': 'I will apply to St Thomas Law as a',
         'Last Name': 'Last Name',
+        // Full picklist fullName values
+        'I would like program information to be mailed to me': 'I would like program information to be mailed to me',
+        'I would like to receive text messages': 'I would like to receive text messages',
+        // Short alias fallbacks (may appear in older saved JSON)
         'Mail Information': 'Mail Information',
         'Receive Text Messages': 'Receive Text Messages',
         'Scholarship of Interest': 'Scholarship of Interest',
@@ -232,6 +236,10 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         'I will apply to St Thomas as a': 'Admit_Type__c',
         'I will apply to St Thomas Law as a': 'Admit_Type__c',
         'Last Name': 'Last_Name__c',
+        // Full picklist fullName values (what actually gets stored as fieldName in JSON)
+        'I would like program information to be mailed to me': 'Mail_Information__c',
+        'I would like to receive text messages': 'Receive_Texts__c',
+        // Short alias fallbacks (may appear in older saved JSON)
         'Mail Information': 'Mail_Information__c',
         'Receive Text Messages': 'Receive_Texts__c',
         'Scholarship of Interest': 'Scholarship_of_Interest__c',

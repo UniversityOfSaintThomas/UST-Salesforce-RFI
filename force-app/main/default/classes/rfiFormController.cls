@@ -1107,9 +1107,14 @@ public with sharing class rfiFormController {
                         newField.isEmail = true;
                     } else if (fieldName.contains('Phone')) {
                         newField.isTel = true;
-                    } else if (fieldName == 'I have a question' || fieldName == 'Tell us about yourself') {
+                    } else if (fieldName == 'Tell us about yourself') {
                         newField.isTextarea = true;
-                    } else if (fieldName == 'Receive Text Messages' || fieldName == 'Mail Information') {
+                    } else if (fieldName == 'I have a question') {
+                        newField.isCheckbox = true;
+                        newField.showDependentField = true;
+                    } else if (fieldName == 'I would like to receive text messages' || fieldName == 'Receive Text Messages') {
+                        newField.isCheckbox = true;
+                    } else if (fieldName == 'I would like program information to be mailed to me' || fieldName == 'Mail Information') {
                         newField.isCheckbox = true;
                     }
 
