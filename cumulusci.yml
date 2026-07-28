@@ -3,7 +3,7 @@ project:
   name: UST-Salesforce-RFI
   package:
     name: UST-RFI
-    api_version: '63.0'
+    api_version: '67.0'
   git:
   source_format: sfdx
 
