@@ -9,7 +9,7 @@ public with sharing class ReusableLookupController {
         List<ResultWrapper> returnWrapperList = new List<ResultWrapper>();
 
         if (inputWrapper != null) {
-            if (string.isNotBlank(inputWrapper.fieldApiName)) {
+            if (String.isNotBlank(inputWrapper.fieldApiName)) {
                 List<String> sanitizedOtherFields = new List<String>();
                 try {
                     String fieldsToQuery = 'SELECT Id, ';
@@ -18,7 +18,7 @@ public with sharing class ReusableLookupController {
                     SObjectType objectToQuery = Schema.getGlobalDescribe().get(inputWrapper.objectApiName);
                     Map<String, SObjectField> fieldsMap = objectToQuery.getDescribe().fields.getMap();
                     try {
-                        if (string.isNotBlank(inputWrapper.otherFieldApiName)) {
+                        if (String.isNotBlank(inputWrapper.otherFieldApiName)) {
                             //Can be comma separated
                             List<String> otherFields = inputWrapper.otherFieldApiName.split(',');
 

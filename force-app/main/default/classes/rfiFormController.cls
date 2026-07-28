@@ -266,7 +266,8 @@ public with sharing class rfiFormController {
             List<String> requiredFields = rfiController.Required_Fields__c != null ? rfiController.Required_Fields__c.split(';') : new List<String>();
 
             // Lead field describes for dynamic picklist detection
-            Map<String, Schema.SObjectField> leadFieldMap = Schema.SObjectType.Lead.fields.getMap();
+            //Map<String, Schema.SObjectField> leadFieldMap = Schema.SObjectType.Lead.fields.getMap();
+
             // Interaction field describes to validate field existence
             Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
 
@@ -1022,7 +1023,7 @@ public with sharing class rfiFormController {
             }
         }
 
-        if (!Schema.sObjectType.Interaction__c.isCreateable()) {
+        if (!Schema.SObjectType.Interaction__c.isCreateable()) {
             throw new AuraHandledException('Insufficient permissions to submit RFI form.');
         }
 

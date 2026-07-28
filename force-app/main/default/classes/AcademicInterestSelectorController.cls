@@ -22,6 +22,7 @@ public with sharing class AcademicInterestSelectorController {
     /**
      * Returns the list of valid picklist values from Academic_Interests_To_Display__c.
      * These are the only codes the selector is allowed to save back.
+     * @return Set<String>
      */
     private static Set<String> getValidPicklistValues() {
         Schema.DescribeFieldResult d = Schema.SObjectType.RFI_Controller__c
@@ -43,6 +44,7 @@ public with sharing class AcademicInterestSelectorController {
      *
      * @param academic_level  'U'/'Undergraduate' or 'G'/'Graduate'
      * @param school_college  Optional school/college filter
+     * @return List<ProgramOptions>
      */
     @AuraEnabled(Cacheable=true)
     public static List<ProgramOption> getSelectablePrograms(String academic_level, String school_college) {
@@ -148,7 +150,7 @@ public with sharing class AcademicInterestSelectorController {
      */
     @AuraEnabled
     public static void saveAcademicInterests(Id recordId, String codes) {
-        if (!Schema.sObjectType.RFI_Controller__c.isUpdateable()) {
+        if (!Schema.SObjectType.RFI_Controller__c.isUpdateable()) {
             throw new AuraHandledException('Insufficient permissions to update RFI Controller records.');
         }
 
