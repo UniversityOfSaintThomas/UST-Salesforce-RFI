@@ -419,7 +419,8 @@ public with sharing class rfiFormController {
                     when 'I would like to receive text messages' {
                         newField.fieldLabel = 'I would like to receive text messages';
                         newField.fieldInteractionAPIName = 'Receive_Texts__c';
-                        newField.isCheckbox = true;
+                        // Receive_Texts__c is a Picklist, not a Boolean — let the dynamic
+                        // picklist detection below populate isPicklist/picklistValues.
                     }
                     when 'Phone' {
                         newField.fieldLabel = 'Phone';
@@ -1074,7 +1075,7 @@ public with sharing class rfiFormController {
                     'ok_to_text__c' => 'Receive_Texts__c',
                     'school_college__c' => 'St_Thomas_College_School__c',
                     'tell_us_about_yourself__c' => 'Description__c',
-                    'title__c' => 'Salutation__c'
+                    'title__c' => 'Contact_Title__c'
             };
 
             for (Object qObj : unifiedQuestions) {
@@ -1114,7 +1115,8 @@ public with sharing class rfiFormController {
                         newField.isCheckbox = true;
                         newField.showDependentField = true;
                     } else if (fieldName == 'I would like to receive text messages' || fieldName == 'Receive Text Messages') {
-                        newField.isCheckbox = true;
+                        // Receive_Texts__c is a Picklist, not a Boolean — fall through to the
+                        // dynamic picklist detection below instead of forcing a checkbox.
                     } else if (fieldName == 'I would like program information to be mailed to me' || fieldName == 'Mail Information') {
                         newField.isCheckbox = true;
                     }

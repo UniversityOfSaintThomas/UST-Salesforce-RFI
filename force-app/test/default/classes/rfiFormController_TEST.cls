@@ -565,16 +565,23 @@ private class rfiFormController_TEST {
 
     @IsTest
     static void getRFIForm_unifiedPath_preconfiguredCheckbox_TEST() {
-        // OK to text? checkbox in @TestSetup unified ctrl (id 10)
+        // OK to text? in @TestSetup unified ctrl (id 10). Receive_Texts__c is a Picklist on
+        // Interaction__c (not a Boolean), so this must render as a picklist, not a checkbox —
+        // rendering it as a checkbox caused an "Illegal assignment from Boolean to String" error
+        // on submit (ECRMSF-5732/ECRMSF-5764).
         Test.startTest();
         rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(unifiedCtrlName());
         Test.stopTest();
         System.assertNotEquals(null, wrap);
-        Boolean foundCheckbox = false;
+        Boolean foundPicklist = false;
         for (rfiFormController.rfiField f : wrap.rfiFieldList) {
-            if (f.isCheckbox == true && f.fieldLabel == 'OK to text?') foundCheckbox = true;
+            if (f.fieldLabel == 'OK to text?') {
+                System.assertNotEquals(true, f.isCheckbox, 'Receive_Texts__c should not render as a checkbox');
+                System.assertEquals(true, f.isPicklist, 'Receive_Texts__c should render as a picklist');
+                foundPicklist = true;
+            }
         }
-        System.assert(foundCheckbox, 'Should find OK to text? checkbox field');
+        System.assert(foundPicklist, 'Should find OK to text? picklist field');
     }
 
     @IsTest

@@ -83,3 +83,4 @@ robot/UST-RFI/results/
 
 **/graphql.config.yml
 code-analyzer.yml
+/.agentbridge/
