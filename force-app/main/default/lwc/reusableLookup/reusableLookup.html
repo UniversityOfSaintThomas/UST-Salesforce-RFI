@@ -22,14 +22,14 @@
                 </div>
             </div>
             <template if:true={isValueSelected}>
-                <label class="slds-form-element__label" for="combobox-id-5" id="combobox-label-id-35">{label}</label>
                 <template if:true={required}>
-                    <span style="color:red">*</span>
+                    <span class="slds-m-horizontal_xxx-small" style="color:red">*</span>
                 </template>
+                <label class="slds-form-element__label" for="combobox-id-5" id="combobox-label-id-35">{label}</label>
                 <div tabindex="0" class="slds-combobox_container slds-has-selection">
                     <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click">
                         <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_left-right" role="none">
-                            <span class="slds-icon_container slds-icon-standard-account slds-combobox__input-entity-icon" title="Account">
+                            <span class="slds-icon_container slds-combobox__input-entity-icon" title={selectedIconName}>
                                 <lightning-icon icon-name={selectedIconName} alternative-text={selectedIconName} size="x-small"></lightning-icon>
                             </span>
                             <button type="button"

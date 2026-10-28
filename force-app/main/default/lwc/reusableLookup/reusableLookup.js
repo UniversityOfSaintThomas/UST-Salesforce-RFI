@@ -27,6 +27,8 @@ export default class ReusableLookup extends LightningElement {
     @api parentFieldApiName;
     @api recordTypeName;
     @api type;
+    @api andCriteria = '';
+    @api orderByCriteria = '';
     @api placeholder;
 
     @api
@@ -53,7 +55,9 @@ export default class ReusableLookup extends LightningElement {
             parentRecordId: this.parentRecordId,
             parentFieldApiName: this.parentFieldApiName,
             recordTypeName: this.recordTypeName,
-            type: this.type
+            type: this.type,
+            andCriteria: this.andCriteria,
+            orderByCriteria: this.orderByCriteria
         };
     }
 
@@ -219,6 +223,11 @@ export default class ReusableLookup extends LightningElement {
     handleCommit() {
         this.selectedRecordId = "";
         this.selectedRecordName = "";
+        // Notify parent that selection was cleared
+        const selectedEvent = new CustomEvent('valueselected', {
+            detail: { id: "", mainField: "", subField: "" }
+        });
+        this.dispatchEvent(selectedEvent);
     }
 
     //handler for selection of records from lookup result list
@@ -251,10 +260,26 @@ export default class ReusableLookup extends LightningElement {
         // eslint-disable-next-line @lwc/lwc/no-async-operation
         this.delayTimeout = setTimeout(() => {
             if (!this.preventClosingOfSearchPanel) {
-                this.recordsList = [];
+                // this.recordsList = [];
+                // this.searchString = '';
+                this.reset()
             }
             this.preventClosingOfSearchPanel = false;
         }, DELAY);
+    }
+
+    @api
+    reset() {
+        this.selectedRecordId = '';
+        this.selectedRecordName = '';
+        this.recordsList = [];
+        this.searchString = '';
+        this.focusedIndex = -1;
+        // Clear the actual input field in the DOM
+        const inputEl = this.template.querySelector('lightning-input');
+        if (inputEl) {
+            inputEl.value = '';
+        }
     }
 
 }
