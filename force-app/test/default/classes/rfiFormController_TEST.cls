@@ -1217,4 +1217,213 @@ private class rfiFormController_TEST {
         Test.stopTest();
         System.assert(threw, 'A blank controller name must raise AuraHandledException');
     }
+
+
+    // --- Phase 1: question mapping fixes (ECRMSF-6047, ECRMSF-6048) ---
+
+    private static String insertUnifiedController(List<Map<String, Object>> questions, String marker) {
+        RFI_Controller__c ctrl = new RFI_Controller__c(
+                Academic_Level__c = 'U',
+                Fields_to_Display__c = fieldsToDisplayDefault(),
+                Unified_Questions__c = JSON.serialize(questions),
+                Redirect_URL__c = 'https://phase1-' + marker + '.example.com'
+        );
+        insert ctrl;
+        return uniqueNameFor(ctrl.Id);
+    }
+
+    /**
+     * The Name field is an auto-number, and inside a unit test it can repeat across records. Any other
+     * controller with the same Name is removed (this test does not use it), so that looking a controller
+     * up by Name returns exactly the one this test inserted.
+     */
+    private static String uniqueNameFor(Id controllerId) {
+        String controllerName = [SELECT Name FROM RFI_Controller__c WHERE Id = :controllerId].Name;
+        delete [SELECT Id FROM RFI_Controller__c WHERE Name = :controllerName AND Id != :controllerId];
+        return controllerName;
+    }
+
+    private static Map<String, Object> pre(Integer id, String questionName, String savedApiName, Boolean isRequired) {
+        return new Map<String, Object>{
+                'id' => id, 'type' => 'preconfigured', 'fieldName' => questionName,
+                'questionLabel' => questionName, 'fieldInteractionAPIName' => savedApiName, 'isRequired' => isRequired
+        };
+    }
+
+    private static String describeFields(rfiFormController.interactionRFIFields wrap) {
+        List<String> parts = new List<String>();
+        for (rfiFormController.rfiField f : wrap.rfiFieldList) {
+            parts.add(f.fieldLabel + '->' + f.fieldInteractionAPIName);
+        }
+        return String.join(parts, ' | ');
+    }
+
+    private static rfiFormController.rfiField fieldFor(rfiFormController.interactionRFIFields wrap, String apiName) {
+        for (rfiFormController.rfiField f : wrap.rfiFieldList) {
+            if (f.fieldInteractionAPIName == apiName) {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    @IsTest
+    static void unified_savedWrongTargets_areCorrectedByQuestionName_TEST() {
+        // These are the wrong targets that were saved on real forms
+        String ctrlName = insertUnifiedController(new List<Map<String, Object>>{
+                pre(0, 'Title', 'Salutation__c', false),
+                pre(1, 'I would like program information to be mailed to me', 'Mail_Information__c', false),
+                pre(2, 'Timeline to Enrollment', 'Timeline__c', false)
+        }, 'targets');
+        Test.startTest();
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
+        Test.stopTest();
+        System.assertNotEquals(null, fieldFor(wrap, 'Contact_Title__c'), 'Title must save to Contact_Title__c');
+        System.assertEquals(null, fieldFor(wrap, 'Salutation__c'), 'Title must not save to Salutation__c');
+        rfiFormController.rfiField mail = fieldFor(wrap, 'Mailed_Program_Information_Requested__c');
+        System.assertNotEquals(null, mail, 'Mail question must save to Mailed_Program_Information_Requested__c');
+        System.assertEquals(true, mail.isCheckbox);
+        System.assertEquals(null, fieldFor(wrap, 'Mail_Information__c'));
+        System.assertNotEquals(null, fieldFor(wrap, 'Timeline__c'));
+    }
+
+    @IsTest
+    static void unified_homeAndMobilePhone_becomesTwoPhoneInputs_TEST() {
+        String ctrlName = insertUnifiedController(new List<Map<String, Object>>{
+                pre(0, 'Home and Mobile Phone', '', true)
+        }, 'phones');
+        Test.startTest();
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
+        Test.stopTest();
+        rfiFormController.rfiField home = fieldFor(wrap, 'Home_Phone__c');
+        rfiFormController.rfiField mobile = fieldFor(wrap, 'Mobile_Phone__c');
+        System.assertNotEquals(null, home, 'Home phone input expected');
+        System.assertNotEquals(null, mobile, 'Mobile phone input expected');
+        System.assertEquals(true, home.isTel);
+        System.assertEquals(true, mobile.isTel);
+        System.assertEquals(true, home.isRequired, 'Home phone follows the question being required');
+        System.assertEquals(false, mobile.isRequired);
+    }
+
+    @IsTest
+    static void unified_splitAddressQuestions_collapseToOneAddress_TEST() {
+        String ctrlName = insertUnifiedController(new List<Map<String, Object>>{
+                pre(0, 'Address 1', '', false),
+                pre(1, 'Address 2', '', true),
+                pre(2, 'City', '', false),
+                pre(3, 'State', '', false),
+                pre(4, 'Zipcode', '', false),
+                pre(5, 'Country', '', false)
+        }, 'split');
+        Test.startTest();
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
+        Test.stopTest();
+        Integer addressCount = 0;
+        for (rfiFormController.rfiField f : wrap.rfiFieldList) {
+            if (f.isAddress == true) {
+                addressCount++;
+                System.assertEquals(true, f.isRequired, 'Address is required when any older address question was');
+            }
+        }
+        System.assertEquals(1, addressCount, 'The six older address questions become one Address question');
+        System.assertEquals(1, wrap.rfiFieldList.size(), 'No leftover address or Field Label Not Found inputs');
+    }
+
+    @IsTest
+    static void unified_splitAddress_notDuplicatedWhenAddressAlreadyPresent_TEST() {
+        String ctrlName = insertUnifiedController(new List<Map<String, Object>>{
+                pre(0, 'Address', 'Mailing_Street__c', false),
+                pre(1, 'City', '', false)
+        }, 'split2');
+        Test.startTest();
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
+        Test.stopTest();
+        System.assertEquals(1, wrap.rfiFieldList.size(), 'City is dropped because Address is already there');
+    }
+
+    @IsTest
+    static void unified_startSchoolQuestion_isDropped_TEST() {
+        String ctrlName = insertUnifiedController(new List<Map<String, Object>>{
+                pre(0, 'Email', 'Email__c', false),
+                pre(1, 'When do you plan to start school', '', false)
+        }, 'startschool');
+        Test.startTest();
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
+        Test.stopTest();
+        System.assertEquals(1, wrap.rfiFieldList.size(), 'Only Email remains. Got: ' + describeFields(wrap));
+        System.assertEquals('Email__c', wrap.rfiFieldList[0].fieldInteractionAPIName);
+    }
+
+    @IsTest
+    static void unified_startTermAndCollege_areDropDowns_TEST() {
+        String ctrlName = insertUnifiedController(new List<Map<String, Object>>{
+                pre(0, 'Expected Start Term at St Thomas', 'Intended_Start_Term__c', false),
+                pre(1, 'St Thomas Colleges', 'St_Thomas_College_School__c', false)
+        }, 'lookups');
+        Test.startTest();
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
+        Test.stopTest();
+        rfiFormController.rfiField term = fieldFor(wrap, 'Intended_Start_Term__c');
+        rfiFormController.rfiField college = fieldFor(wrap, 'St_Thomas_College_School__c');
+        System.assertNotEquals(null, term);
+        System.assertNotEquals(null, college);
+        System.assertEquals(true, term.isPicklist, 'Start term must be a drop-down, not a text box');
+        System.assertEquals(true, college.isPicklist, 'College/School must be a drop-down, not a text box');
+        System.assertNotEquals(null, term.picklistValues);
+        System.assert(term.picklistValues.size() >= 1, 'Test data has upcoming terms');
+    }
+
+    @IsTest
+    static void legacy_homeAndMobilePhone_andSplitAddress_andLawApplicant_TEST() {
+        RFI_Controller__c ctrl = new RFI_Controller__c(
+                Academic_Level__c = 'U',
+                Fields_to_Display__c = 'Home and Mobile Phone;Address 1;City;Zipcode;I will apply to St Thomas Law as a;I would like program information to be mailed to me',
+                Required_Fields__c = 'Home Phone',
+                Redirect_URL__c = 'https://phase1-legacy.example.com'
+        );
+        insert ctrl;
+        String ctrlName = uniqueNameFor(ctrl.Id);
+        Test.startTest();
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
+        Test.stopTest();
+        System.assertNotEquals(null, fieldFor(wrap, 'Mobile_Phone__c'));
+        rfiFormController.rfiField home = fieldFor(wrap, 'Home_Phone__c');
+        System.assertNotEquals(null, home);
+        System.assertEquals(true, home.isRequired);
+        Integer addressCount = 0;
+        for (rfiFormController.rfiField f : wrap.rfiFieldList) {
+            System.assertNotEquals('Field Label Not Found', f.fieldLabel, 'No question may fall through to a generic box');
+            if (f.isAddress == true) {
+                addressCount++;
+            }
+        }
+        System.assertEquals(1, addressCount);
+        System.assertNotEquals(null, fieldFor(wrap, 'Admit_Type__c'), 'Law applicant question maps to Admit Type');
+        System.assertNotEquals(null, fieldFor(wrap, 'Mailed_Program_Information_Requested__c'));
+        System.assertEquals(null, fieldFor(wrap, 'Mail_Information__c'));
+    }
+
+    @IsTest
+    static void normalizeQuestionNames_collapsesAndDrops_TEST() {
+        List<String> cleaned = rfiFormController.normalizeQuestionNames(new List<String>{
+                'Email', 'Address 1', 'Address 2', 'Phone', 'City', 'When do you plan to start school', 'Zipcode'
+        });
+        System.assertEquals(new List<String>{ 'Email', 'Address', 'Phone' }, cleaned);
+        List<String> unchanged = rfiFormController.normalizeQuestionNames(new List<String>{ 'Address', 'Title' });
+        System.assertEquals(new List<String>{ 'Address', 'Title' }, unchanged);
+    }
+
+
+    @IsTest
+    static void correctedTargets_allExistOnInteraction_TEST() {
+        // Guard: a question must never point at a field that does not exist on Interaction__c.
+        // Whether the running user can write it depends on field-level security (the public form runs as
+        // the site guest, who gets access through the RFI User permission set), so that is not checked here.
+        Map<String, Schema.SObjectField> interactionFields = Schema.SObjectType.Interaction__c.fields.getMap();
+        for (String questionName : rfiFormController.correctedTargetByQuestion.keySet()) {
+            String target = rfiFormController.correctedTargetByQuestion.get(questionName);
+            System.assert(interactionFields.containsKey(target.toLowerCase()),
+                    questionName + ' points at ' + target + ', which is not a field on Interaction__c');
+        }
+    }
 }

@@ -96,6 +96,27 @@ tasks:
 
             upsert applicationSettings;
 
+  apply_admin_permissions_sets:
+    description: Apply needed RFI permissions sets to admin user
+    class_path: cumulusci.tasks.apex.anon.AnonymousApexTask
+    options:
+      apex: >
+        List<PermissionSet> adminPermissionSets = [
+                SELECT Name, Id
+                FROM PermissionSet
+                WHERE Name = 'RFI_Controller_User'
+        ];
+
+        List<PermissionSetAssignment> newAssignments = new List<PermissionSetAssignment>();
+        
+        for (User u : [SELECT Id FROM User WHERE Profile.Name = 'System Administrator']) {
+            for (PermissionSet permission : adminPermissionSets) {
+                newAssignments.add(new PermissionSetAssignment(PermissionSetId = permission.Id, AssigneeId = u.Id));
+            }
+        }
+
+        insert newAssignments;
+
 flows:
   config_dev:
     steps:
@@ -105,6 +126,8 @@ flows:
         task: deploy_guest_sharing_rules
       5:
         task: adjust_custom_settings
+      6:
+        task: apply_admin_permissions_sets
 
 orgs:
   scratch:

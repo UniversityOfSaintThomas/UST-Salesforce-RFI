@@ -17,8 +17,22 @@ Lead-based path produced, and make it hard to break that again.
 
 **Target environment.** `rfiForm` must work in the scratch org, but it is built for
 the **eda-staging full sandbox** and then production. Everything below was checked
-against eda-staging (read-only: describes, queries, and metadata retrieves). Nothing was
-submitted or changed in any org.
+against eda-staging with describes, queries, metadata retrieves and, in Phase 0, five test
+submissions that were deleted afterwards. No metadata was deployed to eda-staging.
+
+**Working agreement for environments (decided 2026-10-29).** eda-staging is for investigation only:
+the assistant reads (describes, queries, retrieves) and does not deploy, run scripts that write data,
+or create test records there. The repository owner deploys to eda-staging and production. Changes are
+built and tested in scratch orgs first, then deployed by the owner, and differences found in staging
+are observed and fixed afterwards. Phase 0 (2026-10-28) wrote five test submissions to eda-staging
+before this agreement; they were deleted, and no further writes will be made.
+
+**Scope rule for permissions (decided 2026-10-29).** Permission sets, profiles and sharing rules in
+this repo exist only so scratch orgs work. Admins own permissions in eda-staging and production,
+and developers never deploy or overwrite them there. Profiles are not tracked in the repo at all.
+Where staging or production needs a permission change, it is written up as a note for admins
+(section 9) and the admins decide. Fields themselves are metadata and are still deployed by developers;
+their field security is then set by admins.
 
 **Two paths exist side by side in eda-staging and the scratch org:**
 
@@ -140,7 +154,9 @@ suggests it but no submission was run.
 | F26 | **Sharing rules added by the new `config_dev` tasks do not fit the form.** The Account guest rule for EASY Applicant Portal was narrowed to Educational Institution accounts of type College/High School, which removes the University Department accounts the school list needs (live result: College\\School has 0 options). The new `Academic_Term__c` rule is for the Summit Events guest user, not EASY Applicant Portal (live result: Expected Start Term has 0 options). Interaction external default is now ReadWrite. | `unpackaged/sharing`; rules and defaults retrieved from the scratch org; live form option counts. | Verified |
 | F27 | **Textareas overwrite each other and the answer is lost.** `_validateForm` copies every textarea and input into the payload by its `name`. Controller 0001 renders nine "Field Label Not Found" textareas (questions the legacy switch does not know: Address 1, 2, 3, City, State, Country, Zipcode, Home and Mobile Phone, St Thomas Law) that all fall back to `Description__c`, so the last blank one overwrites "Tell us about yourself". The "I have a question" box is named `Description`, which is not an Interaction field, so that answer is dropped. | Payload from the browser test: no `Description__c`; a stray `Description` key. | Verified in a browser |
 | F28 | **An empty duplicate input overwrites a real answer.** "When do you plan to start school" and "High School Graduation" both map to `High_School_Graduation_Year__c`; the blank one is sent last, so the 2028 entered was submitted as an empty string. | Payload: `High_School_Graduation_Year__c: ""`. | Verified in a browser |
-| F29 | **`Timeline__c` was sent but not saved (open).** The payload carried `"0-6 Months"`, the guest has edit on the field through `RFI User`, and the saved record is blank. A fresh REST describe as the admin does not list the field at all (an admin has no field access to a new field), so the describe cannot settle it. One candidate cause is the stale Aura definition cache for a field created minutes earlier (see the agent-onboarding caching note); it is not confirmed. | Payload and saved record from the browser test; permission rows; REST describe. | Open |
+| F29 | **Resolved: `Timeline__c` was saved; the admin could not see it.** A scratch org gives the admin every field it knows at build time. A field created later has no field security for anyone, so the admin user could not describe or query `Timeline__c`, and an earlier note in this plan that the value "was sent but not saved" was wrong. After `RFI Controller User` was assigned to administrators and the field added to it, all three browser test records show `Timeline__c = 0-6 Months`. The guest, which holds `RFI User`, was never affected. | Admin describe and query before and after; three saved test Interactions. | Resolved. Process rule: every new field goes into `RFI User` (guest) and `RFI Controller User` (admins) in the same change |
+| F30 | **The single "Phone" question saves to the wrong phone field.** The old form sent it to the Lead mobile phone; the new form sends it to `Home_Phone__c`. It also collides with the Home Phone input: on controller 0001 both write `Home_Phone__c`, and the blank one is copied last, so the typed home phone is lost (payload: `Home_Phone__c: ""`). Open decision: where should "Phone" save? Recommendation: `Mobile_Phone__c`, to match the old form. | Old form handler (`phone_label` case); browser payload; Phase 1 test. | Verified. Needs a decision |
+| F31 | **`RFI Controller User` in the scratch copy was behind staging.** It lacked the controller fields the Question Manager saves (`Unified_Questions__c`, `Fields_to_Display_Order__c`, four filter fields, `School_College__c`), `Account.School_College_Name__c`, and Apex class access to `rfiFormController`, `ReusableLookupController` and `AcademicInterestSelectorController`. 22 field grants and the 3 class accesses were added to the repo copy on 2026-10-29. In staging 19 users hold this set (14 Enrollment Staff, 1 of them inactive, and 5 administrators, 1 of them inactive), so the repo copy is for scratch orgs only and is never deployed to staging. The differences are recorded for admins in section 9. | Retrieve of both copies; holders query; deploy to scratch. | Verified |
 
 ---
 
@@ -293,13 +309,23 @@ Not measured:
 - Make the Apex remap key on the saved `fieldName` as well as the API name, so already-saved
   configs are corrected without admin action.
 - Add unified-path handling for Expected Start Term and St Thomas Colleges (F2).
-- Add the missing Interaction fields (D1) and a permission set that grants them.
+- Add the missing Interaction fields (D1). Permission sets that grant them are kept in the repo for scratch orgs only; staging changes go to admins as notes (section 9).
 - Script a one-time, idempotent update of `Unified_Questions__c` in eda-staging (anonymous
   Apex run from `ai-logs/`) that rewrites bad targets and replaces the split Address
   questions. The same script runs in production at release.
 
 **Done when:** a controller with every preconfigured question submits and every answer
 lands on the Interaction (the 0357 case in Phase 0 is clean).
+
+**Phase 1 progress (2026-10-29).** Done in code, tested and deployed to the scratch org only:
+- Question Manager mapping table fixed (Title, mail question, Home and Mobile Phone).
+- Corrected-target table in `rfiFormController` keyed by question name, so forms saved with the old names are fixed at run time.
+- Both code paths now understand Home and Mobile Phone (two phone inputs), the split address questions (collapse to one Address) and the St Thomas Law applicant question. Live result on controller 0001: "Field Label Not Found" boxes went from 9 to 0.
+- Expected Start Term and St Thomas Colleges render as drop-downs in the unified path (unit-tested; the live lists are empty until the guest sharing rules in ECRMSF-6053 exist).
+- "When do you plan to start school" deactivated in `Fields_to_Display__c` and `Required_Fields__c` (deactivated, not deleted, so existing records stay valid).
+- Repair script `ai-logs/migrate-questions.apex` (dry run by default, safe to repeat). A dry run in eda-staging (read-only) reports that it would change 3 controllers: 0223 (Title), 0234 (mail question) and 0357 (split address, mail question, start-school question), plus one older field list. Applied in the scratch org (2 controllers); a second run changed nothing. It is not applied in eda-staging: the owner runs it at deployment (see the hand-off checklist in Phase 5).
+- 9 new Apex tests. With the fixes switched off, 7 of the original 8 fail (the 8th tests a helper in isolation). One of the 9 guards that every corrected target exists on Interaction; it caught the old bad field name when I put it back.
+- Not changed: the single "Phone" question (F30), pending your decision.
 
 ### Phase 2: Server-side parity (ECRMSF-5588)
 
@@ -375,14 +401,30 @@ versioned in the repo (D7).
 
 1. Scratch org: seed `Program__c`, `Academic_Term__c` and record types needed so the form
    can be exercised end to end. Apex tests create their own data.
-2. eda-staging: deploy targeted (classes, then LWC, then Aura dependency app), run the
-   Phase 0 matrix again, run the controller JSON migration.
-3. Production is a separate story. Deployment order, the JSON migration and the new fields
-   go in its checklist. Anything in the org but not in the repo (F15) gets retrieved first so
-   production is not surprised.
+2. eda-staging: the owner deploys, once the scratch work is tightened up (see the hand-off
+   checklist below). Permission sets, profiles and sharing rules are not deployed by anyone from
+   the repo; admins apply the notes in section 9. After the owner deploys, the assistant observes
+   differences with read-only checks and records them here.
+3. Production is a separate story. Deployment order, the JSON repair and the new fields go in its
+   checklist, plus a copy of the section 9 notes for admins. Anything in the org but not in the
+   repo (F15) gets retrieved first so production is not surprised.
 4. Related tracks: 5800 (test dynamic program-filter questions) runs against the Phase 2
    build. 5856 includes the Question Manager bug where the Question Label does not update
    after the Filter Field is changed.
+
+**Hand-off checklist for the person deploying to eda-staging.** Order matters; fields and
+value sets come before the code that uses them.
+1. Fields: `Interaction__c.Timeline__c` (new); the deactivated value in
+   `RFI_Controller__c.Fields_to_Display__c` and `Required_Fields__c`.
+2. Apex: `rfiFormController`, `rfiFormController_TEST`. The shared lookup and the Aura app were
+   brought up to date with staging on 2026-10-28.
+3. LWC: `rfiUnifiedQuestionManager`, then the Aura dependency app (make a real content change to the
+   app if a browser keeps an old bundle).
+4. Admins apply the section 9 notes (class access for `rfiFormController` first).
+5. Run the controller repair (dry run first, read the report, then save). In a non-sandbox org the
+   script refuses to save until its safety check is edited on purpose.
+6. Smoke test as an anonymous visitor: the form loads, the school and start term lists have choices,
+   a submit saves.
 
 ---
 
@@ -423,7 +465,7 @@ developer section at the end of each. None are assigned or scheduled.
 | ECRMSF-6050 | Save State and Country in the fields the Opportunity uses | F9 | 5764 |
 | ECRMSF-6051 | Make the public form work for anonymous visitors safely (access, errors, logging) | F11, F12, F13, F24 | none |
 | ECRMSF-6052 | Automated tests that catch field mapping mistakes | Phase 4 | none |
-| ECRMSF-6053 | Guest access setup (permission set and sharing rules) for scratch, staging and production | F15, F25, F26 | none |
+| ECRMSF-6053 | Guest access in scratch orgs, and a checklist for admins to align staging and production | F15, F25, F26 | none |
 
 Not created because the work is done: the baseline parity matrix (Phase 0) and the shared
 lookup and Aura sync (F18, F19).
@@ -469,3 +511,38 @@ sf project retrieve start --target-org eda-staging --output-dir ai-logs/retrieve
   --metadata "Flow:Auto_Convert_Recruitment_Flow" "LightningComponentBundle:requestForInformationForm"
 sf data query --target-org eda-staging --query "SELECT Name, Unified_Questions__c FROM RFI_Controller__c"
 ```
+
+---
+
+## 9. Notes for admins (eda-staging and production)
+
+Information only. Nothing here has been deployed, and developers will not deploy it. Each item says
+what the new form needs so admins can decide what to change in their own permission sets, profiles and
+sharing rules. Findings come from comparing the form's code with the staging copies of `RFI User` and
+`RFI Controller User` retrieved on 2026-10-29. Access can also come from a profile or another
+permission set, which this comparison did not read, so each item says "check".
+
+**A. What the public form needs for the guest user (check against the Admissions guest profile and `RFI User`).**
+
+| Item | Staging `RFI User` today | Note |
+|---|---|---|
+| Apex class `rfiFormController` | **Not granted** (it grants `ReusableLookupController` and the old `requestForInformationFormController`) | The new form cannot run for the guest without it. This is the first thing to check. |
+| Create on `Interaction__c` | Granted | |
+| Edit on the 50 Interaction fields the form writes | Granted for all except `Timeline__c` | `Timeline__c` is a new field (see B) |
+| Read on `Account.School_College_Name__c`, `Account.Type`, `Account.BillingAddress` | Not in `RFI User` | Needed to list schools and search high schools. Check the profile. |
+| Read on `Academic_Term__c.Term_Start_Date__c` | Not in `RFI User`; `Academic_Term__c` object read not in the set | Needed for the Expected Start Term drop-down |
+| Read on `Program__c` generic filters 6, 7, 8 | Not in `RFI User` | Only for controllers that use those filters |
+
+**B. New field to be created by developers, then given field security by admins.** `Interaction__c.Timeline__c` (picklist: 0-6 Months, 6-12 Months, More than 1 Year, Undecided). Guest needs edit; admin users need read or edit.
+
+**C. Sharing rules the Admissions guest user would need (check what exists).** Staging today has guest rules for Programs (all programs) and high school and college Accounts. It has none for:
+- University Department Accounts (the school records the College/School drop-down needs; 32 in eda-staging and 28 in the scratch org)
+- Academic Terms for the Admissions guest user (rules exist for the two University of St. Thomas guest users, not for Admissions)
+
+The new form reads the controller record through code that does not need a sharing rule. Accounts stay controlled by sharing rules so admins decide what is visible.
+
+**D. Administrator visibility (`RFI Controller User` in staging).** It does not grant `Timeline__c`, `School_Name_Text__c`, `Heard_About_Us__c` or `Email__c` on Interaction. It does grant the Question Manager fields. Decide whether staff should see the new and form-written fields.
+
+**E. Worth a look while you are there.** Staging `RFI User` is held by 13 active Enrollment Staff and 3 active administrators as well as the Admissions guest user, and grants read on 315 Contact fields, some of which look sensitive (birthdate, donor status, ethnicity and religion codes). That is your call; it is noted because the guest user holds the same set.
+
+**F. Scratch-only items in the repo (for reference).** `RFI User` and `RFI Controller User` permission sets, the guest sharing rules under `unpackaged/sharing`, and the `apply_admin_permissions_sets` task exist to make scratch orgs work. The task is meant to run once at build time, by design.

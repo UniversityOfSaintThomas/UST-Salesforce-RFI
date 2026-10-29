@@ -119,6 +119,105 @@ public with sharing class rfiFormController {
         }
     }
 
+    /**
+     * Interaction field each preconfigured question must save to. Forms saved earlier, and the old
+     * Question Manager list, stored wrong names for some of these (for example Title saved to
+     * Salutation__c and the mail question pointed at a field that does not exist). The question
+     * name is its identity, so this table wins over any API name stored with the question.
+     */
+    @TestVisible
+    private static final Map<String, String> correctedTargetByQuestion = new Map<String, String>{
+            'Title' => 'Contact_Title__c',
+            'I would like program information to be mailed to me' => 'Mailed_Program_Information_Requested__c',
+            'Mail Information' => 'Mailed_Program_Information_Requested__c',
+            'Timeline to Enrollment' => 'Timeline__c',
+            'I will apply to St Thomas Law as a' => 'Admit_Type__c'
+    };
+
+    /** Older address questions that are replaced by the single Address question. */
+    private static final Set<String> splitAddressQuestions = new Set<String>{
+            'Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country'
+    };
+
+    /** Question removed from the Question Manager (no matching field on Interaction). */
+    private static final String removedStartSchoolQuestion = 'When do you plan to start school';
+
+    /**
+     * Cleans a question list read from the older field-list structure: the split address questions
+     * collapse into one Address question (kept at the position of the first one) and removed
+     * questions are dropped.
+     *
+     * @param questionNames Question names in display order
+     * @return The cleaned list in the same order
+     */
+    @TestVisible
+    private static List<String> normalizeQuestionNames(List<String> questionNames) {
+        List<String> cleanedNames = new List<String>();
+        Boolean hasAddressQuestion = questionNames.contains('Address');
+        Boolean addressAdded = false;
+        for (String questionName : questionNames) {
+            if (questionName == removedStartSchoolQuestion) {
+                continue;
+            }
+            if (splitAddressQuestions.contains(questionName)) {
+                if (!hasAddressQuestion && !addressAdded) {
+                    cleanedNames.add('Address');
+                    addressAdded = true;
+                }
+                continue;
+            }
+            cleanedNames.add(questionName);
+        }
+        return cleanedNames;
+    }
+
+    /**
+     * Tells whether a question is required. The collapsed Address question is required when any of
+     * the older split address questions was required.
+     *
+     * @param requiredQuestionNames Names of the questions marked required
+     * @param questionName The question to check
+     * @return True when the question is required
+     */
+    private static Boolean isQuestionRequired(Set<String> requiredQuestionNames, String questionName) {
+        if (requiredQuestionNames.contains(questionName)) {
+            return true;
+        }
+        if (questionName == 'Address') {
+            for (String splitName : splitAddressQuestions) {
+                if (requiredQuestionNames.contains(splitName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Builds the two phone inputs behind the Home and Mobile Phone question, as the old form had.
+     *
+     * @param isHomeRequired Whether the home phone input is required
+     * @param isMobileRequired Whether the mobile phone input is required
+     * @return The Home Phone input followed by the Mobile Phone input
+     */
+    private static List<rfiField> buildHomeAndMobilePhoneFields(Boolean isHomeRequired, Boolean isMobileRequired) {
+        rfiField homeField = new rfiField();
+        homeField.fieldLabel = 'Home Phone';
+        homeField.fieldInteractionAPIName = 'Home_Phone__c';
+        homeField.isTel = true;
+        homeField.isVisible = true;
+        homeField.isSelected = false;
+        homeField.isRequired = isHomeRequired;
+        rfiField mobileField = new rfiField();
+        mobileField.fieldLabel = 'Mobile Phone';
+        mobileField.fieldInteractionAPIName = 'Mobile_Phone__c';
+        mobileField.isTel = true;
+        mobileField.isVisible = true;
+        mobileField.isSelected = false;
+        mobileField.isRequired = isMobileRequired;
+        return new List<rfiField>{ homeField, mobileField };
+    }
+
     @AuraEnabled(Cacheable=true)
     public static interactionRFIFields getRFIForm(String rfiControllerName) {
         RFI_Controller__c rfiController = new rfiControllerReader().getByName(rfiControllerName);
@@ -371,8 +470,12 @@ public with sharing class rfiFormController {
                 System.debug('Applied legacy field order for backward compatibility');
             }
 
+            fieldsToDisplay = normalizeQuestionNames(fieldsToDisplay);
+            Set<String> requiredQuestionNames = new Set<String>(requiredFields);
+
             for (String fieldName : fieldsToDisplay) {
                 rfiField newField = new rfiField();
+                rfiField extraField = null;
                 // default visibility/selection
                 newField.isVisible = true;
                 newField.isSelected = false;
@@ -445,7 +548,7 @@ public with sharing class rfiFormController {
                     }
                     when 'I would like program information to be mailed to me' {
                         newField.fieldLabel = 'I would like program information to be mailed to me';
-                        newField.fieldInteractionAPIName = 'Mail_Information__c';
+                        newField.fieldInteractionAPIName = 'Mailed_Program_Information_Requested__c';
                         newField.isCheckbox = true;
                     }
                     when 'I would like to receive text messages' {
@@ -499,9 +602,15 @@ public with sharing class rfiFormController {
                         newField.fieldLabel = 'Title';
                         newField.fieldInteractionAPIName = 'Contact_Title__c';
                     }
-                    when 'When do you plan to start school' {
-                        newField.fieldLabel = 'When do you plan to start school';
-                        newField.fieldInteractionAPIName = 'High_School_Graduation_Year__c';
+                    when 'I will apply to St Thomas Law as a' {
+                        newField.fieldLabel = 'I will apply to St. Thomas Law as a';
+                        newField.fieldInteractionAPIName = 'Admit_Type__c';
+                    }
+                    when 'Home and Mobile Phone' {
+                        List<rfiField> phoneFields = buildHomeAndMobilePhoneFields(
+                                requiredQuestionNames.contains('Home Phone'), requiredQuestionNames.contains('Mobile Phone'));
+                        newField = phoneFields[0];
+                        extraField = phoneFields[1];
                     }
                     when else {
                         newField.fieldLabel = 'Field Label Not Found';
@@ -528,8 +637,13 @@ public with sharing class rfiFormController {
                 }
 
                 Boolean forceRequired = (newField.fieldInteractionAPIName == 'First_Name__c' || newField.fieldInteractionAPIName == 'Last_Name__c');
-                newField.isRequired = forceRequired || requiredFields.contains(fieldName);
+                if (fieldName != 'Home and Mobile Phone') {
+                    newField.isRequired = forceRequired || isQuestionRequired(requiredQuestionNames, fieldName);
+                }
                 interactionAndRfi.rfiFieldList.add(newField);
+                if (extraField != null) {
+                    interactionAndRfi.rfiFieldList.add(extraField);
+                }
 
             }
 
@@ -1103,18 +1217,53 @@ public with sharing class rfiFormController {
                     'high_school_grad_year__c' => 'High_School_Graduation_Year__c',
                     'phone__c' => 'Home_Phone__c',
                     'comments__c' => 'Has_Question__c',
-                    'mail_me__c' => 'Mail_Information__c',
+                    'mail_me__c' => 'Mailed_Program_Information_Requested__c',
                     'ok_to_text__c' => 'Receive_Texts__c',
                     'school_college__c' => 'St_Thomas_College_School__c',
                     'tell_us_about_yourself__c' => 'Description__c',
                     'title__c' => 'Contact_Title__c'
             };
 
+            // Saved forms may still hold the older split address questions. Collapse them into one
+            // Address question, kept where the first one was and required if any of them was.
+            Boolean hasAddressQuestion = false;
+            Boolean anySplitAddressRequired = false;
+            Boolean addressQuestionAdded = false;
+            for (Object scanObj : unifiedQuestions) {
+                Map<String, Object> scanned = (Map<String, Object>) scanObj;
+                String scannedName = String.valueOf(scanned.get('fieldName') != null ? scanned.get('fieldName') : '');
+                if (scannedName == 'Address') {
+                    hasAddressQuestion = true;
+                }
+                if (splitAddressQuestions.contains(scannedName) && scanned.get('isRequired') == true) {
+                    anySplitAddressRequired = true;
+                }
+            }
+
             for (Object qObj : unifiedQuestions) {
                 Map<String, Object> q = (Map<String, Object>) qObj;
                 String questionType = (String) q.get('type');
+                String savedQuestionName = String.valueOf(q.get('fieldName') != null ? q.get('fieldName') : '');
+                if (questionType == 'preconfigured' && savedQuestionName == removedStartSchoolQuestion) {
+                    continue;
+                }
+                if (questionType == 'preconfigured' && splitAddressQuestions.contains(savedQuestionName)) {
+                    if (!hasAddressQuestion && !addressQuestionAdded) {
+                        rfiField addressField = new rfiField();
+                        addressField.fieldLabel = 'Address';
+                        addressField.fieldInteractionAPIName = 'Mailing_Street__c';
+                        addressField.isAddress = true;
+                        addressField.isVisible = true;
+                        addressField.isSelected = false;
+                        addressField.isRequired = anySplitAddressRequired;
+                        interactionAndRfi.rfiFieldList.add(addressField);
+                        addressQuestionAdded = true;
+                    }
+                    continue;
+                }
 
                 rfiField newField = new rfiField();
+                rfiField extraField = null;
                 newField.fieldLabel = (String) q.get('questionLabel');
                 newField.isRequired = q.get('isRequired') == true;
                 newField.isVisible = true;
@@ -1126,8 +1275,12 @@ public with sharing class rfiFormController {
                     if (String.isNotBlank(rawApiName) && legacyApiNameRemap.containsKey(rawApiName.toLowerCase())) {
                         rawApiName = legacyApiNameRemap.get(rawApiName.toLowerCase());
                     }
+                    String fieldName = savedQuestionName;
+                    // The question name is its identity: use the corrected target when we have one
+                    if (correctedTargetByQuestion.containsKey(fieldName)) {
+                        rawApiName = correctedTargetByQuestion.get(fieldName);
+                    }
                     newField.fieldInteractionAPIName = rawApiName;
-                    String fieldName = String.valueOf(q.get('fieldName') != null ? q.get('fieldName') : '');
 
                     // Special handling for known field types
                     if (fieldName == 'Academic Interest') {
@@ -1137,6 +1290,20 @@ public with sharing class rfiFormController {
                         newField.isAddress = true;
                     } else if (fieldName == 'High School Attended') {
                         newField.isSchoolLookup = true;
+                    } else if (fieldName == 'Expected Start Term at St Thomas') {
+                        // Intended_Start_Term__c is a lookup to Academic_Term__c, shown as a drop-down of terms
+                        newField.fieldInteractionAPIName = 'Intended_Start_Term__c';
+                        newField.isPicklist = true;
+                        newField.picklistValues = getTerms();
+                    } else if (fieldName == 'St Thomas Colleges') {
+                        // St_Thomas_College_School__c is a lookup to Account, shown as a drop-down of schools
+                        newField.fieldInteractionAPIName = 'St_Thomas_College_School__c';
+                        newField.isPicklist = true;
+                        newField.picklistValues = getUSTSchoolList();
+                    } else if (fieldName == 'Home and Mobile Phone') {
+                        List<rfiField> phoneFields = buildHomeAndMobilePhoneFields(q.get('isRequired') == true, false);
+                        newField = phoneFields[0];
+                        extraField = phoneFields[1];
                     } else if (fieldName == 'Email') {
                         newField.isEmail = true;
                     } else if (fieldName.contains('Phone')) {
@@ -1260,6 +1427,9 @@ public with sharing class rfiFormController {
                 }
 
                 interactionAndRfi.rfiFieldList.add(newField);
+                if (extraField != null) {
+                    interactionAndRfi.rfiFieldList.add(extraField);
+                }
             }
 
             System.debug('✅ Processed ' + unifiedQuestions.size() + ' unified questions');

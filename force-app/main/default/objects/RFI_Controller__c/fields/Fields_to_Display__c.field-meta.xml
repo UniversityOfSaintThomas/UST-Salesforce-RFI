@@ -148,6 +148,7 @@
             <value>
                 <fullName>When do you plan to start school</fullName>
                 <default>false</default>
+                <isActive>false</isActive>
                 <label>When do you plan to start school</label>
             </value>
             <value>

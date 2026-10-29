@@ -231,22 +231,23 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         'High School Graduation Year': 'High_School_Graduation_Year__c',
         'Phone': 'Home_Phone__c',
         'Home Phone': 'Home_Phone__c',
+        'Home and Mobile Phone': 'Home_Phone__c',
         'How did you hear about us': 'Heard_About_Us__c',
         'I have a question': 'Has_Question__c',
         'I will apply to St Thomas as a': 'Admit_Type__c',
         'I will apply to St Thomas Law as a': 'Admit_Type__c',
         'Last Name': 'Last_Name__c',
         // Full picklist fullName values (what actually gets stored as fieldName in JSON)
-        'I would like program information to be mailed to me': 'Mail_Information__c',
+        'I would like program information to be mailed to me': 'Mailed_Program_Information_Requested__c',
         'I would like to receive text messages': 'Receive_Texts__c',
         // Short alias fallbacks (may appear in older saved JSON)
-        'Mail Information': 'Mail_Information__c',
+        'Mail Information': 'Mailed_Program_Information_Requested__c',
         'Receive Text Messages': 'Receive_Texts__c',
         'Scholarship of Interest': 'Scholarship_of_Interest__c',
         'St Thomas Colleges': 'St_Thomas_College_School__c',
         'Tell us about yourself': 'Description__c',
         'Timeline to Enrollment': 'Timeline__c',
-        'Title': 'Salutation__c'
+        'Title': 'Contact_Title__c'
     };
 
     @wire(getObjectInfo, { objectApiName: RFI_CONTROLLER_OBJECT })
