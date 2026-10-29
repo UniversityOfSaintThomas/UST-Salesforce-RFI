@@ -59,10 +59,29 @@ public with sharing class rfiFormController {
     }
 
 
-    @AuraEnabled(Cacheable=true)
-    public static interactionRFIFields getRFIForm(String rfiControllerName) {
-        RFI_Controller__c rfiController = [
-                SELECT
+    /**
+     * Reads the RFI_Controller__c configuration record for the public form.
+     *
+     * Runs without sharing on purpose. The site guest user can only see records a guest sharing
+     * rule shares with it, and that rule would have to be rebuilt for every site and environment.
+     * This class is the only place that widens access: it matches one record by exact Name, returns
+     * form configuration (no applicant data), and queries in system mode so the guest profile does
+     * not need field-level read on each configuration field.
+     */
+    private without sharing class rfiControllerReader {
+
+        /**
+         * Finds one RFI controller by its Name.
+         *
+         * @param rfiControllerName The exact Name of the RFI_Controller__c record
+         * @return The matching record, or null when none exists
+         */
+        public RFI_Controller__c getByName(String rfiControllerName) {
+            if (String.isBlank(rfiControllerName)) {
+                return null;
+            }
+            List<RFI_Controller__c> controllers = [
+                    SELECT
                         Academic_Level__c,
                         School_College__c,
                         Citizenship_Type__c,
@@ -91,11 +110,24 @@ public with sharing class rfiFormController {
                         Student_Types_To_Display__c,
                         Delivery_Types_To_Display__c,
                         Program_Types_To_Display__c
-                FROM RFI_Controller__c
-                WHERE Name = :rfiControllerName
-                WITH USER_MODE
-                LIMIT 1
-        ];
+                    FROM RFI_Controller__c
+                    WHERE Name = :rfiControllerName
+                    WITH SYSTEM_MODE
+                    LIMIT 1
+            ];
+            return controllers.isEmpty() ? null : controllers[0];
+        }
+    }
+
+    @AuraEnabled(Cacheable=true)
+    public static interactionRFIFields getRFIForm(String rfiControllerName) {
+        RFI_Controller__c rfiController = new rfiControllerReader().getByName(rfiControllerName);
+        if (rfiController == null) {
+            // AuraHandledException hides its message from getMessage() unless setMessage is called.
+            AuraHandledException notFound = new AuraHandledException('RFI Controller not found: ' + rfiControllerName);
+            notFound.setMessage('RFI Controller not found: ' + rfiControllerName);
+            throw notFound;
+        }
 
 
         interactionRFIFields interactionAndRfi = new interactionRFIFields();

@@ -99,9 +99,9 @@ Not mapped onward (stay on the Interaction only): `Scholarship_of_Interest__c`,
 `Receive_Texts__c`, `Description__c`, `Has_Question__c`,
 `Mailed_Program_Information_Requested__c`.
 
-**Not tested:** what the Opportunity automation does when those source values are
-empty. Treat the gaps as high priority until Phase 0 shows otherwise. The meaning of
-`Skip_Mapping__c` on a row was also not confirmed.
+**Measured in Phase 0 (section 5):** with those source values empty, the Opportunity is created
+as record type `Donor`, stage `Enrollment Prospect`, with no term, inquiry date or
+undergraduate programs (F20). The meaning of `Skip_Mapping__c` on a row was not confirmed.
 
 ---
 
@@ -116,11 +116,11 @@ suggests it but no submission was run.
 | F2 | The unified path treats two Lookup-backed questions as plain text: Expected Start Term (`Intended_Start_Term__c`, 5 controllers) and St Thomas Colleges (`St_Thomas_College_School__c`). The legacy path handles both. This matches Mike's "becomes a text field after Save Configuration" report and the St. Thomas Colleges submit error. No ticket tracks it. | `processUnifiedQuestions` has no branch for either; legacy `getRFIForm` uses `getTerms()` and `getUSTSchoolList()`. | Verified |
 | F3 | Saved questions with no mapping at all, so answers are dropped: "Home and Mobile Phone" (4 controllers); Address 1/2/3, City, State, Zipcode, Country (controller 0357); "When do you plan to start school" (0357). Cheng's "Address 1, 2, 3 aren't coming through" refers to these split questions. The combined "Address" question works. | Question usage counts from `Unified_Questions__c` across 20 unified controllers. | Verified |
 | F4 | Per-controller presets are ignored. Controllers 0229, 0245 (Schulze Innovation), 0266 and 0288 (GHR Fellows) preset `Scholarship_of_Interest__c`. This explains empty Scholarship on 0229, which has no Scholarship question. | `Lead_Preset_Value__mdt` rows; new code has no reference to presets. | Verified |
-| F5 | Defaults the flow used to set are missing (section 2.2). | Flow XML. | Verified |
+| F5 | Defaults the flow used to set are missing (section 2.2). Measured 2026-10-28 (cases A-E): NEW leaves `Interaction_Source__c` at `Application`, and `Date_Inquiry__c`, `Opportunity_Record_Type__c`, `Term__c` and the associated schools empty. | Flow XML; cases A-E. | Verified (measured) |
 | F6 | Recruitment/Academic Program logic differs for undergraduate (section 2.1). Mike's unanswered question on 5588 is answered by `getRecruitmentProgram`: First-Year vs Transfer vs International Transfer vs Dougherty Family College. | Old Apex class. | Verified (rules); port them (D4) |
-| F7 | Multi-select answers may be sent as an array where Apex expects a semicolon string. Affects `Scholarship_of_Interest__c` and `Heard_About_Us__c` when a user answers the question (controller 0356 has the Scholarship question). | `handleMultiSelectChange` stores the array from the pills component. | Hypothesis. The submit payload is already logged to the browser console. |
-| F8 | "I can't find my school" writes typed text into `High_School_or_College__c`, which is a Lookup. The flow copied `hed__Most_Recent_School__c` to `School_Name_Text__c`, which looks like the intended home for typed names. | `handleManualSchoolEntry`; flow mapping. | Verified code path; old form's manual-school handler not read in detail |
-| F9 | `State__c` and `Country__c` (restricted picklists, feed Opportunity) are never written. The `Mailing_*` pair receives the same values the old flow wrote, so the 5764 claim that these are silently dropped is not supported: `Mailing_Country__c` and `Mailing_State__c` are unrestricted. | Describes of Lead and Interaction in eda-staging: `State__c` accepts `MN`, `Mailing_State__c` accepts `Minnesota`; the form sends `MN`. | Verified |
+| F7 | **Multi-select answers never reach the payload, and a second bug sits behind the first.** (1) `handleMultiSelectChange` finds the field with `f.name === name`, but the Apex `rfiField` class has no `name` property, so the lookup never matches and the handler returns without saving. (2) Once that is fixed, the pills component emits `detail.value` as an array (`valueString.split(";")`), which the handler would store as an array; Apex cannot read an array into a multi-select field (server probe: `JSONException`). | Browser test 2026-10-28 on the scratch public site: the component held `Friend` and `Schulze Innovation`, the submitted payload contained neither field, and the saved Interaction was blank. Server probe in eda-staging for (2). The existing Jest test uses an old field shape and cannot see either bug. | Verified in a browser
+| F8 | "I can't find my school" writes typed text into `High_School_or_College__c`, which is a Lookup. The flow copied `hed__Most_Recent_School__c` to `School_Name_Text__c`, which looks like the intended home for typed names. Probe 2026-10-28: assigning typed text to the lookup deserializes to null with no error, so the answer is lost silently. | `handleManualSchoolEntry`; flow mapping; probe. | Verified code path and silent loss; old form's manual-school handler not read in detail |
+| F9 | `State__c` (restricted) is never written by the form, so `Opportunity.State__c` is blank for NEW (measured, case D: OLD = MN, NEW = blank). `Country__c` appears populated on NEW records only because the field has a picklist default of "United States of America", so an international applicant would be recorded as the USA. The `Mailing_*` pair matches the old flow: Contact mailing fields were identical in OLD and NEW for case D. | Interaction describe; cases A and D. | Verified (measured) |
 | F10 | Both Description writers collide (section 2.1). | `rfiFormController.cls`, `Has_Question__c` help text. | Verified |
 | F11 | `submitRfiInteraction` copies any creatable field the browser sends, including `OwnerId`, `Lead_Source__c` and opportunity fields. The endpoint is reachable by guests through Lightning Out. | Loop over `getPopulatedFieldsAsMap()`. | Verified code path |
 | F12 | Failures are silent: `processUnifiedQuestions` catches every exception and returns a partial form; non-creatable fields are skipped with only a debug line; no error record is written. | `rfiFormController.cls`. | Verified |
@@ -129,8 +129,18 @@ suggests it but no submission was run.
 | F15 | Repo did not match eda-staging: 8 custom Interaction fields existed only in the org. **Done 2026-10-28:** 7 retrieved into `force-app` (`Partner_Populations_Supported__c`, `Personal_Email__c`, `Preferred_Email__c`, `Preferred_Phone__c`, `Title_Affiliation__c`, `Work_Email__c`, `Work_Phone__c`). `Pardot_Sync_OCB_Formula__c` is in `unpackaged/staging-only/` because a validate-only deploy to the scratch org fails: "formula references fields across 16 unique relationships while only 15 are allowed". It deploys in eda-staging. The flows and `Lead_Preset_Value__mdt` are still not in the repo. | Org describe vs `force-app`; dry-run deploy of all 9 field files to the scratch org (8 passed). | Verified |
 | F16 | `rfiFormController` on eda-staging is **not** the branch version. It still maps `title__c` to `Salutation__c` and still renders the text-message question as a checkbox. The fixes described as deployed on 2026-08-26 are not in staging. | Retrieve of the deployed class and diff against the branch. | Verified |
 | F17 | High School Attended "not displaying on 0229" is not explained by configuration: controllers 0229 and 0356 both include the question and are both undergraduate. | Controller JSON. | Needs a browser repro (Phase 0) |
-| F18 | The branch is **behind** eda-staging for the shared lookup. Staging `ReusableLookupController` validates the object and the user-supplied search field against the object's field map and handles picklist fields; the branch version does not. Staging `reusableLookup` has `andCriteria`, `orderByCriteria`, a public `reset()` and emits a cleared-selection event; the branch has none of these. Deploying the branch would roll all of that back, including the injection hardening. | File diffs of staging versus branch; last branch change to these files was 2026-07-28. | Verified. Not changed yet: retrieve staging's versions into the branch before any deploy (Phase 0). |
-| F19 | The Aura dependency app declares `c:rfiFrom`, which is not a component, and does not declare `c:rfiForm`. Lightning Out cannot serve the new form from this app until that is corrected. | `requestForInformationApp.app` (the branch adds the typo; staging lacks the line). | Verified |
+| F18 | **Resolved 2026-10-28.** The branch was behind eda-staging for the shared lookup (staging validates the search field against the object's field map and has extra lookup features). The staging versions of `ReusableLookupController`, `reusableLookup` and the test class are now on the branch (commit `1189288`). Verified by diff: the LWC and test class are identical to staging, and the controller and css differ only in whitespace (one misindented block in the controller; logic identical). | File diffs of staging versus branch. | Resolved |
+| F19 | **Resolved 2026-10-28.** The Aura dependency app declared `c:rfiFrom`, which is not a component. It now declares `c:rfiForm` alongside `c:requestForInformationForm`. After the next deploy, make a real content change to the app if Lightning Out serves a stale bundle (see agent-onboarding caching note). | `requestForInformationApp.app` | Resolved |
+| F20 | **The Opportunity created from a NEW Interaction is wrong.** For the same inputs, OLD Opportunities were record type `Inquiry_Opportunity`, stage `Inquiry`, with inquiry date, term, programs and a full name (last name, term and program joined by pipe characters). NEW Opportunities were record type `Donor`, stage `Enrollment Prospect`, no inquiry date, no term, no programs for undergraduates, and a name with the term and program parts empty. | Cases A-E, `Opportunity` query in eda-staging. | Verified (measured). Highest priority. |
+| F21 | Undergraduate Recruitment/Academic Program is empty for every NEW undergraduate submission; the old rules chose First-Year, Transfer or Transfer (INTL). Graduate programs match OLD. | Cases A, B, C, E versus D. | Verified (measured) |
+| F22 | No outbound problems were observed for the five cases: no `hed__Error__c` rows, and the existing Lead-conversion trigger ran for the OLD Leads. Whether Marketing Cloud, Act-On or Journey Builder reacted was not checked. | Phase 0 run. | Partly verified |
+| F23 | eda-staging holds two `hed__Term__c` records per term (for example keys `202740` and `202740a`). The flow selects the one whose key contains `a`. A port must replicate this or `Term__c` will point at the wrong record. | `hed__Term__c` query for Fall 2027. | Verified |
+| F24 | **The new controller cannot read its own configuration as a guest user.** The old `requestForInformationFormController` was `without sharing`; `rfiFormController` and `ReusableLookupController` are `with sharing`. Guest users see no records unless a guest sharing rule grants them, and `WITH SYSTEM_MODE` does not bypass sharing. Scratch org symptom: `getRFIForm` throws `List has no rows for assignment to SObject` (line 64) for the EASY Applicant Portal guest user. The same would happen in eda-staging: the `Admissions` guest user has guest sharing rules for Programs and school Accounts only, and none for `RFI_Controller__c` or `Academic_Term__c`, and its Account rule does not cover University Department accounts. | Live response from the scratch site; guest sharing rules retrieved from both orgs; class headers. | Verified |
+| F25 | **Browser test on the scratch public site (2026-10-28).** As the anonymous EASY Applicant Portal guest, `getRFIForm` succeeded after the controller reader, the field grants and the `RFI_User` permission set changes; the guest then created an Interaction, a Contact and an Opportunity. The Opportunity came out as `Name\|\|` with stage Enrollment Prospect, the same defect as F20. | Live submit on controller 0001; Interaction `a10dq00002zPjnTAAS`. | Verified |
+| F26 | **Sharing rules added by the new `config_dev` tasks do not fit the form.** The Account guest rule for EASY Applicant Portal was narrowed to Educational Institution accounts of type College/High School, which removes the University Department accounts the school list needs (live result: College\\School has 0 options). The new `Academic_Term__c` rule is for the Summit Events guest user, not EASY Applicant Portal (live result: Expected Start Term has 0 options). Interaction external default is now ReadWrite. | `unpackaged/sharing`; rules and defaults retrieved from the scratch org; live form option counts. | Verified |
+| F27 | **Textareas overwrite each other and the answer is lost.** `_validateForm` copies every textarea and input into the payload by its `name`. Controller 0001 renders nine "Field Label Not Found" textareas (questions the legacy switch does not know: Address 1, 2, 3, City, State, Country, Zipcode, Home and Mobile Phone, St Thomas Law) that all fall back to `Description__c`, so the last blank one overwrites "Tell us about yourself". The "I have a question" box is named `Description`, which is not an Interaction field, so that answer is dropped. | Payload from the browser test: no `Description__c`; a stray `Description` key. | Verified in a browser |
+| F28 | **An empty duplicate input overwrites a real answer.** "When do you plan to start school" and "High School Graduation" both map to `High_School_Graduation_Year__c`; the blank one is sent last, so the 2028 entered was submitted as an empty string. | Payload: `High_School_Graduation_Year__c: ""`. | Verified in a browser |
+| F29 | **`Timeline__c` was sent but not saved (open).** The payload carried `"0-6 Months"`, the guest has edit on the field through `RFI User`, and the saved record is blank. A fresh REST describe as the admin does not list the field at all (an admin has no field access to a new field), so the describe cannot settle it. One candidate cause is the stale Aura definition cache for a field created minutes earlier (see the agent-onboarding caching note); it is not confirmed. | Payload and saved record from the browser test; permission rows; REST describe. | Open |
 
 ---
 
@@ -220,13 +230,62 @@ Done, read-only:
   `hed__Term__c`. These are different objects, which is why the flow had a name-matching
   lookup to fill `Term__c`.
 
-Still to do:
-- Retrieve staging's `ReusableLookupController`, its test class and `reusableLookup` into
-  the branch (F18), and fix the Aura dependency (F19), so a deploy does not regress staging.
-- The submission matrix. This creates Interaction, Lead and possibly Contact and
-  Opportunity records in eda-staging and may trigger the downstream flows and syncs. It
-  needs your go-ahead, a list of test controllers, and a plan for cleaning up the records.
-- Field-level access probe and the F7, F9 and F17 measurements.
+**Submission matrix (run 2026-10-28 in eda-staging, a sandbox).** Five cases, each as an OLD
+submission (the old form's logic, then `createLead`, then the flow) and a NEW submission
+(`getRFIForm` defaults, then `submitRfiInteraction`), both through the real deployed Apex.
+The NEW side is the build currently deployed in staging, not the branch. Test records use
+last names starting `ZZPhase0` and `@example.invalid` emails.
+
+| Case | Controller | Scenario |
+|---|---|---|
+| A | 0299 | Undergraduate First-Year, major, start term |
+| B | 0299 | Undergraduate Transfer |
+| C | 0299 | Undergraduate Transfer, International |
+| D | 0223 | Graduate, address, program |
+| E | 0229 | Schulze preset and a question |
+
+All ten submissions succeeded and no `hed__Error__c` rows were written. Results:
+
+- **Downstream is wrong, not just incomplete (F20).** Every OLD submission produced an
+  Opportunity with record type `Inquiry_Opportunity`, stage `Inquiry`, an inquiry date, the
+  term and programs, and a name like `Name|Fall 2027|Program`. Every NEW submission produced
+  an Opportunity with record type **`Donor`**, stage `Enrollment Prospect`, no inquiry date,
+  no term, and a name like `Name||`. For undergraduates the Opportunity also had no
+  Academic or Recruitment Program.
+- **Graduate programs are fine.** In case D the Academic Program, Recruitment Program,
+  Academic Level and Program Code are identical in OLD and NEW. The graduate gap is only
+  the defaults, `Term__c`, the associated schools and `State__c`.
+- **Undergraduate rules confirmed.** The old logic chose "Undergraduate First-Year" (A, E),
+  "Undergraduate Transfer" (B) and "Undergraduate Transfer (INTL)" (C). NEW chose nothing.
+- **Presets and Description confirmed.** E: OLD stored `Scholarship_of_Interest__c` =
+  Schulze Innovation; NEW stored nothing. OLD Description carried the header
+  "Questions/Comments from RFI:"; NEW stored the bare text.
+- **Address.** Contact mailing fields came out identical in OLD and NEW (case D). Opportunity
+  `State__c` was MN for OLD and blank for NEW.
+- **Two Term records per term (F23).** eda-staging has two `hed__Term__c` records per term
+  (for example `202740` and `202740a`). The flow picks the one whose key contains `a`.
+
+Server-side probes of how an `Interaction__c` deserializes input:
+
+- A JSON array for a multi-select field (`Scholarship_of_Interest__c`, `Heard_About_Us__c`)
+  throws `JSONException`; a semicolon-separated string works.
+- Typed text for the lookup `High_School_or_College__c` is accepted and silently becomes
+  null (F8).
+
+**Test records removed (2026-10-28).** The five cases' records in eda-staging were deleted with
+`ai-logs/phase0/cleanup.apex` (5 Leads, 10 Interactions, 10 Contacts, 10 Opportunities, 10
+Accounts; the script refuses to run if more than that match). A follow-up query found zero
+records named `ZZPhase0*` of any of those types. They are in the recycle bin for 15 days. The
+scratch org still holds two browser-submitted test Interactions (`ZZPhase0Scratch`,
+`ZZPhase0Two`) and their Contacts and Opportunities.
+
+Not measured:
+- The browser side: what the LWC actually sends (F7), the High School question on 0229
+  (F17), and the guest user's field access. No query found a guest-license profile with
+  explicit `Interaction__c` permissions, so how anonymous visitors are granted access is
+  unresolved. These need a browser session.
+- Alumni referral (sends email), Dougherty Family College, and a legacy-path controller (0230).
+- Whether Marketing Cloud, Act-On or Journey Builder reacted to the test records.
 
 ### Phase 1: Mapping hotfix (ECRMSF-5764)
 
@@ -274,6 +333,22 @@ versioned in the repo (D7).
 - Write failures to `hed__Error__c` with the controller name and payload, as the old form
   did (F12). Make `processUnifiedQuestions` report failure instead of returning a partial
   form.
+- Fix F24 in code, not per environment: read configuration (controller, programs, terms,
+  school accounts) through a small `without sharing` inner class that returns only the fields
+  the form needs, as the old controller effectively did. The alternative, guest sharing rules
+  per site and per environment, exposes those records to the guest user everywhere and has
+  to be redone for each site guest user. Replace the `isCreateable()` field skipping in
+  `submitRfiInteraction` with the controller-based allowlist (F11, F12) so the guest profile
+  does not need field-level create on every Interaction field.
+- **F24 progress (2026-10-28):** step 1 done and deployed to the scratch org. `getRFIForm` now
+  reads `RFI_Controller__c` through `rfiControllerReader` (private, `without sharing`, system
+  mode, exact Name match), so no guest sharing rule is needed for controllers. A missing or
+  blank name now raises a readable `AuraHandledException` (two new tests). Live result: the
+  public site's `getRFIForm` moved past the controller query and now stops at the school
+  Account query. Still to move behind the same pattern: school Accounts, Programs, Academic
+  Terms, and the reads inside `submitRfiInteraction`. Two tests in `rfiFormController_TEST`
+  (`legacyPath_customLabels`, `unifiedPath_preconfiguredTextarea`) were already failing before
+  this change (verified against the pre-edit class); they expect labels removed in commit 51fd7cd.
 - Keep `allowSave = true` so an RFI is never blocked by a duplicate rule (D6). Any failure
   is logged and the visitor still gets a success path where the data was saved.
 - Clear `Major_Program_*` when Academic Interest is emptied (F14).
@@ -334,18 +409,33 @@ new form sets Recruitment and Academic Program from the major's program. When bo
 an undergraduate, keep the old behavior (rule-based program, major preserved in
 `Major_Program_1__c`) unless Admissions says otherwise.
 
-**Draft subtasks under 5545 (not created):** unified-path lookup parity (F2); invalid mapping
-targets and saved-config migration (F1, F3); presets and server defaults (F4, F5); program
-rules (F6); submit hardening and error logging (F11, F12); shared-component and Aura sync
-with staging (F18, F19); guardrail tests; metadata and repo drift (F15); baseline parity
-matrix (Phase 0).
+**Jira subtasks created under ECRMSF-5545 (2026-10-29).** Written for admins first, with a short
+developer section at the end of each. None are assigned or scheduled.
+
+| Key | Subject | Findings | Related to |
+|---|---|---|---|
+| ECRMSF-6044 | New inquiries create the wrong Opportunity (record type, stage, source, dates) | F5, F20, F23 | 5588 |
+| ECRMSF-6045 | Undergraduate inquiries are not assigned a recruitment program | F6, F21 | 5588 |
+| ECRMSF-6046 | Apply the preset answers set up on each RFI Controller | F4 | 5588 |
+| ECRMSF-6047 | Fix questions that save to the wrong field, and repair saved RFI forms | F1, F3 | 5764 |
+| ECRMSF-6048 | Expected Start Term and College/School turn into text boxes after Save Configuration | F2 | 5764 |
+| ECRMSF-6049 | Answers typed on the form are lost before they are saved | F7, F8, F10, F27, F28, F29 | 5764 |
+| ECRMSF-6050 | Save State and Country in the fields the Opportunity uses | F9 | 5764 |
+| ECRMSF-6051 | Make the public form work for anonymous visitors safely (access, errors, logging) | F11, F12, F13, F24 | none |
+| ECRMSF-6052 | Automated tests that catch field mapping mistakes | Phase 4 | none |
+| ECRMSF-6053 | Guest access setup (permission set and sharing rules) for scratch, staging and production | F15, F25, F26 | none |
+
+Not created because the work is done: the baseline parity matrix (Phase 0) and the shared
+lookup and Aura sync (F18, F19).
 
 ---
 
 ## 7. Risks and what is not verified
 
-- **Not tested by submission:** no form was submitted in any org. F7, F9's downstream
-  effect, F17 and field-level access are hypotheses until Phase 0.
+- **Browser side not measured:** the Phase 0 matrix called the deployed Apex with payloads
+  built to match each form. It did not exercise the LWCs, so F7 (array handling in the
+  browser), F17 and guest field access still need a browser session.
+- **Phase 0 test records** were removed from eda-staging; two browser test Interactions remain in the scratch org.
 - **Production may differ from eda-staging** (refresh date, drifted metadata). Compare
   before the production story.
 - **Old form's manual-school handling** was not read in detail (F8).

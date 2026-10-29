@@ -23,6 +23,43 @@ tasks:
     options:
       required_org_code_coverage_percent: 75
 
+  update_sharing_settings:
+    description: Update sharing settings on EASY Application objects
+    class_path: cumulusci.tasks.metadata_etl.SetOrgWideDefaults
+    options:
+      org_wide_defaults:
+        - api_name: Application__c
+          internal_sharing_model: ReadWrite
+          external_sharing_model: ReadWrite
+        - api_name: Application_Control__c
+          internal_sharing_model: ReadWrite
+          external_sharing_model: Read
+        - api_name: EASY_Widget__c
+          internal_sharing_model: ReadWrite
+          external_sharing_model: Read
+        - api_name: Interaction__c
+          internal_sharing_model: ReadWrite
+          external_sharing_model: ReadWrite
+        - api_name: Interaction_Mapping__c
+          internal_sharing_model: ReadWrite
+          external_sharing_model: ReadWrite
+        - api_name: Requirement__c
+          internal_sharing_model: ReadWrite
+          external_sharing_model: Read
+        - api_name: Scholarship_Applicant__c
+          internal_sharing_model: ReadWrite
+          external_sharing_model: ReadWrite
+        - api_name: Scholarship__c
+          internal_sharing_model: ReadWrite
+          external_sharing_model: ReadWrite
+
+  deploy_guest_sharing_rules:
+    description: Deploys configuration for Development.
+    class_path: cumulusci.tasks.salesforce.Deploy
+    options:
+      namespace_inject: $project_config.project__package__namespace
+      path: unpackaged/sharing
+
   adjust_custom_settings:
     description: Activate Sites
     class_path: cumulusci.tasks.apex.anon.AnonymousApexTask
@@ -58,6 +95,16 @@ tasks:
             applicationSettings.Default_Template__c = 'stthomas2021';
 
             upsert applicationSettings;
+
+flows:
+  config_dev:
+    steps:
+      3:
+        task: update_sharing_settings
+      4:
+        task: deploy_guest_sharing_rules
+      5:
+        task: adjust_custom_settings
 
 orgs:
   scratch:

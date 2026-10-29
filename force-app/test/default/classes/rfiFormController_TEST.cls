@@ -1185,4 +1185,36 @@ private class rfiFormController_TEST {
         Test.stopTest();
         System.assertNotEquals(null, result);
     }
+
+
+    // --- getRFIForm: controller lookup (rfiControllerReader) ---
+
+    @IsTest
+    static void getRFIForm_unknownController_throwsNotFound_TEST() {
+        Boolean threw = false;
+        String message = '';
+        Test.startTest();
+        try {
+            rfiFormController.getRFIForm('No Such RFI Controller');
+        } catch (AuraHandledException e) {
+            threw = true;
+            message = e.getMessage();
+        }
+        Test.stopTest();
+        System.assert(threw, 'An unknown controller name must raise AuraHandledException, not a QueryException');
+        System.assert(message.contains('not found'), 'Message should say the controller was not found: ' + message);
+    }
+
+    @IsTest
+    static void getRFIForm_blankControllerName_throwsNotFound_TEST() {
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            rfiFormController.getRFIForm('');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'A blank controller name must raise AuraHandledException');
+    }
 }
