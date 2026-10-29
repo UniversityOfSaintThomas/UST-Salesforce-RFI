@@ -323,7 +323,7 @@ lands on the Interaction (the 0357 case in Phase 0 is clean).
 - Both code paths now understand Home and Mobile Phone (two phone inputs), the split address questions (collapse to one Address) and the St Thomas Law applicant question. Live result on controller 0001: "Field Label Not Found" boxes went from 9 to 0.
 - Expected Start Term and St Thomas Colleges render as drop-downs in the unified path (unit-tested; the live lists are empty until the guest sharing rules in ECRMSF-6053 exist).
 - "When do you plan to start school" deactivated in `Fields_to_Display__c` and `Required_Fields__c` (deactivated, not deleted, so existing records stay valid).
-- Repair script `ai-logs/migrate-questions.apex` (dry run by default, safe to repeat). A dry run in eda-staging (read-only) reports that it would change 3 controllers: 0223 (Title), 0234 (mail question) and 0357 (split address, mail question, start-school question), plus one older field list. Applied in the scratch org (2 controllers); a second run changed nothing. It is not applied in eda-staging: the owner runs it at deployment (see the hand-off checklist in Phase 5).
+- Repair script `scripts/apex/migrate_rfi_questions.apex` (dry run by default, safe to repeat). A dry run in eda-staging (read-only) reports that it would change 3 controllers: 0223 (Title), 0234 (mail question) and 0357 (split address, mail question, start-school question), plus one older field list. Applied in the scratch org (2 controllers); a second run changed nothing. It is not applied in eda-staging: the owner runs it at deployment (see the hand-off checklist in Phase 5).
 - 9 new Apex tests. With the fixes switched off, 7 of the original 8 fail (the 8th tests a helper in isolation). One of the 9 guards that every corrected target exists on Interaction; it caught the old bad field name when I put it back.
 - Not changed: the single "Phone" question (F30), pending your decision.
 
@@ -421,7 +421,7 @@ value sets come before the code that uses them.
 3. LWC: `rfiUnifiedQuestionManager`, then the Aura dependency app (make a real content change to the
    app if a browser keeps an old bundle).
 4. Admins apply the section 9 notes (class access for `rfiFormController` first).
-5. Run the controller repair (dry run first, read the report, then save). In a non-sandbox org the
+5. Run the controller repair, `scripts/apex/migrate_rfi_questions.apex` (dry run first, read the report, then save). In a non-sandbox org the
    script refuses to save until its safety check is edited on purpose.
 6. Smoke test as an anonymous visitor: the form loads, the school and start term lists have choices,
    a submit saves.

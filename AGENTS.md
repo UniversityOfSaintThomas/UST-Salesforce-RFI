@@ -4,6 +4,25 @@
 
 Before taking any action, read the onboarding skill: agent-onboarding
 
+## Environment and Permission Rules
+
+These come from the repository owner. Follow them in every session.
+
+- **Develop and test in scratch orgs.** Build, deploy and try things in the scratch org first.
+- **eda-staging (and production) are shared and are for investigation only.** Read, describe, query
+  and retrieve. Do not deploy, do not run scripts that write data, and do not create test records there.
+  The owner deploys to eda-staging and production, then we compare what we see.
+- **Permissions belong to admins in shared orgs.** Permission sets, profiles and sharing rules in this repo
+  exist only so scratch orgs work. Never deploy them to eda-staging or production, never track profiles,
+  and never overwrite what admins built. When staging or production needs a permission change, write it
+  as a note for admins (see `docs/RFI_FORM_ROBUSTNESS_PLAN.md`, section 9) and let them decide.
+- **Add each new field to both permission sets in the same change.** `RFI_User` is for the public form's
+  guest user. `RFI_Controller_User` is for admins. A scratch org only grants the admin fields that existed
+  when it was built, so a new field is invisible to the admin until a permission set grants it.
+- **The owner makes the git commits.** Do not commit or push.
+- **Scripts that write data** (such as `scripts/apex/migrate_rfi_questions.apex`) are run by the owner in
+  shared orgs. In scratch orgs, run them with the dry-run default first.
+
 ## Project Overview
 
 This repo builds the **Request for Information (RFI) form** for University of St. Thomas — a
