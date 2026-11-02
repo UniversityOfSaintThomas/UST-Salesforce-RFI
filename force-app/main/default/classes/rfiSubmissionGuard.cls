@@ -107,10 +107,15 @@ public with sharing class rfiSubmissionGuard {
             return result;
         }
         Map<String, Schema.SObjectField> fieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
+        Set<String> filterOnlyFields = filterOnlyFieldNames();
         List<String> names = new List<String>(incoming.keySet());
         names.sort();
         for (String fieldName : names) {
             String key = fieldName.toLowerCase();
+            if (filterOnlyFields.contains(key) && !fieldMap.containsKey(key)) {
+                // A program filter whose field does not exist: its answer only narrows the program list
+                continue;
+            }
             Boolean isKnownField = fieldMap.containsKey(key);
             Boolean isPermitted = !serverControlledFields.contains(key) && (allowed == null || allowed.contains(key));
             if (isKnownField && isPermitted) {
@@ -120,6 +125,21 @@ public with sharing class rfiSubmissionGuard {
             }
         }
         return result;
+    }
+
+    /**
+     * @return The names (lower case) of program filters that have no field on Interaction__c. The page sends
+     *         them with the other answers, and there is nothing to save, so they are dropped without a report.
+     */
+    @TestVisible
+    private static Set<String> filterOnlyFieldNames() {
+        Set<String> names = new Set<String>();
+        for (rfiQuestionCatalog.Filter filter : rfiQuestionCatalog.filters()) {
+            if (filter.storesAnswer != true) {
+                names.add(filter.targetField.toLowerCase());
+            }
+        }
+        return names;
     }
 
     /**

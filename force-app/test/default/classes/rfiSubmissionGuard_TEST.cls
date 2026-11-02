@@ -102,4 +102,38 @@ private class rfiSubmissionGuard_TEST {
         System.assertEquals('Ada', record.First_Name__c);
         System.assertEquals(new List<String>{ 'Academic_Level__c' }, filtered.ignored, 'The formula field is reported, not fatal');
     }
+
+    // ---------- program filters that have no Interaction field ----------
+
+    @IsTest
+    static void filterIncoming_aProgramFilterWithNoInteractionField_isDroppedWithoutBeingReported_TEST() {
+        // Degree_Type__c is a program filter whose Interaction field does not exist: it only narrows the program list
+        System.assertEquals(false, Schema.SObjectType.Interaction__c.fields.getMap().containsKey('degree_type__c'),
+                'This test assumes Degree_Type__c does not exist on Interaction__c');
+        Set<String> allowed = new Set<String>{ 'first_name__c', 'degree_type__c' };
+        rfiSubmissionGuard.FilterResult result = rfiSubmissionGuard.filterIncoming(
+                new Map<String, Object>{ 'First_Name__c' => 'Ada', 'Degree_Type__c' => 'Graduate' }, allowed);
+        System.assertEquals(1, result.accepted.size());
+        System.assertEquals(0, result.ignored.size(), 'A filter answer is expected and must not be reported: ' + result.ignored);
+    }
+
+    @IsTest
+    static void filterIncoming_aQuestionWhoseFieldIsMissing_isStillReported_TEST() {
+        // Not a program filter, so a missing field is a mistake that must show up
+        rfiSubmissionGuard.FilterResult result = rfiSubmissionGuard.filterIncoming(
+                new Map<String, Object>{ 'Field_That_Is_Missing__c' => 'x' }, new Set<String>{ 'field_that_is_missing__c' });
+        System.assertEquals(new List<String>{ 'Field_That_Is_Missing__c' }, result.ignored);
+    }
+
+    @IsTest
+    static void filterOnlyFieldNames_matchTheFiltersThatDoNotStoreTheirAnswer_TEST() {
+        Set<String> expected = new Set<String>();
+        for (rfiQuestionCatalog.Filter filter : rfiQuestionCatalog.filters()) {
+            if (filter.storesAnswer != true) {
+                expected.add(filter.targetField.toLowerCase());
+            }
+        }
+        System.assertEquals(expected, rfiSubmissionGuard.filterOnlyFieldNames());
+        System.assert(!expected.isEmpty());
+    }
 }

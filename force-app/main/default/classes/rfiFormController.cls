@@ -33,6 +33,7 @@ public with sharing class rfiFormController {
         @AuraEnabled public Boolean isEmail { get; set; }
         @AuraEnabled public Boolean isTel { get; set; }
         @AuraEnabled public Boolean isDate { get; set; }
+        @AuraEnabled public String inputType { get; set; } // 'date' for a date picker; empty means a text box
         @AuraEnabled public Boolean isTextarea { get; set; }
         @AuraEnabled public Boolean isMultiSelect { get; set; }
         @AuraEnabled public Boolean isPicklist { get; set; }
@@ -120,31 +121,9 @@ public with sharing class rfiFormController {
         }
     }
 
-    /**
-     * Interaction field each preconfigured question must save to. Forms saved earlier, and the old
-     * Question Manager list, stored wrong names for some of these (for example Title saved to
-     * Salutation__c and the mail question pointed at a field that does not exist). The question
-     * name is its identity, so this table wins over any API name stored with the question.
-     */
-    @TestVisible
-    private static final Map<String, String> correctedTargetByQuestion = new Map<String, String>{
-            'Title' => 'Contact_Title__c',
-            'I would like program information to be mailed to me' => 'Mailed_Program_Information_Requested__c',
-            'Mail Information' => 'Mailed_Program_Information_Requested__c',
-            'Timeline to Enrollment' => 'Timeline__c',
-            'I will apply to St Thomas Law as a' => 'Admit_Type__c',
-            // The single Phone question saves to the mobile phone, as the old form did.
-            // Provisional: the business may later decide on a single phone number.
-            'Phone' => 'Mobile_Phone__c'
-    };
-
     /** Older address questions that are replaced by the single Address question. */
-    private static final Set<String> splitAddressQuestions = new Set<String>{
-            'Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country'
-    };
+    private static final Set<String> splitAddressQuestions = rfiQuestionCatalog.splitAddressQuestions;
 
-    /** Question removed from the Question Manager (no matching field on Interaction). */
-    private static final String removedStartSchoolQuestion = 'When do you plan to start school';
 
     /**
      * Cleans a question list read from the older field-list structure: the split address questions
@@ -160,7 +139,7 @@ public with sharing class rfiFormController {
         Boolean hasAddressQuestion = questionNames.contains('Address');
         Boolean addressAdded = false;
         for (String questionName : questionNames) {
-            if (questionName == removedStartSchoolQuestion) {
+            if (rfiQuestionCatalog.retiredQuestions.contains(questionName)) {
                 continue;
             }
             if (splitAddressQuestions.contains(questionName)) {
@@ -220,6 +199,17 @@ public with sharing class rfiFormController {
         mobileField.isSelected = false;
         mobileField.isRequired = isMobileRequired;
         return new List<rfiField>{ homeField, mobileField };
+    }
+
+    /**
+     * The list of pre-configured questions and program filters, with the Interaction field each one saves to.
+     * The Question Manager reads it, so the manager and the form can never disagree.
+     *
+     * @return The question catalog
+     */
+    @AuraEnabled(Cacheable=true)
+    public static rfiQuestionCatalog.Catalog getQuestionCatalog() {
+        return rfiQuestionCatalog.getCatalog();
     }
 
     @AuraEnabled(Cacheable=true)
@@ -332,6 +322,7 @@ public with sharing class rfiFormController {
             System.debug('📦 Using Unified Questions structure');
             // Filter questions are embedded in the unified list — processUnifiedQuestions handles them
             processUnifiedQuestions(rfiController, interactionAndRfi);
+            ensureNameQuestions(interactionAndRfi.rfiFieldList);
             // Skip the legacy filter + field processing below
         } else {
             System.debug('📦 Using legacy field structure (Fields_to_Display__c)');
@@ -353,21 +344,6 @@ public with sharing class rfiFormController {
                     'Program_Types_To_Display__c' => 'Program Type'
             };
 
-            //Map the filter display fields to the correct Interaction field API names
-            Map<String, String> mapFilterToInteractionField = new Map<String, String>{
-                    'School_College_To_Display__c' => 'St_Thomas_College_School__c',
-                    'Citizen_Types_To_Display__c' => 'Citizenship__c',
-                    'Degree_Types_To_Display__c' => 'Degree_Type__c',
-                    'Generic_Filter_2_To_Display__c' => 'Generic_Filter_2__c',
-                    'Generic_Filter_3_To_Display__c' => 'Generic_Filter_3__c',
-                    'Generic_Filter_4_To_Display__c' => 'Generic_Filter_4__c',
-                    'Generic_Filter_6_To_Display__c' => 'Generic_Filter_6__c',
-                    'Generic_Filter_7_To_Display__c' => 'Generic_Filter_7__c',
-                    'Generic_Filter_8_To_Display__c' => 'Generic_Filter_8__c',
-                    'Student_Types_To_Display__c' => 'Student_Type__c',
-                    'Delivery_Types_To_Display__c' => 'Delivery_Type__c',
-                    'Program_Types_To_Display__c' => 'Generic_Filter_5__c'
-            };
 
             //Create rfiField entries for each valid filter field configured on the controller
             for (String key : mapFilterLabels.keySet()) {
@@ -385,7 +361,7 @@ public with sharing class rfiFormController {
                         newField.picklistValues = getOptionsFromDelineatedString((String) rfiController.get(key));
                     }
 
-                    newField.fieldInteractionAPIName = mapFilterToInteractionField.get(key);
+                    newField.fieldInteractionAPIName = rfiQuestionCatalog.filterTargetFor(key);
                     interactionAndRfi.rfiFieldList.add(newField);
                     interactionAndRfi.filterValues.put(newField.fieldInteractionAPIName, '');
                 }
@@ -496,7 +472,7 @@ public with sharing class rfiFormController {
                 newField.max = 4;
                 switch on fieldName {
                     when 'Academic Interest' {
-                        newField.fieldInteractionAPIName = 'Major_Program_1__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Academic Interest');
                         newField.isProgramLookup = true;
                         if (rfiController.Academic_Interest_Max_Selection__c != null) {
                             newField.max = Integer.valueOf(String.valueOf(rfiController.Academic_Interest_Max_Selection__c));
@@ -510,115 +486,115 @@ public with sharing class rfiFormController {
                         }
                     }
                     when 'Address' {
-                        newField.fieldInteractionAPIName = 'Address';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Address');
                         newField.isAddress = true;
                     }
                     when 'Birthdate' {
                         newField.fieldLabel = 'Birthday (MM/DD/YYYY)';
-                        newField.fieldInteractionAPIName = 'Birthdate__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Birthdate');
                         newField.isDate = true;
                     }
                     when 'Citizenship' {
                         newField.fieldLabel = 'Citizenship';
-                        newField.fieldInteractionAPIName = 'Citizenship__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Citizenship');
                     }
                     when 'Email' {
                         newField.fieldLabel = 'Email';
-                        newField.fieldInteractionAPIName = 'Email__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Email');
                         newField.isEmail = true;
                     }
                     when 'Employer' {
                         newField.fieldLabel = 'Employer';
-                        newField.fieldInteractionAPIName = 'Employer__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Employer');
                     }
                     when 'Expected Start Term at St Thomas' {
                         newField.fieldLabel = 'Expected Start Term at St. Thomas';
                         newField.isPicklist = true;
                         newField.picklistValues = getTerms();
-                        newField.fieldInteractionAPIName = 'Intended_Start_Term__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Expected Start Term at St Thomas');
                     }
                     when 'High School Attended' {
                         newField.fieldLabel = 'High School Attended';
-                        newField.fieldInteractionAPIName = 'High_School_or_College__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('High School Attended');
                         newField.isSchoolLookup = true;
                     }
                     when 'High School Graduation Year' {
                         newField.fieldLabel = 'High School Graduation (YYYY)';
-                        newField.fieldInteractionAPIName = 'High_School_Graduation_Year__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('High School Graduation Year');
                     }
                     when 'How did you hear about us' {
                         newField.fieldLabel = 'How did you hear about us?';
-                        newField.fieldInteractionAPIName = 'Heard_About_Us__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('How did you hear about us');
                     }
                     when 'I have a question' {
                         newField.fieldLabel = 'I have a question';
-                        newField.fieldInteractionAPIName = 'Has_Question__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('I have a question');
                         newField.isCheckbox = true;
                         newField.showDependentField = true;
                     }
                     when 'I will apply to St Thomas as a' {
                         newField.fieldLabel = 'I will apply to St. Thomas as a';
-                        newField.fieldInteractionAPIName = 'Admit_Type__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('I will apply to St Thomas as a');
                     }
                     when 'I would like program information to be mailed to me' {
                         newField.fieldLabel = 'I would like program information to be mailed to me';
-                        newField.fieldInteractionAPIName = 'Mailed_Program_Information_Requested__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('I would like program information to be mailed to me');
                         newField.isCheckbox = true;
                     }
                     when 'I would like to receive text messages' {
                         newField.fieldLabel = 'I would like to receive text messages';
-                        newField.fieldInteractionAPIName = 'Receive_Texts__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('I would like to receive text messages');
                         // Receive_Texts__c is a Picklist, not a Boolean — let the dynamic
                         // picklist detection below populate isPicklist/picklistValues.
                     }
                     when 'Phone' {
                         newField.fieldLabel = 'Phone';
-                        newField.fieldInteractionAPIName = 'Mobile_Phone__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Phone');
                         newField.isTel = true;
                     }
                     when 'Home Phone' {
                         newField.fieldLabel = 'Home Phone';
-                        newField.fieldInteractionAPIName = 'Home_Phone__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Home Phone');
                         newField.isTel = true;
                     }
                     when 'First Name' {
                         newField.fieldLabel = 'First Name';
-                        newField.fieldInteractionAPIName = 'First_Name__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('First Name');
                     }
                     when 'Last Name' {
                         newField.fieldLabel = 'Last Name';
-                        newField.fieldInteractionAPIName = 'Last_Name__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Last Name');
                     }
                     when 'Company' {
                         newField.fieldLabel = 'Company';
-                        newField.fieldInteractionAPIName = 'Employer__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Company');
                     }
                     when 'Scholarship of Interest' {
                         newField.fieldLabel = 'Scholarship of Interest';
-                        newField.fieldInteractionAPIName = 'Scholarship_of_Interest__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Scholarship of Interest');
                     }
                     when 'St Thomas Colleges' {
                         newField.fieldLabel = 'College\\School';
                         newField.isPicklist = true;
                         newField.picklistValues = getUSTSchoolList();
-                        newField.fieldInteractionAPIName = 'St_Thomas_College_School__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('St Thomas Colleges');
                     }
                     when 'Tell us about yourself' {
                         newField.fieldLabel = 'Tell us about yourself and why you are interested in this program. (150 words or less)';
-                        newField.fieldInteractionAPIName = 'Description__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Tell us about yourself');
                         newField.isTextarea = true;
                     }
                     when 'Timeline to Enrollment' {
                         newField.fieldLabel = 'Timeline to Enrollment';
-                        newField.fieldInteractionAPIName = 'Timeline__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Timeline to Enrollment');
                     }
                     when 'Title' {
                         newField.fieldLabel = 'Title';
-                        newField.fieldInteractionAPIName = 'Contact_Title__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('Title');
                     }
                     when 'I will apply to St Thomas Law as a' {
                         newField.fieldLabel = 'I will apply to St. Thomas Law as a';
-                        newField.fieldInteractionAPIName = 'Admit_Type__c';
+                        newField.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor('I will apply to St Thomas Law as a');
                     }
                     when 'Home and Mobile Phone' {
                         List<rfiField> phoneFields = buildHomeAndMobilePhoneFields(
@@ -663,7 +639,67 @@ public with sharing class rfiFormController {
 
         } // End of legacy else block
 
+        useDatePickerForDateFields(interactionAndRfi.rfiFieldList);
         return interactionAndRfi;
+    }
+
+    /**
+     * Makes sure the form asks for first and last name, which Interaction__c requires. The older form definition
+     * always adds them; the newer one relied on the Question Manager never removing them. A saved list that lacks
+     * them (edited by hand, or saved before that rule) would make every submission fail.
+     *
+     * @param questions The questions of the form; first and last name are added at the front when missing
+     */
+    @TestVisible
+    private static void ensureNameQuestions(List<rfiField> questions) {
+        Boolean hasLastName = false;
+        Boolean hasFirstName = false;
+        for (rfiField question : questions) {
+            if (question.fieldInteractionAPIName == 'Last_Name__c') {
+                hasLastName = true;
+            }
+            if (question.fieldInteractionAPIName == 'First_Name__c') {
+                hasFirstName = true;
+            }
+        }
+        if (!hasLastName) {
+            questions.add(0, nameQuestion('Last Name'));
+        }
+        if (!hasFirstName) {
+            questions.add(0, nameQuestion('First Name'));
+        }
+    }
+
+    private static rfiField nameQuestion(String questionName) {
+        rfiField question = new rfiField();
+        question.fieldLabel = questionName;
+        question.fieldInteractionAPIName = rfiQuestionCatalog.targetFieldFor(questionName);
+        question.isRequired = true;
+        question.isVisible = true;
+        question.isSelected = false;
+        return question;
+    }
+
+    /**
+     * Makes every question that saves to a Date field use a date picker. A date typed as text (for example
+     * 01/15/2000) cannot be read by the server, which would reject the whole submission before any of our
+     * code runs, so nothing would be saved and nothing would be logged.
+     *
+     * @param questions The questions of the form
+     */
+    @TestVisible
+    private static void useDatePickerForDateFields(List<rfiField> questions) {
+        Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
+        for (rfiField question : questions) {
+            if (question == null || String.isBlank(question.fieldInteractionAPIName)) {
+                continue;
+            }
+            Schema.SObjectField field = interactionFieldMap.get(question.fieldInteractionAPIName.toLowerCase());
+            if (field != null && field.getDescribe().getType() == Schema.DisplayType.DATE) {
+                question.isDate = true;
+                question.inputType = 'date';
+            }
+        }
     }
 
     private static final Map<String, Integer> countryIndexCache = new Map<String, Integer>();
@@ -1354,27 +1390,6 @@ public with sharing class rfiFormController {
             // Cache field map outside loop — describe calls are expensive
             Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
 
-            // Remap legacy/incorrect fieldInteractionAPIName values saved before the corrected map
-            Map<String, String> legacyApiNameRemap = new Map<String, String>{
-                    'citizenship_type__c' => 'Citizenship__c',
-                    'degree_type__c' => 'Admit_Type__c',
-                    'how_did_you_hear__c' => 'Heard_About_Us__c',
-                    'timeline_to_enrollment__c' => 'Timeline__c',
-                    'address_1__c' => 'Mailing_Street__c',
-                    'birth_date__c' => 'Birthdate__c',
-                    'company__c' => 'Employer__c',
-                    'expected_start_term__c' => 'Intended_Start_Term__c',
-                    'high_school_attended__c' => 'High_School_or_College__c',
-                    'high_school_grad_year__c' => 'High_School_Graduation_Year__c',
-                    'phone__c' => 'Mobile_Phone__c',
-                    'comments__c' => 'Has_Question__c',
-                    'mail_me__c' => 'Mailed_Program_Information_Requested__c',
-                    'ok_to_text__c' => 'Receive_Texts__c',
-                    'school_college__c' => 'St_Thomas_College_School__c',
-                    'tell_us_about_yourself__c' => 'Description__c',
-                    'title__c' => 'Contact_Title__c'
-            };
-
             // Saved forms may still hold the older split address questions. Collapse them into one
             // Address question, kept where the first one was and required if any of them was.
             Boolean hasAddressQuestion = false;
@@ -1395,7 +1410,7 @@ public with sharing class rfiFormController {
                 Map<String, Object> q = (Map<String, Object>) qObj;
                 String questionType = (String) q.get('type');
                 String savedQuestionName = String.valueOf(q.get('fieldName') != null ? q.get('fieldName') : '');
-                if (questionType == 'preconfigured' && savedQuestionName == removedStartSchoolQuestion) {
+                if (questionType == 'preconfigured' && rfiQuestionCatalog.retiredQuestions.contains(savedQuestionName)) {
                     continue;
                 }
                 if (questionType == 'preconfigured' && splitAddressQuestions.contains(savedQuestionName)) {
@@ -1421,15 +1436,13 @@ public with sharing class rfiFormController {
                 newField.isSelected = false;
 
                 if (questionType == 'preconfigured') {
-                    String rawApiName = (String) q.get('fieldInteractionAPIName');
-                    // Remap any legacy incorrect API names saved before the corrected map
-                    if (String.isNotBlank(rawApiName) && legacyApiNameRemap.containsKey(rawApiName.toLowerCase())) {
-                        rawApiName = legacyApiNameRemap.get(rawApiName.toLowerCase());
-                    }
+                    // Older saved forms hold field names that were never right: correct them
+                    String rawApiName = rfiQuestionCatalog.correctStoredApiName((String) q.get('fieldInteractionAPIName'));
                     String fieldName = savedQuestionName;
-                    // The question name is its identity: use the corrected target when we have one
-                    if (correctedTargetByQuestion.containsKey(fieldName)) {
-                        rawApiName = correctedTargetByQuestion.get(fieldName);
+                    // The question name is its identity: the catalog decides where it saves
+                    String catalogTarget = rfiQuestionCatalog.targetFieldFor(fieldName);
+                    if (catalogTarget != null) {
+                        rawApiName = catalogTarget;
                     }
                     newField.fieldInteractionAPIName = rawApiName;
 
@@ -1494,6 +1507,10 @@ public with sharing class rfiFormController {
                     // Program filter question — drives Academic Programs picklist filtering
                     String controllerField = (String) q.get('filterControllerField');
                     String interactionApiName = (String) q.get('filterInteractionAPIName');
+                    String catalogFilterTarget = rfiQuestionCatalog.filterTargetFor((String) q.get('filterControllerField'));
+                    if (catalogFilterTarget != null) {
+                        interactionApiName = catalogFilterTarget;
+                    }
                     Boolean isSchoolList = q.get('isFilterSchoolList') == true;
 
                     newField.fieldInteractionAPIName = interactionApiName;

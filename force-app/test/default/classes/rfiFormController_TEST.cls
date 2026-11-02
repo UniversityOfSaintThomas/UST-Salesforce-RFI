@@ -1255,6 +1255,17 @@ private class rfiFormController_TEST {
         return controllerName;
     }
 
+    /** The questions on a form other than the first and last name, which every form gets automatically. */
+    private static List<rfiFormController.rfiField> questionsApartFromNames(rfiFormController.interactionRFIFields wrap) {
+        List<rfiFormController.rfiField> others = new List<rfiFormController.rfiField>();
+        for (rfiFormController.rfiField f : wrap.rfiFieldList) {
+            if (f.fieldInteractionAPIName != 'First_Name__c' && f.fieldInteractionAPIName != 'Last_Name__c') {
+                others.add(f);
+            }
+        }
+        return others;
+    }
+
     private static Map<String, Object> pre(Integer id, String questionName, String savedApiName, Boolean isRequired) {
         return new Map<String, Object>{
                 'id' => id, 'type' => 'preconfigured', 'fieldName' => questionName,
@@ -1338,7 +1349,7 @@ private class rfiFormController_TEST {
             }
         }
         System.assertEquals(1, addressCount, 'The six older address questions become one Address question');
-        System.assertEquals(1, wrap.rfiFieldList.size(), 'No leftover address or Field Label Not Found inputs');
+        System.assertEquals(1, questionsApartFromNames(wrap).size(), 'No leftover address or Field Label Not Found inputs');
     }
 
     @IsTest
@@ -1350,7 +1361,7 @@ private class rfiFormController_TEST {
         Test.startTest();
         rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
         Test.stopTest();
-        System.assertEquals(1, wrap.rfiFieldList.size(), 'City is dropped because Address is already there');
+        System.assertEquals(1, questionsApartFromNames(wrap).size(), 'City is dropped because Address is already there');
     }
 
     @IsTest
@@ -1362,8 +1373,8 @@ private class rfiFormController_TEST {
         Test.startTest();
         rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
         Test.stopTest();
-        System.assertEquals(1, wrap.rfiFieldList.size(), 'Only Email remains. Got: ' + describeFields(wrap));
-        System.assertEquals('Email__c', wrap.rfiFieldList[0].fieldInteractionAPIName);
+        System.assertEquals(1, questionsApartFromNames(wrap).size(), 'Only Email remains. Got: ' + describeFields(wrap));
+        System.assertEquals('Email__c', questionsApartFromNames(wrap)[0].fieldInteractionAPIName);
     }
 
     @IsTest
@@ -1423,20 +1434,6 @@ private class rfiFormController_TEST {
         System.assertEquals(new List<String>{ 'Email', 'Address', 'Phone' }, cleaned);
         List<String> unchanged = rfiFormController.normalizeQuestionNames(new List<String>{ 'Address', 'Title' });
         System.assertEquals(new List<String>{ 'Address', 'Title' }, unchanged);
-    }
-
-
-    @IsTest
-    static void correctedTargets_allExistOnInteraction_TEST() {
-        // Guard: a question must never point at a field that does not exist on Interaction__c.
-        // Whether the running user can write it depends on field-level security (the public form runs as
-        // the site guest, who gets access through the RFI User permission set), so that is not checked here.
-        Map<String, Schema.SObjectField> interactionFields = Schema.SObjectType.Interaction__c.fields.getMap();
-        for (String questionName : rfiFormController.correctedTargetByQuestion.keySet()) {
-            String target = rfiFormController.correctedTargetByQuestion.get(questionName);
-            System.assert(interactionFields.containsKey(target.toLowerCase()),
-                    questionName + ' points at ' + target + ', which is not a field on Interaction__c');
-        }
     }
 
 

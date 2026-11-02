@@ -163,6 +163,9 @@ suggests it but no submission was run.
 | F35 | **`State__c` holds the state code, not the name.** The flow stored `StateCode` (MN); the form saved only the name (`Mailing_State__c` = Minnesota), so name matching could never fill `State__c`. | Flow text; describe of `State__c` in scratch and staging (values are two-letter codes). | Fixed: the form sends the code as `State__c`; Apex keeps it only when it is in the org's own list and falls back to a name match. |
 | F36 | **Phase 2 deleted `handleAcademicInterestChange` from `rfiForm.js`.** The template still bound it, so choosing academic interests saved nothing to `Major_Program_1..4__c`. Neither the Jest tests nor the first guest runs noticed, because no run selected an Academic Interest. Found while starting F14. | Diff of method names between HEAD and the working file; guest payload before and after. | Fixed and covered: the handler is back and two component tests choose programs and empty the selection. Nothing was deployed outside scratch. |
 | F37 | **The page echoes the controller's own owner and lead source back to the server.** The form returns its whole Interaction, so with the allowlist every normal submission would have been reported as having ignored fields. | First guest run after the allowlist (Error record listing `Lead_Source__c`). | Fixed: the echo is recognised and not reported; any different value is. |
+| F38 | **A Birthdate typed as text makes the server reject the whole submission.** Both form definitions marked Birthdate as a date, but the page never used that flag (the template read `inputType`, which nothing set), so Birthdate was a plain text box. Text such as `01/15/2000`, the format the older label asks for, cannot be read into a Date field, so Aura rejects the request before any code runs: nothing is saved and nothing is logged. A blank value is dropped by the page, so only visitors who typed a birthdate were affected. Found by the new type audit. | `JSON.deserialize` probe in scratch (`01/15/2000`, `1/5/2000` and an empty string all fail; `2000-01-15` works); template and wrapper. Whether this was already happening in production is not known; the old Lead form is a separate component. | Fixed in scratch: any question that saves to a Date field is drawn as a date picker (`inputType = 'date'`), on both paths and for custom questions. Live guest check: `1999-12-31` sent and saved. The older label still says "Birthday (MM/DD/YYYY)"; shorten it if the picker makes that confusing. |
+| F39 | **Eight of the twelve program filters name an Interaction field that does not exist** (`Degree_Type__c`, `Student_Type__c`, `Delivery_Type__c`, `Generic_Filter_2__c`, `_4__c`, `_5__c`, `_6__c`, `_7__c`, `_8__c`; only school, citizenship and `Generic_Filter_3__c` exist), in both scratch and eda-staging. Their answers only narrow the program list and are not saved, which is probably fine, but after the Phase 3 allowlist each submit on a form with such a filter would have written a "saved with gaps" Error record. | Interaction describe in both orgs; the manager's filter list and the Apex filter map. | Handled: the catalog marks each filter as storing its answer or not, a test keeps that statement true (it fails if someone creates one of those fields), and the guard drops filter-only answers without a report. Decision for the business, not for this work: should any of those answers be saved? If yes, the fields must be created. |
+| F40 | **The newer form depended on the manager to include First Name and Last Name.** The older form adds them when missing; the newer one did not. A saved list without them (edited by hand, or saved before the manager protected them) would make every submission fail on the object's required fields. Found by the parity test. | `olderAndNewerForms_giveTheSameFieldsAndControlsForTheSameQuestions_TEST`. | Fixed: the newer form adds both at the front when missing. All 20 staging controllers that use the newer form already contain them (checked read-only). |
 
 ---
 
@@ -474,6 +477,48 @@ fail to load for malformed JSON.
   Apex `switch`, unified Apex remap) with one catalog the manager reads from Apex.
 - Before calling a fix done, break it on purpose and confirm the new test fails, then restore.
 
+**Status (2026-11-02, scratch org only; nothing deployed to staging).**
+
+Built:
+- **One catalog, `rfiQuestionCatalog`.** It holds, for each pre-configured question, the Interaction field it saves to
+  and its default label; for each program filter, its field and whether the answer is saved; the table that corrects
+  field names older saved forms hold; the split-address and retired question names. The older form definition (25
+  switch branches), the newer one, the filter map and the Question Manager all read it. The three duplicate mappings
+  and the correction table are gone from `rfiFormController` and the manager. The manager gets the catalog through
+  `rfiFormController.getQuestionCatalog` (cacheable), which the admin permission set already allows, and builds no
+  questions until it arrives so it cannot save blank field names.
+- **One behaviour change by design:** the older form now saves Address to `Mailing_Street__c` like the newer one (it
+  used a placeholder name that the page never read).
+- **Read-only migration check in eda-staging before changing anything:** all 153 saved pre-configured questions in 20
+  controllers resolve to the same field under the catalog as before (the 4 Home and Mobile Phone questions are the
+  two-input composite, and 1 is the retired start-school question).
+- **`rfiQuestionCatalog_TEST` (14 tests):** every question the manager offers has a catalog entry; no duplicates or
+  blank targets; aliases save where their full names do; every target exists on Interaction, is not a formula or
+  auto number, and is a writable type; every filter names a real controller field and states truthfully whether it is
+  saved; every form (older and newer) saves each question to its catalog field with a field type that fits how the
+  question is drawn; older and newer forms give the same fields and controls for the same questions; every date
+  question is a date picker; the newer form always has first and last name; and a test fills in every question,
+  submits through `submitRfiForm`, and compares each saved field with what was sent (and expects no Error record).
+- **Jest:** `rfiUnifiedQuestionManager.catalog.test.js` (4) uses a deliberately fake catalog, so any built-in copy of
+  the mapping fails it; plus the date picker test in `rfiForm.submit.test.js`.
+
+Found by the new audits, not by hand: F38 (typed birthdates), F39 (filters with no field), F40 (names). Three Phase 1
+tests were updated because they counted every field on a form and the form now always has the two name questions.
+
+Tests: Apex 156 run, 156 pass (five classes); Jest 38 pass (rfiFormUtils 20, rfiForm.submit 14, manager catalog 4).
+Mutation checks, each a deliberate reintroduction of a known mistake, all caught with a message that names it:
+Title back to `Salutation__c`; the mail question pointed at the missing `Mail_Information__c`; a question dropped from
+the catalog; a checkbox question pointed at a text field; a filter that wrongly claims to store, and one that wrongly
+claims not to; no date picker; names not guaranteed; the older form's Address and Phone reverted; the newer form
+ignoring the catalog; the guard reporting filter answers; the guard dropping an allowed field (the round trip names
+`Timeline__c`). Manager: a built-in copy of one mapping, no wait for the catalog, labels ignored, the filter target
+ignored. Date picker removed from the template.
+
+Guest check on the public scratch site (controller 0001, older path, with a Birthday): the question is a date input,
+`1999-12-31` is sent and saved, `State__c` is `MN`, and no Error record is written.
+
+Not applicable: the "repeat `load` event" test. None of the RFI components use a record edit form.
+
 ### Phase 5: Rollout
 
 1. Scratch org: seed `Program__c`, `Academic_Term__c` and record types needed so the form
@@ -493,10 +538,13 @@ fail to load for malformed JSON.
 value sets come before the code that uses them.
 1. Fields: `Interaction__c.Timeline__c` (new); the deactivated value in
    `RFI_Controller__c.Fields_to_Display__c` and `Required_Fields__c`.
-2. Apex, in this order: `rfiErrorLogger`, `rfiSubmissionGuard`, `rfiSubmissionProcessor`, `rfiFormController`,
-   then the tests `rfiErrorLogger_TEST`, `rfiSubmissionGuard_TEST`, `rfiSubmissionProcessor_TEST`,
-   `rfiFormController_TEST` (all 140 tests in the four classes pass). The shared lookup and the Aura app were brought up to date with staging on 2026-10-28.
-3. LWC: `rfiFormUtils` (new), `rfiForm`, `rfiUnifiedQuestionManager`, then the Aura dependency app (make a
+2. Apex, in this order: `rfiQuestionCatalog`, `rfiErrorLogger`, `rfiSubmissionGuard`, `rfiSubmissionProcessor`,
+   `rfiFormController`, then the tests `rfiQuestionCatalog_TEST`, `rfiErrorLogger_TEST`, `rfiSubmissionGuard_TEST`,
+   `rfiSubmissionProcessor_TEST`, `rfiFormController_TEST` (156 tests in the five classes pass in scratch).
+   `rfiQuestionCatalog_TEST` checks the catalog against the org's real fields, so `Timeline__c` (step 1) must be
+   there first or it fails, which is its job. The shared lookup and the Aura app were brought up to date with staging on 2026-10-28.
+3. LWC, after the Apex above (the manager imports `rfiFormController.getQuestionCatalog`, so it will not deploy
+   without it): `rfiFormUtils` (new), `rfiForm`, `rfiUnifiedQuestionManager`, then the Aura dependency app (make a
    real content change to the app if a browser keeps an old bundle).
 4. Admins apply the section 9 notes (class access for `rfiFormController` first).
 5. Run the controller repair, `scripts/apex/migrate_rfi_questions.apex` (dry run first, read the report, then save). In a non-sandbox org the
@@ -637,3 +685,9 @@ The new form reads the controller record through code that does not need a shari
 - **Personal data in Error records:** the message holds what the visitor entered (name, email, phone, address), as the old form's error records did. Limit who can read the Error object accordingly.
 - **Programs, Academic Terms and school Accounts:** still open. The form reads them as the guest (sharing rules in scratch). Choose either guest sharing rules per site (you control what is visible) or more `without sharing` reader code in the controller (same everywhere, no admin work, but the code decides what is visible). Accounts stay under sharing rules unless you say otherwise.
 - A form whose saved questions cannot be read now shows "We could not load this form" instead of a partial form. All 20 staging controllers with unified questions parsed in a read-only check.
+
+**I. What Phase 4 adds for admins.**
+- **Nothing to grant.** The Question Manager now reads its question list from `rfiFormController.getQuestionCatalog`; the staging `RFI Controller User` already allows `rfiFormController`.
+- **If you add a question** to the `Fields_to_Display__c` picklist, a developer must add it to `rfiQuestionCatalog` in the same change. The tests fail until that is done, which is intended; it stops a question from silently saving nowhere.
+- **Program filters that save nothing:** eight of the twelve filters (all except school, citizenship and Generic Filter 3) have no matching field on Interaction in eda-staging, so their answers only narrow the program list and are not stored. Decide whether the business wants any of them stored; if so, the fields must be created first (finding F39).
+- **Birthdate** is now a date picker. Nothing changes for staff, but anyone who typed the date as text before had their whole submission rejected (finding F38).

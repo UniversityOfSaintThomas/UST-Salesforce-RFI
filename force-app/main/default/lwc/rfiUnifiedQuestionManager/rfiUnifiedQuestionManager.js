@@ -8,6 +8,7 @@ import { LightningElement, api, track, wire } from 'lwc';
 import { getRecord, updateRecord, getFieldValue, notifyRecordUpdateAvailable } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
+import getQuestionCatalog from '@salesforce/apex/rfiFormController.getQuestionCatalog';
 import { getObjectInfo, getPicklistValues, getPicklistValuesByRecordType } from 'lightning/uiObjectInfoApi';
 
 import RFI_CONTROLLER_OBJECT from '@salesforce/schema/RFI_Controller__c';
@@ -79,84 +80,72 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         {
             value: 'School_College_To_Display__c',
             label: 'School / College',
-            interactionAPIName: 'St_Thomas_College_School__c',
             isSchoolList: true,
             schemaField: SCHOOL_COLLEGE_TO_DISPLAY
         },
         {
             value: 'Citizen_Types_To_Display__c',
             label: 'Citizenship Type',
-            interactionAPIName: 'Citizenship__c',
             isSchoolList: false,
             schemaField: CITIZEN_TYPES_TO_DISPLAY
         },
         {
             value: 'Degree_Types_To_Display__c',
             label: 'Degree Type',
-            interactionAPIName: 'Degree_Type__c',
             isSchoolList: false,
             schemaField: DEGREE_TYPES_TO_DISPLAY
         },
         {
             value: 'Student_Types_To_Display__c',
             label: 'Student Type',
-            interactionAPIName: 'Student_Type__c',
             isSchoolList: false,
             schemaField: STUDENT_TYPES_TO_DISPLAY
         },
         {
             value: 'Delivery_Types_To_Display__c',
             label: 'Delivery Type',
-            interactionAPIName: 'Delivery_Type__c',
             isSchoolList: false,
             schemaField: DELIVERY_TYPES_TO_DISPLAY
         },
         {
             value: 'Program_Types_To_Display__c',
             label: 'Program Type',
-            interactionAPIName: 'Generic_Filter_5__c',
             isSchoolList: false,
             schemaField: PROGRAM_TYPES_TO_DISPLAY
         },
         {
             value: 'Generic_Filter_2_To_Display__c',
             label: 'Generic Filter 2',
-            interactionAPIName: 'Generic_Filter_2__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_2_TO_DISPLAY
         },
         {
             value: 'Generic_Filter_3_To_Display__c',
             label: 'Generic Filter 3',
-            interactionAPIName: 'Generic_Filter_3__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_3_TO_DISPLAY
         },
         {
             value: 'Generic_Filter_4_To_Display__c',
             label: 'Generic Filter 4',
-            interactionAPIName: 'Generic_Filter_4__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_4_TO_DISPLAY
         },
         {
             value: 'Generic_Filter_6_To_Display__c',
             label: 'Generic Filter 6',
-            interactionAPIName: 'Generic_Filter_6__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_6_TO_DISPLAY
         },
         {
             value: 'Generic_Filter_7_To_Display__c',
             label: 'Generic Filter 7',
-            interactionAPIName: 'Generic_Filter_7__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_7_TO_DISPLAY
         },
         {
             value: 'Generic_Filter_8_To_Display__c',
             label: 'Generic Filter 8',
-            interactionAPIName: 'Generic_Filter_8__c',
             isSchoolList: false,
             schemaField: GENERIC_FILTER_8_TO_DISPLAY
         }
@@ -183,72 +172,54 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
     ];
 
 
+    // The question catalog comes from Apex (rfiQuestionCatalog), the same list the form uses.
+    _catalog;
+    _catalogLookups;
+    _loadWaitingForCatalog = false;
+
+    @wire(getQuestionCatalog)
+    wiredCatalog({ data, error }) {
+        if (data) {
+            this._catalog = data;
+            this._catalogLookups = null;
+            if (this._loadWaitingForCatalog) {
+                this._loadWaitingForCatalog = false;
+                this.loadQuestions();
+            }
+        } else if (error) {
+            console.error('Error loading the question catalog:', error);
+            this.showToast('Error', 'The list of questions could not be loaded. Please reload the page.', 'error');
+        }
+    }
+
+    get catalogLookups() {
+        if (!this._catalogLookups) {
+            const labels = {};
+            const targets = {};
+            const filterTargets = {};
+            if (this._catalog) {
+                (this._catalog.questions || []).forEach(question => {
+                    labels[question.name] = question.defaultLabel;
+                    targets[question.name] = question.targetField;
+                });
+                (this._catalog.filters || []).forEach(filter => {
+                    filterTargets[filter.controllerField] = filter.targetField;
+                });
+            }
+            this._catalogLookups = { labels, targets, filterTargets };
+        }
+        return this._catalogLookups;
+    }
+
     // Default labels for pre-configured fields
-    defaultLabels = {
-        'Academic Interest': 'Academic Interest',
-        'Address': 'Address',
-        'Birthdate': 'Birthdate',
-        'Citizenship': 'Citizenship',
-        'Company': 'Company',
-        'Email': 'Email',
-        'Employer': 'Employer',
-        'Expected Start Term at St Thomas': 'Expected Start Term at St Thomas',
-        'First Name': 'First Name',
-        'High School Attended': 'High School Attended',
-        'High School Graduation Year': 'High School Graduation Year',
-        'Phone': 'Phone',
-        'Home Phone': 'Home Phone',
-        'How did you hear about us': 'How did you hear about us',
-        'I have a question': 'I have a question',
-        'I will apply to St Thomas as a': 'I will apply to St Thomas as a',
-        'I will apply to St Thomas Law as a': 'I will apply to St Thomas Law as a',
-        'Last Name': 'Last Name',
-        // Full picklist fullName values
-        'I would like program information to be mailed to me': 'I would like program information to be mailed to me',
-        'I would like to receive text messages': 'I would like to receive text messages',
-        // Short alias fallbacks (may appear in older saved JSON)
-        'Mail Information': 'Mail Information',
-        'Receive Text Messages': 'Receive Text Messages',
-        'Scholarship of Interest': 'Scholarship of Interest',
-        'St Thomas Colleges': 'College\\School',
-        'Tell us about yourself': 'Tell us about yourself',
-        'Timeline to Enrollment': 'Timeline to Enrollment',
-        'Title': 'Title'
-    };
+    get defaultLabels() {
+        return this.catalogLookups.labels;
+    }
 
     // Field to Interaction__c API name mapping (for pre-configured)
-    fieldInteractionAPIMap = {
-        'Academic Interest': 'Major_Program_1__c',
-        'Address': 'Mailing_Street__c',
-        'Birthdate': 'Birthdate__c',
-        'Citizenship': 'Citizenship__c',
-        'Company': 'Employer__c',
-        'Email': 'Email__c',
-        'Employer': 'Employer__c',
-        'Expected Start Term at St Thomas': 'Intended_Start_Term__c',
-        'First Name': 'First_Name__c',
-        'High School Attended': 'High_School_or_College__c',
-        'High School Graduation Year': 'High_School_Graduation_Year__c',
-        'Phone': 'Mobile_Phone__c',
-        'Home Phone': 'Home_Phone__c',
-        'Home and Mobile Phone': 'Home_Phone__c',
-        'How did you hear about us': 'Heard_About_Us__c',
-        'I have a question': 'Has_Question__c',
-        'I will apply to St Thomas as a': 'Admit_Type__c',
-        'I will apply to St Thomas Law as a': 'Admit_Type__c',
-        'Last Name': 'Last_Name__c',
-        // Full picklist fullName values (what actually gets stored as fieldName in JSON)
-        'I would like program information to be mailed to me': 'Mailed_Program_Information_Requested__c',
-        'I would like to receive text messages': 'Receive_Texts__c',
-        // Short alias fallbacks (may appear in older saved JSON)
-        'Mail Information': 'Mailed_Program_Information_Requested__c',
-        'Receive Text Messages': 'Receive_Texts__c',
-        'Scholarship of Interest': 'Scholarship_of_Interest__c',
-        'St Thomas Colleges': 'St_Thomas_College_School__c',
-        'Tell us about yourself': 'Description__c',
-        'Timeline to Enrollment': 'Timeline__c',
-        'Title': 'Contact_Title__c'
-    };
+    get fieldInteractionAPIMap() {
+        return this.catalogLookups.targets;
+    }
 
     @wire(getObjectInfo, { objectApiName: RFI_CONTROLLER_OBJECT })
     rfiObjectInfo({ data, error }) {
@@ -364,6 +335,11 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
 
     loadQuestions() {
         if (!this.recordData) return;
+        if (!this._catalog) {
+            // Questions are built with the catalog's field names, so wait for it
+            this._loadWaitingForCatalog = true;
+            return;
+        }
 
         const unifiedQuestionsJSON = this.getFieldValue(UNIFIED_QUESTIONS_FIELD);
 
@@ -557,7 +533,7 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         this.currentQuestion = {
             ...this.currentQuestion,
             filterControllerField: chosen,
-            filterInteractionAPIName: def ? def.interactionAPIName : '',
+            filterInteractionAPIName: this.catalogLookups.filterTargets[chosen] || '',
             isFilterSchoolList: def ? def.isSchoolList : false,
             filterSelectedValues: preSelected,
             // Pre-fill label from definition only if user hasn't typed one yet

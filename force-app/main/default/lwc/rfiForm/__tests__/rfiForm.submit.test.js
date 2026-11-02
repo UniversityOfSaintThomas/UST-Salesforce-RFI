@@ -290,6 +290,22 @@ describe('c-rfi-form submit', () => {
         expect(message.textContent).toContain('could not load this form');
     });
 
+    it('draws a date question as a date picker and sends the date in the form the server can read', async () => {
+        const withBirthdate = JSON.parse(JSON.stringify(FORM));
+        withBirthdate.rfiFieldList.push(field('Birthday', 'Birthdate__c', { isDate: true, inputType: 'date' }));
+        element = createElement('c-rfi-form', { is: RfiForm });
+        element.rfiControllerName = CONTROLLER_NAME;
+        document.body.appendChild(element);
+        getRFIForm.emit(withBirthdate);
+        await flushPromises();
+        expect(inputByLabel('Birthday').type).toBe('date');
+        await type(inputByLabel('First Name'), 'Ada');
+        await type(inputByLabel('Last Name'), 'Lovelace');
+        await type(inputByLabel('Birthday'), '2000-01-15');
+        await submit();
+        expect(captured.interaction.Birthdate__c).toBe('2000-01-15');
+    });
+
     it('a blank Employer keeps the controller default', async () => {
         await renderForm();
         await submit();
