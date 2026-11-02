@@ -1779,4 +1779,154 @@ private class rfiFormController_TEST {
             System.assert(allowed.contains(expected), expected);
         }
     }
+
+
+    // --- custom questions an admin builds on any Interaction field ---
+
+    private static Map<String, Object> custom(Integer id, String label, String questionType, String targetField, List<Object> savedPicklistValues) {
+        Map<String, Object> question = new Map<String, Object>{
+            'id' => id, 'type' => 'custom', 'questionLabel' => label, 'questionType' => questionType,
+            'fieldToApplyTo' => targetField, 'isRequired' => questionType.contains('required')
+        };
+        if (savedPicklistValues != null) {
+            question.put('picklistValues', savedPicklistValues);
+        }
+        return question;
+    }
+
+    private static List<String> activeValuesOf(Schema.SObjectField field) {
+        List<String> values = new List<String>();
+        for (Schema.PicklistEntry entry : field.getDescribe().getPicklistValues()) {
+            if (entry.isActive()) {
+                values.add(entry.getValue());
+            }
+        }
+        values.sort();
+        return values;
+    }
+
+    private static List<String> optionValuesOf(rfiFormController.rfiField question) {
+        List<String> values = new List<String>();
+        for (rfiFormController.picklistOption option : question.picklistValues) {
+            values.add(option.value);
+        }
+        values.sort();
+        return values;
+    }
+
+    @IsTest
+    static void customPicklist_onAPicklistField_showsTheFieldsLiveValues_notTheCopySavedWithTheQuestion_TEST() {
+        // The saved copy is stale: it holds a value the field does not have and lacks the real ones
+        String name = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            custom(2, 'Citizenship (custom)', 'Picklist', 'Citizenship__c', new List<Object>{
+                new Map<String, Object>{ 'label' => 'Retired Value', 'value' => 'Retired Value' } })
+        }, 'livepick');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        rfiFormController.rfiField question = fieldFor(form, 'Citizenship__c');
+        System.assertNotEquals(null, question);
+        System.assertEquals(true, question.isPicklist);
+        System.assertEquals(activeValuesOf(Interaction__c.Citizenship__c), optionValuesOf(question), 'The live values of the field');
+        System.assert(!optionValuesOf(question).contains('Retired Value'), 'A value the field does not have must not be offered');
+    }
+
+    @IsTest
+    static void customPicklist_onATextField_usesTheListTheAdminTyped_TEST() {
+        String name = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            custom(2, 'Campus', 'Picklist', 'Employer__c', new List<Object>{
+                new Map<String, Object>{ 'label' => 'Main', 'value' => 'Main' },
+                new Map<String, Object>{ 'label' => 'Online', 'value' => 'Online' } })
+        }, 'typedpick');
+        rfiFormController.rfiField question = fieldFor(rfiFormController.getRFIForm(name), 'Employer__c');
+        System.assertEquals(new List<String>{ 'Main', 'Online' }, optionValuesOf(question));
+    }
+
+    @IsTest
+    static void customPicklist_onAMultiSelectField_showsTheFieldsLiveValues_TEST() {
+        List<String> live = activeValuesOf(Interaction__c.Heard_About_Us__c);
+        String name = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            custom(2, 'Where from', 'Picklist', 'Heard_About_Us__c', new List<Object>())
+        }, 'multipick');
+        rfiFormController.rfiField question = fieldFor(rfiFormController.getRFIForm(name), 'Heard_About_Us__c');
+        System.assertEquals(live, optionValuesOf(question));
+    }
+
+    @IsTest
+    static void customCheckbox_isDrawnAsACheckbox_andRequiredMeansMustBeTicked_TEST() {
+        String name = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            custom(2, 'Send me mail', 'Checkbox', 'Mailed_Program_Information_Requested__c', null),
+            custom(3, 'I have read this', 'Checkbox required', 'Has_Question__c', null)
+        }, 'checkbox');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        rfiFormController.rfiField optional = fieldFor(form, 'Mailed_Program_Information_Requested__c');
+        rfiFormController.rfiField mandatory = fieldFor(form, 'Has_Question__c');
+        System.assertEquals(true, optional.isCheckbox);
+        System.assertEquals(false, optional.isRequired);
+        System.assertEquals(true, mandatory.isCheckbox);
+        System.assertEquals(true, mandatory.isRequired);
+        System.assertNotEquals(true, optional.isTextarea);
+    }
+
+    @IsTest
+    static void customDate_isDrawnAsADatePicker_TEST() {
+        String name = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            custom(2, 'Date of birth', 'Date required', 'Birthdate__c', null)
+        }, 'date');
+        rfiFormController.rfiField question = fieldFor(rfiFormController.getRFIForm(name), 'Birthdate__c');
+        System.assertEquals(true, question.isDate);
+        System.assertEquals('date', question.inputType);
+        System.assertEquals(true, question.isRequired);
+    }
+
+    @IsTest
+    static void customCheckboxDatePicklist_answersAreSavedToTheirFields_TEST() {
+        String pickValue = activeValuesOf(Interaction__c.Citizenship__c)[0];
+        String name = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true), pre(2, 'Last Name', 'Last_Name__c', true),
+            custom(3, 'Send me mail', 'Checkbox', 'Mailed_Program_Information_Requested__c', null),
+            custom(4, 'Date of birth', 'Date', 'Birthdate__c', null),
+            custom(5, 'Citizenship (custom)', 'Picklist', 'Citizenship__c', null)
+        }, 'customsave');
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(First_Name__c = 'Ada', Last_Name__c = 'Custom',
+                Mailed_Program_Information_Requested__c = true, Birthdate__c = Date.newInstance(1999, 12, 31), Citizenship__c = pickValue), name);
+        Test.stopTest();
+        System.assertNotEquals(null, savedId, 'Not saved: ' + errorRecords());
+        Interaction__c saved = [SELECT Mailed_Program_Information_Requested__c, Birthdate__c, Citizenship__c FROM Interaction__c WHERE Id = :savedId];
+        System.assertEquals(true, saved.Mailed_Program_Information_Requested__c);
+        System.assertEquals(Date.newInstance(1999, 12, 31), saved.Birthdate__c);
+        System.assertEquals(pickValue, saved.Citizenship__c);
+        System.assertEquals(0, errorRecords().size(), 'Nothing to report: ' + errorRecords());
+    }
+
+
+    @IsTest
+    static void activeOptions_leavesOutRetiredValues_TEST() {
+        List<Schema.PicklistEntry> entries = new List<Schema.PicklistEntry>{
+            (Schema.PicklistEntry) JSON.deserialize('{"active":true,"defaultValue":false,"label":"Kept","value":"Kept"}', Schema.PicklistEntry.class),
+            (Schema.PicklistEntry) JSON.deserialize('{"active":false,"defaultValue":false,"label":"Gone","value":"Gone"}', Schema.PicklistEntry.class),
+            (Schema.PicklistEntry) JSON.deserialize('{"active":true,"defaultValue":false,"label":"Also kept","value":"Also kept"}', Schema.PicklistEntry.class)
+        };
+        List<rfiFormController.picklistOption> options = rfiFormController.activeOptions(entries);
+        System.assertEquals(2, options.size());
+        System.assertEquals('Kept', options[0].value);
+        System.assertEquals('Also kept', options[1].value, 'The field\'s order is kept');
+        System.assertEquals(0, rfiFormController.activeOptions(new List<Schema.PicklistEntry>()).size());
+    }
+
+    @IsTest
+    static void customDate_onATextField_isStillADatePicker_TEST() {
+        // A Date question the admin put on a text field (edited by hand): the question type decides how it is drawn
+        String name = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            custom(2, 'Start date', 'Date', 'Employer__c', null)
+        }, 'datetext');
+        rfiFormController.rfiField question = fieldFor(rfiFormController.getRFIForm(name), 'Employer__c');
+        System.assertEquals(true, question.isDate);
+        System.assertEquals('date', question.inputType);
+    }
 }

@@ -644,6 +644,59 @@ public with sharing class rfiFormController {
     }
 
     /**
+     * Turns a field's picklist entries into form choices. Retired (inactive) values are left out.
+     *
+     * @param entries The picklist entries of a field
+     * @return One choice for each active entry, in the field's order
+     */
+    @TestVisible
+    private static List<picklistOption> activeOptions(List<Schema.PicklistEntry> entries) {
+        List<picklistOption> options = new List<picklistOption>();
+        for (Schema.PicklistEntry entry : entries) {
+            if (entry.isActive()) {
+                picklistOption option = new picklistOption();
+                option.label = entry.getLabel();
+                option.value = entry.getValue();
+                options.add(option);
+            }
+        }
+        return options;
+    }
+
+    /**
+     * Works out the choices for a custom picklist question. A question on a picklist (or multi-select) field always shows that
+     * field's live active values, so a value an admin adds later appears and a value they retire disappears without
+     * anyone editing the question. A copy saved with the question is ignored for those fields, because a retired value
+     * would still be offered and the platform would reject it. Only a question on a plain text field uses the
+     * list the admin typed in.
+     *
+     * @param savedValues The list saved with the question (label and value pairs), or null
+     * @param targetField The Interaction field the question saves to, or null
+     * @param interactionFieldMap The Interaction field map (lower case names)
+     * @return The choices to show
+     */
+    @TestVisible
+    private static List<picklistOption> customPicklistOptions(Object savedValues, String targetField, Map<String, Schema.SObjectField> interactionFieldMap) {
+        List<picklistOption> options = new List<picklistOption>();
+        Schema.SObjectField field = String.isBlank(targetField) ? null : interactionFieldMap.get(targetField.toLowerCase());
+        Boolean isPicklistField = field != null && (field.getDescribe().getType() == Schema.DisplayType.PICKLIST
+                || field.getDescribe().getType() == Schema.DisplayType.MULTIPICKLIST);
+        if (isPicklistField) {
+            return activeOptions(field.getDescribe().getPicklistValues());
+        }
+        if (savedValues != null) {
+            for (Object savedObject : (List<Object>) savedValues) {
+                Map<String, Object> saved = (Map<String, Object>) savedObject;
+                picklistOption option = new picklistOption();
+                option.label = (String) saved.get('label');
+                option.value = (String) saved.get('value');
+                options.add(option);
+            }
+        }
+        return options;
+    }
+
+    /**
      * Makes sure the form asks for first and last name, which Interaction__c requires. The older form definition
      * always adds them; the newer one relied on the Question Manager never removing them. A saved list that lacks
      * them (edited by hand, or saved before that rule) would make every submission fail.
@@ -1560,36 +1613,16 @@ public with sharing class rfiFormController {
                         newField.staticContentHtml = (String) q.get('valuesFlat');
                     } else if (qType.toLowerCase().contains('picklist') || qType.toLowerCase().contains('combobox')) {
                         newField.isPicklist = true;
-                        List<picklistOption> opts = new List<picklistOption>();
-                        Object picklistValuesObj = q.get('picklistValues');
-                        if (picklistValuesObj != null) {
-                            for (Object pvObj : (List<Object>) picklistValuesObj) {
-                                Map<String, Object> pv = (Map<String, Object>) pvObj;
-                                picklistOption po = new picklistOption();
-                                po.label = (String) pv.get('label');
-                                po.value = (String) pv.get('value');
-                                opts.add(po);
-                            }
-                        }
-                        // Fall back to Interaction field schema if no stored values
-                        if (opts.isEmpty() && String.isNotBlank(newField.fieldInteractionAPIName)) {
-                            Schema.SObjectField sField = interactionFieldMap.get(newField.fieldInteractionAPIName.toLowerCase());
-                            if (sField != null) {
-                                for (Schema.PicklistEntry entry : sField.getDescribe().getPicklistValues()) {
-                                    if (entry.isActive()) {
-                                        picklistOption po = new picklistOption();
-                                        po.label = entry.getLabel();
-                                        po.value = entry.getValue();
-                                        opts.add(po);
-                                    }
-                                }
-                            }
-                        }
-                        newField.picklistValues = opts;
+                        newField.picklistValues = customPicklistOptions(q.get('picklistValues'), newField.fieldInteractionAPIName, interactionFieldMap);
                     } else if (qType.toLowerCase().contains('textarea')) {
                         newField.isTextarea = true;
                     } else if (qType.toLowerCase().contains('email')) {
                         newField.isEmail = true;
+                    } else if (qType.toLowerCase().startsWith('checkbox')) {
+                        newField.isCheckbox = true;
+                    } else if (qType.toLowerCase().startsWith('date')) {
+                        newField.isDate = true;
+                        newField.inputType = 'date';
                     }
                     // Default (text box) falls through to lightning-input in the template
                 }

@@ -132,7 +132,11 @@ Dual-path:
 **`processUnifiedQuestions()`** — iterates unified JSON:
 - `preconfigured`: maps fieldName to Interaction field, detects picklist/address/email/etc.
 - `filter`: reads `filterSelectedValues` from JSON (falls back to `_To_Display__c`), builds picklist options, registers in `filterValues` map
-- `custom`: builds field from questionType (static, picklist, textarea, email, text)
+- `custom`: builds field from questionType: `Text box`, `Textarea`, `Email`, `Picklist`, `Checkbox`, `Date`, `Static content`.
+  Each type except Static content has a `... required` variant (a required Checkbox must be ticked). A Picklist question on a
+  picklist or multi-select Interaction field always shows that field's live active values; any copy saved with the question is
+  ignored. A Picklist question on a text field uses the list the admin typed. Any question that saves to a Date field is drawn
+  as a date picker.
 
 **Other key methods:**
 - `getUSTSchoolList(schoolNames)` — returns Account IDs for school filter (School/College is special: stores Account IDs not text values)

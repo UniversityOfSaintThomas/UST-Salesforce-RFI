@@ -160,6 +160,10 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
 
     // Question type options for custom questions
     questionTypes = [
+        { label: 'Checkbox', value: 'Checkbox' },
+        { label: 'Checkbox required', value: 'Checkbox required' },
+        { label: 'Date', value: 'Date' },
+        { label: 'Date required', value: 'Date required' },
         { label: 'Email', value: 'Email' },
         { label: 'Email required', value: 'Email required' },
         { label: 'Picklist', value: 'Picklist' },
@@ -488,14 +492,13 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
             this.interactionObjectInfo && this.interactionObjectInfo.data) {
             const fieldMeta = this.interactionObjectInfo.data.fields[question.fieldToApplyTo];
             const isOrgPicklist = fieldMeta && fieldMeta.dataType.toLowerCase() === 'picklist';
-            if (isOrgPicklist && !this.currentQuestion.isMappedPicklist) {
-                // Re-hydrate org values in case they were saved as mapped
-                const orgOptions = this._interactionPicklistOptions[question.fieldToApplyTo] || [];
+            if (isOrgPicklist) {
+                // Older saved questions hold a copy of the values. The form now reads the live values, so drop it.
                 this.currentQuestion = {
                     ...this.currentQuestion,
                     isMappedPicklist: true,
-                    picklistValues: orgOptions.length > 0 ? orgOptions : question.picklistValues,
-                    valuesFlat: orgOptions.length > 0 ? orgOptions.map(o => o.value).join(';') : question.valuesFlat
+                    picklistValues: [],
+                    valuesFlat: ''
                 };
             }
         }
@@ -580,10 +583,10 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
                     const fieldMeta = this.interactionObjectInfo.data.fields[value];
                     const isOrgPicklist = fieldMeta && fieldMeta.dataType.toLowerCase() === 'picklist';
                     if (isOrgPicklist) {
-                        const orgOptions = this._interactionPicklistOptions[value] || [];
+                        // The form reads this field's live values, so no copy is saved with the question
                         this.currentQuestion.isMappedPicklist = true;
-                        this.currentQuestion.picklistValues = orgOptions;
-                        this.currentQuestion.valuesFlat = orgOptions.map(o => o.value).join(';');
+                        this.currentQuestion.picklistValues = [];
+                        this.currentQuestion.valuesFlat = '';
                     } else {
                         this.currentQuestion.isMappedPicklist = false;
                     }
@@ -630,6 +633,8 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
                 isTextBox: qt === 'text box' || qt === 'text box required',
                 isTextarea: qt === 'textarea' || qt === 'textarea required',
                 isEmail: qt === 'email' || qt === 'email required',
+                isCheckbox: qt === 'checkbox' || qt === 'checkbox required',
+                isDate: qt === 'date' || qt === 'date required',
                 isStaticContent: qt === 'static content',
                 isFirst: index === 0,
                 isLast: index === last
@@ -1092,6 +1097,11 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         return !!(this.currentQuestion.isMappedPicklist);
     }
 
+    // The live values of the mapped Interaction picklist, shown read-only in the dialog
+    get mappedPicklistOptions() {
+        return this._interactionPicklistOptions[this.currentQuestion.fieldToApplyTo] || [];
+    }
+
     // True when creator should enter values manually (picklist type but NOT mapped to an org picklist field)
     get showPicklistTextarea() {
         return this.isPicklist && !this.isMappedPicklist;
@@ -1137,7 +1147,11 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
             const dt = field.dataType.toLowerCase();
             let include = false;
 
-            if (qType.startsWith('text box') || qType.startsWith('textarea')) {
+            if (qType.startsWith('checkbox')) {
+                include = dt === 'boolean';
+            } else if (qType.startsWith('date')) {
+                include = dt === 'date';
+            } else if (qType.startsWith('text box') || qType.startsWith('textarea')) {
                 include = dt === 'string' || dt === 'textarea';
             } else if (qType.startsWith('email')) {
                 include = dt === 'email' || dt === 'string';
