@@ -4,11 +4,14 @@
 // Default: DRY_RUN = true. It only prints what would change (look for "MIGRATION change:" lines).
 // Save:    set DRY_RUN = false below and run again. Safe to run more than once; the second run changes nothing.
 // Guard:   outside a sandbox it refuses to save until the IsSandbox check below is edited on purpose.
+// Order:   run it AFTER the Apex classes are deployed. It reads the question catalog (rfiQuestionCatalog), so the
+//          field each question saves to is defined in one place and this script cannot disagree with the form.
 //
 // What it repairs
 //   Saved question JSON (RFI_Controller__c.Unified_Questions__c):
-//     - Title, the mail question, Timeline, Phone: set the correct Interaction field (Phone saves to Mobile_Phone__c)
-//     - "I will apply to St Thomas Law as a": set Admit_Type__c
+//     - Any pre-configured question whose saved Interaction field differs from the catalog's: set the catalog's field
+//       (in eda-staging that is Title, the mail question and Phone, which saves to Mobile_Phone__c). The two-input
+//       "Home and Mobile Phone" question is left alone on purpose.
 //     - "When do you plan to start school": removed
 //     - Address 1/2/3, City, State, Zipcode, Country: collapsed into one "Address" question
 //   Older field lists (Fields_to_Display__c, Fields_to_Display_Order__c, Required_Fields__c):
@@ -23,16 +26,16 @@ if (!DRY_RUN && !org.IsSandbox) {
     throw new AuraHandledException('Refusing to save in a non-sandbox org from this script. Review and run deliberately.');
 }
 
-Map<String, String> correctedTarget = new Map<String, String>{
-    'Title' => 'Contact_Title__c',
-    'I would like program information to be mailed to me' => 'Mailed_Program_Information_Requested__c',
-    'Mail Information' => 'Mailed_Program_Information_Requested__c',
-    'Timeline to Enrollment' => 'Timeline__c',
-    'I will apply to St Thomas Law as a' => 'Admit_Type__c',
-    'Phone' => 'Mobile_Phone__c'
-};
-Set<String> splitAddress = new Set<String>{ 'Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country' };
-String removedQuestion = 'When do you plan to start school';
+// The catalog is the only place that says where a question saves. Two-input questions are skipped.
+Map<String, String> correctedTarget = new Map<String, String>();
+for (rfiQuestionCatalog.Question catalogQuestion : rfiQuestionCatalog.questions()) {
+    if (catalogQuestion.isComposite != true) {
+        correctedTarget.put(catalogQuestion.name, catalogQuestion.targetField);
+    }
+}
+Set<String> splitAddress = rfiQuestionCatalog.splitAddressQuestions;
+String removedQuestion = new List<String>(rfiQuestionCatalog.retiredQuestions)[0];
+String addressTarget = rfiQuestionCatalog.targetFieldFor('Address');
 
 List<RFI_Controller__c> controllers = [
     SELECT Id, Name, Unified_Questions__c, Fields_to_Display__c, Fields_to_Display_Order__c, Required_Fields__c
@@ -71,7 +74,7 @@ for (RFI_Controller__c controller : controllers) {
                     if (!hasAddress && !addressInserted) {
                         rebuilt.add(new Map<String, Object>{
                             'id' => 0, 'type' => 'preconfigured', 'fieldName' => 'Address', 'questionLabel' => 'Address',
-                            'fieldInteractionAPIName' => 'Mailing_Street__c', 'isRequired' => splitRequired
+                            'fieldInteractionAPIName' => addressTarget, 'isRequired' => splitRequired
                         });
                         addressInserted = true;
                     }

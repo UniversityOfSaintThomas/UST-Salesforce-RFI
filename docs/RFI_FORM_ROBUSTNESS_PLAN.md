@@ -166,6 +166,7 @@ suggests it but no submission was run.
 | F38 | **A Birthdate typed as text makes the server reject the whole submission.** Both form definitions marked Birthdate as a date, but the page never used that flag (the template read `inputType`, which nothing set), so Birthdate was a plain text box. Text such as `01/15/2000`, the format the older label asks for, cannot be read into a Date field, so Aura rejects the request before any code runs: nothing is saved and nothing is logged. A blank value is dropped by the page, so only visitors who typed a birthdate were affected. Found by the new type audit. | `JSON.deserialize` probe in scratch (`01/15/2000`, `1/5/2000` and an empty string all fail; `2000-01-15` works); template and wrapper. Whether this was already happening in production is not known; the old Lead form is a separate component. | Fixed in scratch: any question that saves to a Date field is drawn as a date picker (`inputType = 'date'`), on both paths and for custom questions. Live guest check: `1999-12-31` sent and saved. The older label still says "Birthday (MM/DD/YYYY)"; shorten it if the picker makes that confusing. |
 | F39 | **Eight of the twelve program filters name an Interaction field that does not exist** (`Degree_Type__c`, `Student_Type__c`, `Delivery_Type__c`, `Generic_Filter_2__c`, `_4__c`, `_5__c`, `_6__c`, `_7__c`, `_8__c`; only school, citizenship and `Generic_Filter_3__c` exist), in both scratch and eda-staging. Their answers only narrow the program list and are not saved, which is probably fine, but after the Phase 3 allowlist each submit on a form with such a filter would have written a "saved with gaps" Error record. | Interaction describe in both orgs; the manager's filter list and the Apex filter map. | Handled: the catalog marks each filter as storing its answer or not, a test keeps that statement true (it fails if someone creates one of those fields), and the guard drops filter-only answers without a report. Decision for the business, not for this work: should any of those answers be saved? If yes, the fields must be created. |
 | F40 | **The newer form depended on the manager to include First Name and Last Name.** The older form adds them when missing; the newer one did not. A saved list without them (edited by hand, or saved before the manager protected them) would make every submission fail on the object's required fields. Found by the parity test. | `olderAndNewerForms_giveTheSameFieldsAndControlsForTheSameQuestions_TEST`. | Fixed: the newer form adds both at the front when missing. All 20 staging controllers that use the newer form already contain them (checked read-only). |
+| F41 | **A field the running user cannot read behaves as if it does not exist.** For such a field, Apex describe leaves it out of the field map, `put` fails with "Invalid field", and `stripInaccessible` reports nothing. New fields deployed to a org are not readable by anyone until a permission set grants them (measured in scratch with a throwaway field). So if the person who validates the deployment in eda-staging cannot read `Timeline__c`, `rfiQuestionCatalog_TEST` fails with "Timeline__c is not a field on Interaction__c" even though the code is right. | Scratch probe (create a field, describe it as a user without access); staging field access for `School_Name_Text__c` comes only from permission sets. | Handled in the hand-off order: create `Timeline__c`, give the deploying user read access through a permission set, then validate. No code change. |
 
 ---
 
@@ -534,23 +535,80 @@ Not applicable: the "repeat `load` event" test. None of the RFI components use a
    build. 5856 includes the Question Manager bug where the Question Label does not update
    after the Filter Field is changed.
 
-**Hand-off checklist for the person deploying to eda-staging.** Order matters; fields and
-value sets come before the code that uses them.
-1. Fields: `Interaction__c.Timeline__c` (new); the deactivated value in
-   `RFI_Controller__c.Fields_to_Display__c` and `Required_Fields__c`.
-2. Apex, in this order: `rfiQuestionCatalog`, `rfiErrorLogger`, `rfiSubmissionGuard`, `rfiSubmissionProcessor`,
-   `rfiFormController`, then the tests `rfiQuestionCatalog_TEST`, `rfiErrorLogger_TEST`, `rfiSubmissionGuard_TEST`,
-   `rfiSubmissionProcessor_TEST`, `rfiFormController_TEST` (156 tests in the five classes pass in scratch).
-   `rfiQuestionCatalog_TEST` checks the catalog against the org's real fields, so `Timeline__c` (step 1) must be
-   there first or it fails, which is its job. The shared lookup and the Aura app were brought up to date with staging on 2026-10-28.
-3. LWC, after the Apex above (the manager imports `rfiFormController.getQuestionCatalog`, so it will not deploy
-   without it): `rfiFormUtils` (new), `rfiForm`, `rfiUnifiedQuestionManager`, then the Aura dependency app (make a
-   real content change to the app if a browser keeps an old bundle).
-4. Admins apply the section 9 notes (class access for `rfiFormController` first).
-5. Run the controller repair, `scripts/apex/migrate_rfi_questions.apex` (dry run first, read the report, then save). In a non-sandbox org the
-   script refuses to save until its safety check is edited on purpose.
-6. Smoke test as an anonymous visitor: the form loads, the school and start term lists have choices,
-   a submit saves, and no new row appears in the Error object (`hed__Error__c`) for a normal submit.
+**Status (2026-11-02, scratch org only; eda-staging was read from, never written to).**
+
+Done:
+- **Scratch seed data:** nothing to build. The scratch org is created from the `EASY` snapshot (`orgs/dev.json`), which
+  carries the programs, terms and controllers. Apex tests create their own data.
+- **Drift check (read-only retrieve of every Apex class, LWC and Aura bundle in the repo from eda-staging):** 25 components
+  are identical to the repo, 6 differ, 12 are not in staging. Staging's `rfiFormController` and all the LWC files are
+  identical to the staging snapshot taken on 2026-10-28, so nobody has edited them there since, and the deploy overwrites
+  only known differences (F16: the old Title mapping and the text-message checkbox). Left out of the deploy on purpose:
+  `ReusableLookupController` (staging differs by blank lines and brace placement only) and
+  `AcademicInterestSelectorController_TEST` (an older repo test that staging never got; unrelated to this work).
+- **Readiness for the code and the tests in eda-staging:** the only field the new code needs that staging lacks is
+  `Timeline__c`. `hed__Error__c` has no required fields, validation rules or triggers (it has an extra optional restricted
+  picklist, `Error_Status__c`, which the logger does not set). Required fields match scratch for all ten objects the
+  tests write. The record types, the `Minimum Access - Salesforce` profile and `Lead_Preset_Value__mdt` exist.
+  Staging has four active validation rules that scratch lacks (Account, Contact x2, Opportunity); read in full, none can fire
+  for the tests (profile-specific and on edits only, or they need values the tests never set).
+- **Not verifiable without running the tests there:** staging has many more triggers on Contact, Opportunity and Account
+  than scratch (Act-On, DLRS, PS_* and others), and those fire when a test submission creates a Contact and Opportunity.
+  Nothing in the metadata says they will interfere, but only the validation run can show it. That is the main thing to
+  watch in the validation step below.
+- **Repair script:** `scripts/apex/migrate_rfi_questions.apex` held a fourth copy of the mapping. It now reads
+  `rfiQuestionCatalog`, so it must run after the Apex is deployed. Predicted on the real staging data: the same 16 fixes in
+  the same 14 controllers as before. In scratch, seeded with five real staging question lists: the dry run printed the same
+  lines as the old script, a real save followed by a second run changed nothing, and every repaired form built correctly.
+- **Read-only check you can run any time:** `scripts/apex/verify_rfi_rollout.apex` (no writes). Scratch: 13 pass, 0 fail.
+  Baseline in eda-staging before the deploy: 5 pass, 4 fail (all four are things this deploy adds: nine classes, `Timeline__c`,
+  and the two picklist values still active). It also reports the repair counts: 12 Phone, 2 Title and 2 mail questions,
+  1 controller with the start-school question, 1 form with the older split address, and 0 forms without name questions.
+- **Deployment manifest:** `manifest/rfi-staging-deploy.xml`, 17 named components, no permissions and no sharing. A check-only
+  deploy of it to scratch with the five test classes: 17 of 17 components, 155 tests, 0 failures.
+
+Not done, and why: the deploy itself (yours); the repair script's dry run against staging (it needs the catalog class, which staging
+does not have yet; run it right after the Apex deploy); production (separate story, see below).
+
+**Hand-off checklist for the person deploying to eda-staging.** Order matters; fields come before the code that uses them,
+and the Apex before the LWC that imports it.
+1. **Fields** (in the manifest): `Interaction__c.Timeline__c` (new) and the deactivated value in
+   `RFI_Controller__c.Fields_to_Display__c` and `Required_Fields__c`. Deploy only these three first:
+   `sf project deploy start --target-org eda-staging --metadata CustomField:Interaction__c.Timeline__c CustomField:RFI_Controller__c.Fields_to_Display__c CustomField:RFI_Controller__c.Required_Fields__c`
+2. **Make `Timeline__c` readable by whoever validates** (F41). A new field is invisible to everyone until a permission set
+   grants it, and an invisible field makes `rfiQuestionCatalog_TEST` fail with "not a field on Interaction__c". Use a permission
+   set you already hold (or ask admins, section 9 B). Do not use the repo's `RFI_User` or `RFI_Controller_User`: they are not
+   deployed to staging.
+3. **Validate without saving** (this runs the five test classes in the org; it writes nothing):
+   `sf project deploy start --dry-run --manifest manifest/rfi-staging-deploy.xml --target-org eda-staging --test-level RunSpecifiedTests --tests rfiFormController_TEST --tests rfiSubmissionProcessor_TEST --tests rfiSubmissionGuard_TEST --tests rfiErrorLogger_TEST --tests rfiQuestionCatalog_TEST`
+   About 155 tests run and all should pass (the same selection did in scratch; the count can differ by a few in another org). A failure that mentions Act-On, DLRS or another Contact,
+   Opportunity or Account trigger is the unknown described in the status above: send it to me. Do not skip it.
+4. **Deploy** (same command without `--dry-run`). One deploy handles the Apex and the LWC that imports it together; do not
+   deploy the LWC alone before the Apex. Then make a real content change to `requestForInformationApp.app` if a browser keeps an old bundle (the manifest
+   already carries the one-line change that adds `c:rfiForm`).
+5. **Admins** apply the section 9 notes (class access for `rfiFormController` first, and `Timeline__c` for the guest and
+   admin users).
+6. **Check:** `sf apex run --target-org eda-staging --file scripts/apex/verify_rfi_rollout.apex` and read the `VERIFY` lines.
+   All `FAIL` lines should now be `PASS`. Run
+   `sf data query --use-tooling-api --target-org eda-staging --query "SELECT DeveloperName FROM LightningComponentBundle WHERE DeveloperName IN ('rfiForm','rfiFormUtils','rfiUnifiedQuestionManager')"`
+   for the three LWC (the script cannot list them).
+7. **Repair the saved controllers:** `scripts/apex/migrate_rfi_questions.apex`. Run the dry run first and read the report
+   (expect 14 controllers to change). Then set `DRY_RUN = false` and run it again. In a non-sandbox org it refuses to save until
+   its safety check is edited on purpose. Run `verify_rfi_rollout.apex` again; the repair counts should be 0.
+8. **Smoke test as an anonymous visitor:** the form loads, the school and start term lists have choices, a submit saves, and no
+   new row appears in the Error object (`hed__Error__c`) for a normal submit. If a Term or school list is empty, see section 9 C.
+
+**After you deploy, tell me and I will** run `verify_rfi_rollout.apex`, compare the saved test data with what the plan expects, and
+record any differences here. I will not write to eda-staging.
+
+**Production checklist (separate story; same order as above, plus these).**
+- Retrieve first anything that is in production but not in the repo (F15), and compare each component with the repo as was done for
+  eda-staging here (the drift check above is repeatable: retrieve, then diff). Production may not match eda-staging.
+- Run `verify_rfi_rollout.apex` in production before deploying to get its baseline, as was done for eda-staging.
+- The repair script's counts will differ; read its dry run and do not reuse the staging numbers.
+- Give admins the whole of section 9 (A to I) for production; none of it has been applied there.
+- Decide who watches the Error object (section 9 H) before turning the form on in production, since a misconfiguration writes
+  one row per submission.
 
 ---
 
@@ -659,7 +717,7 @@ permission set, which this comparison did not read, so each item says "check".
 | Read on `Academic_Term__c.Term_Start_Date__c` | Not in `RFI User`; `Academic_Term__c` object read not in the set | Needed for the Expected Start Term drop-down |
 | Read on `Program__c` generic filters 6, 7, 8 | Not in `RFI User` | Only for controllers that use those filters |
 
-**B. New field to be created by developers, then given field security by admins.** `Interaction__c.Timeline__c` (picklist: 0-6 Months, 6-12 Months, More than 1 Year, Undecided). Guest needs edit; admin users need read or edit.
+**B. New field to be created by developers, then given field security by admins.** `Interaction__c.Timeline__c` (picklist: 0-6 Months, 6-12 Months, More than 1 Year, Undecided). Guest needs edit; admin users need read or edit. **Whoever validates the deployment also needs read access before the tests run** (finding F41): without it the catalog test cannot see the field.
 
 **C. Sharing rules the Admissions guest user would need (check what exists).** Staging today has guest rules for Programs (all programs) and high school and college Accounts. It has none for:
 - University Department Accounts (the school records the College/School drop-down needs; 32 in eda-staging and 28 in the scratch org)

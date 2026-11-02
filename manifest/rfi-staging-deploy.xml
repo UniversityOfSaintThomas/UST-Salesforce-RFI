@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  What to deploy to eda-staging for the RFI form work (ECRMSF-5545). The commands to validate and deploy it,
+  and the order to do things in, are in docs/RFI_FORM_ROBUSTNESS_PLAN.md under "Hand-off checklist".
+  It lists names, not wildcards, so nothing else in the org is touched.
+
+  It does NOT include permission sets, profiles or sharing rules. Admins own those (plan, section 9).
+  It does NOT include ReusableLookupController (staging differs only in formatting) or
+  AcademicInterestSelectorController_TEST (unrelated to this work).
+-->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Interaction__c.Timeline__c</members>
+        <members>RFI_Controller__c.Fields_to_Display__c</members>
+        <members>RFI_Controller__c.Required_Fields__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>rfiQuestionCatalog</members>
+        <members>rfiErrorLogger</members>
+        <members>rfiSubmissionGuard</members>
+        <members>rfiSubmissionProcessor</members>
+        <members>rfiFormController</members>
+        <members>rfiQuestionCatalog_TEST</members>
+        <members>rfiErrorLogger_TEST</members>
+        <members>rfiSubmissionGuard_TEST</members>
+        <members>rfiSubmissionProcessor_TEST</members>
+        <members>rfiFormController_TEST</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>rfiFormUtils</members>
+        <members>rfiForm</members>
+        <members>rfiUnifiedQuestionManager</members>
+        <name>LightningComponentBundle</name>
+    </types>
+    <types>
+        <members>requestForInformationApp</members>
+        <name>AuraDefinitionBundle</name>
+    </types>
+    <version>67.0</version>
+</Package>
