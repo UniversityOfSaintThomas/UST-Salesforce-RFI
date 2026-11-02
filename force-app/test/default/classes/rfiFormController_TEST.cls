@@ -249,24 +249,30 @@ private class rfiFormController_TEST {
     }
 
     @IsTest
-    static void getRFIForm_legacyPath_customLabels_TEST() {
+    static void getRFIForm_legacyPath_usesTheStandardLabels_andFirstAndLastNameAreAlwaysRequired_TEST() {
+        // The custom label fields were removed from RFI_Controller__c (commit 51fd7cd), so every legacy
+        // question uses its standard label. First and last name are always required because Interaction__c
+        // requires them; other questions are required only when named in Required_Fields__c.
         Test.startTest();
         rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(legacyCtrlName());
         Test.stopTest();
-        Boolean foundFirstName = false, foundEmail = false;
+        Boolean foundFirstName = false;
+        Boolean foundEmail = false;
         for (rfiFormController.rfiField f : wrap.rfiFieldList) {
             if (f.fieldInteractionAPIName == 'First_Name__c') {
-                System.assertEquals('Given Name', f.fieldLabel);
-                System.assertEquals(true, f.isRequired);
+                System.assertEquals('First Name', f.fieldLabel);
+                System.assertEquals(true, f.isRequired, 'Always required, even though Required_Fields__c names only Email');
                 foundFirstName = true;
             }
             if (f.fieldInteractionAPIName == 'Email__c') {
-                System.assertEquals('Email Address', f.fieldLabel);
+                System.assertEquals('Email', f.fieldLabel);
+                System.assertEquals(true, f.isRequired, 'Named in Required_Fields__c');
+                System.assertEquals(true, f.isEmail);
                 foundEmail = true;
             }
         }
-        System.assert(foundFirstName);
-        System.assert(foundEmail);
+        System.assert(foundFirstName, 'First Name question is on the form');
+        System.assert(foundEmail, 'Email question is on the form');
     }
 
     @IsTest
@@ -585,17 +591,23 @@ private class rfiFormController_TEST {
     }
 
     @IsTest
-    static void getRFIForm_unifiedPath_preconfiguredTextarea_TEST() {
-        // Your Question textarea in @TestSetup unified ctrl (id 11)
+    static void getRFIForm_unifiedPath_iHaveAQuestion_isACheckboxThatRevealsTheQuestionBox_TEST() {
+        // "I have a question" is a checkbox; ticking it shows the question box (showDependentField).
+        // It stopped being a plain textarea in commit ba5ff56.
         Test.startTest();
         rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(unifiedCtrlName());
         Test.stopTest();
-        System.assertNotEquals(null, wrap);
-        Boolean foundTextarea = false;
+        Boolean found = false;
         for (rfiFormController.rfiField f : wrap.rfiFieldList) {
-            if (f.isTextarea == true && f.fieldLabel == 'Your Question') foundTextarea = true;
+            if (f.fieldInteractionAPIName == 'Has_Question__c') {
+                found = true;
+                System.assertEquals('Your Question', f.fieldLabel, 'The label saved with the question');
+                System.assertEquals(true, f.isCheckbox);
+                System.assertEquals(true, f.showDependentField, 'Ticking it reveals the question box');
+                System.assertNotEquals(true, f.isTextarea);
+            }
         }
-        System.assert(foundTextarea, 'Should find Your Question textarea field');
+        System.assert(found, 'The I have a question checkbox is on the form');
     }
 
     @IsTest

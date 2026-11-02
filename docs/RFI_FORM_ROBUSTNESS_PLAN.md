@@ -373,7 +373,7 @@ Built:
 Tests:
 - Apex: `rfiSubmissionProcessor_TEST` and `rfiFormController_TEST` run together: 117 tests, 115 pass. The
   2 failures were failing before Phase 2 (`getRFIForm_legacyPath_customLabels_TEST`,
-  `getRFIForm_unifiedPath_preconfiguredTextarea_TEST`).
+  `getRFIForm_unifiedPath_preconfiguredTextarea_TEST`). Both were fixed on 2026-11-02 (see the Phase 3 status).
 - Jest: `rfiFormUtils.test.js` (16) and `rfiForm.submit.test.js` (9) pass. The older `rfiForm.test.js`
   mocks Apex modules that do not exist and is left alone.
 - Mutation checks (break the code on purpose, confirm a test fails): 19 Apex mutations on the processor and
@@ -414,7 +414,8 @@ University Department accounts (F26); staging needs the same decision from admin
   Account query. Still to move behind the same pattern: school Accounts, Programs, Academic
   Terms, and the reads inside `submitRfiInteraction`. Two tests in `rfiFormController_TEST`
   (`legacyPath_customLabels`, `unifiedPath_preconfiguredTextarea`) were already failing before
-  this change (verified against the pre-edit class); they expect labels removed in commit 51fd7cd.
+  this change (verified against the pre-edit class); they expected behaviour removed in commits 51fd7cd
+  and ba5ff56. Fixed 2026-11-02.
 - Keep `allowSave = true` so an RFI is never blocked by a duplicate rule (D6). Any failure
   is logged and the visitor still gets a success path where the data was saved.
 - Clear `Major_Program_*` when Academic Interest is emptied (F14).
@@ -436,7 +437,13 @@ Built:
   message instead of a spinner; the academic interest handler is back and clears on deselect (F14, F36).
 - Unchanged by design: `allowSave = true` (D6); the RFI is saved without any field the user cannot create.
 
-Tests: Apex 140 run, 138 pass (the same 2 older failures); Jest 33 pass. Sixteen Apex mutations and four
+Tests: Apex 140 run, 140 pass; Jest 33 pass. The 2 older failures were stale tests, not code bugs, and were
+rewritten the same day: `getRFIForm_legacyPath_customLabels_TEST` asserted custom labels ("Given Name",
+"Email Address") that commit 51fd7cd removed with the label fields, and is now
+`getRFIForm_legacyPath_usesTheStandardLabels_andFirstAndLastNameAreAlwaysRequired_TEST`;
+`getRFIForm_unifiedPath_preconfiguredTextarea_TEST` expected "I have a question" to be a textarea, which
+commit ba5ff56 changed to a checkbox that reveals the question box, and is now
+`getRFIForm_unifiedPath_iHaveAQuestion_isACheckboxThatRevealsTheQuestionBox_TEST`. Both were mutation-checked. Sixteen Apex mutations and four
 Jest mutations were each caught by a test. Two survived at first and led to new tests: the
 unexpected-exception path, and the older method throwing on a failed save.
 
@@ -488,8 +495,7 @@ value sets come before the code that uses them.
    `RFI_Controller__c.Fields_to_Display__c` and `Required_Fields__c`.
 2. Apex, in this order: `rfiErrorLogger`, `rfiSubmissionGuard`, `rfiSubmissionProcessor`, `rfiFormController`,
    then the tests `rfiErrorLogger_TEST`, `rfiSubmissionGuard_TEST`, `rfiSubmissionProcessor_TEST`,
-   `rfiFormController_TEST` (the two older `getRFIForm_*` failures in `rfiFormController_TEST` were failing
-   before this work). The shared lookup and the Aura app were brought up to date with staging on 2026-10-28.
+   `rfiFormController_TEST` (all 140 tests in the four classes pass). The shared lookup and the Aura app were brought up to date with staging on 2026-10-28.
 3. LWC: `rfiFormUtils` (new), `rfiForm`, `rfiUnifiedQuestionManager`, then the Aura dependency app (make a
    real content change to the app if a browser keeps an old bundle).
 4. Admins apply the section 9 notes (class access for `rfiFormController` first).
