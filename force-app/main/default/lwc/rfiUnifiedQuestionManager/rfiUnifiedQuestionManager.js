@@ -229,7 +229,7 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         'First Name': 'First_Name__c',
         'High School Attended': 'High_School_or_College__c',
         'High School Graduation Year': 'High_School_Graduation_Year__c',
-        'Phone': 'Home_Phone__c',
+        'Phone': 'Mobile_Phone__c',
         'Home Phone': 'Home_Phone__c',
         'Home and Mobile Phone': 'Home_Phone__c',
         'How did you hear about us': 'Heard_About_Us__c',

@@ -53,7 +53,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Academic_Program__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -228,7 +228,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Country__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -273,7 +273,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Date_Inquiry__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -408,7 +408,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Interaction_Source__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -908,12 +908,12 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Opportunity_Record_Type__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Opportunity_Stage__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -948,12 +948,12 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Recruitment_Program_Associated_Schools__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Recruitment_Program__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -1013,12 +1013,12 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.State__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
+        <editable>true</editable>
         <field>Interaction__c.Term__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -2089,6 +2089,15 @@
         <viewAllFields>false</viewAllFields>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>false</allowDelete>
+        <allowEdit>false</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords>
+        <object>Opportunity</object>
+        <viewAllRecords>false</viewAllRecords>
+    </objectPermissions>
     <pageAccesses>
         <apexPage>requestForInformationPage</apexPage>
         <enabled>true</enabled>
@@ -2107,6 +2116,14 @@
     </recordTypeVisibilities>
     <recordTypeVisibilities>
         <recordType>Program__c.Recruitment_Program</recordType>
+        <visible>true</visible>
+    </recordTypeVisibilities>
+    <recordTypeVisibilities>
+        <recordType>Opportunity.Applicant_Opportunity</recordType>
+        <visible>true</visible>
+    </recordTypeVisibilities>
+    <recordTypeVisibilities>
+        <recordType>Opportunity.Inquiry_Opportunity</recordType>
         <visible>true</visible>
     </recordTypeVisibilities>
     <tabSettings>

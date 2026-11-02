@@ -82,6 +82,7 @@ public with sharing class rfiFormController {
             }
             List<RFI_Controller__c> controllers = [
                     SELECT
+                        Name,
                         Academic_Level__c,
                         School_College__c,
                         Citizenship_Type__c,
@@ -131,7 +132,10 @@ public with sharing class rfiFormController {
             'I would like program information to be mailed to me' => 'Mailed_Program_Information_Requested__c',
             'Mail Information' => 'Mailed_Program_Information_Requested__c',
             'Timeline to Enrollment' => 'Timeline__c',
-            'I will apply to St Thomas Law as a' => 'Admit_Type__c'
+            'I will apply to St Thomas Law as a' => 'Admit_Type__c',
+            // The single Phone question saves to the mobile phone, as the old form did.
+            // Provisional: the business may later decide on a single phone number.
+            'Phone' => 'Mobile_Phone__c'
     };
 
     /** Older address questions that are replaced by the single Address question. */
@@ -227,8 +231,18 @@ public with sharing class rfiFormController {
             notFound.setMessage('RFI Controller not found: ' + rfiControllerName);
             throw notFound;
         }
+        return buildForm(rfiController);
+    }
 
-
+    /**
+     * Builds the form for one RFI Controller: its questions, defaults and options. Both loading the form
+     * and checking a submission use it, so the fields a submission may set are exactly the fields the visitor was shown.
+     *
+     * @param rfiController The controller record
+     * @return The form
+     */
+    @TestVisible
+    private static interactionRFIFields buildForm(RFI_Controller__c rfiController) {
         interactionRFIFields interactionAndRfi = new interactionRFIFields();
         interactionAndRfi.academicLevel = rfiController.Academic_Level__c;
         interactionAndRfi.schoolCollege = rfiController.School_College__c;
@@ -559,7 +573,7 @@ public with sharing class rfiFormController {
                     }
                     when 'Phone' {
                         newField.fieldLabel = 'Phone';
-                        newField.fieldInteractionAPIName = 'Home_Phone__c';
+                        newField.fieldInteractionAPIName = 'Mobile_Phone__c';
                         newField.isTel = true;
                     }
                     when 'Home Phone' {
@@ -1127,67 +1141,204 @@ public with sharing class rfiFormController {
         return results;
     }
 
-    //Submit the RFI Lead record
+    /**
+     * Saves an RFI submission. Kept so a browser that still has the older form loaded keeps working; it
+     * saves the answers without the per-controller values (presets and program rules).
+     *
+     * @param interaction The answers the visitor gave
+     * @return The Id of the new Interaction
+     */
     @AuraEnabled
     public static Id submitRfiInteraction(Interaction__c interaction) {
-        // Sanitize: copy only valid Interaction fields from the incoming record
-        System.debug('Received Interaction Record: ' + JSON.serializePretty(interaction));
+        Id savedId = submitRfiForm(interaction, null);
+        if (savedId == null) {
+            throw new AuraHandledException('Your information could not be saved. Please try again later.');
+        }
+        return savedId;
+    }
+
+    /**
+     * Tells whether the browser only sent back a value the controller gave the form. The page returns its whole
+     * Interaction, owner and lead source included, so that echo is expected and not worth reporting.
+     *
+     * @param fieldName The API name of the ignored field
+     * @param sentValue The value the browser sent
+     * @param controllerDefaults The Interaction the controller started the form with
+     * @return True when the field is the owner or the lead source and the value is the controller's own
+     */
+    @TestVisible
+    private static Boolean isEchoOfControllerValue(String fieldName, Object sentValue, Interaction__c controllerDefaults) {
+        if (controllerDefaults == null || sentValue == null) {
+            return false;
+        }
+        String key = fieldName.toLowerCase();
+        if (key != 'ownerid' && key != 'lead_source__c') {
+            return false;
+        }
+        Object controllerValue = controllerDefaults.get(fieldName);
+        return controllerValue != null && String.valueOf(controllerValue) == String.valueOf(sentValue);
+    }
+
+    /** Lets a test make submitRfiForm hit an unexpected exception. Never set outside tests. */
+    @TestVisible
+    private static String failureForTest;
+
+    /**
+     * Saves an RFI submission and completes it with the values the old Lead flow used to set.
+     *
+     * Only the fields that belong to the form are taken from the browser (see rfiSubmissionGuard). An RFI is
+     * never blocked by a missing field permission, a duplicate, or a failed completion step: the Interaction
+     * is saved without what could not be set, and one Error record lists the gaps. When the Interaction
+     * itself cannot be saved, an Error record with the controller name and what was entered is written and
+     * null is returned. It returns instead of throwing because an exception would roll the Error record back.
+     *
+     * @param interaction The answers the visitor gave
+     * @param rfiControllerName The Name of the RFI Controller the form was loaded from, or null when unknown
+     * @return The Id of the new Interaction, or null when it could not be saved
+     */
+    @AuraEnabled
+    public static Id submitRfiForm(Interaction__c interaction, String rfiControllerName) {
         if (interaction == null) {
             throw new AuraHandledException('No Interaction record provided.');
         }
-        if (String.isNotBlank(interaction.Major_Program_1__c)) {
-            //using major_program__c id find program with the same name that is of the record type academic program
-            List<Program__c> programs = [
-                    SELECT Name, Id
-                    FROM Program__c
-                    WHERE Recruitment_Program__c = :interaction.Major_Program_1__c
-                    AND RecordType.DeveloperName = 'Academic_Program'
-                    AND Active__c = TRUE
-                    WITH USER_MODE
-                    LIMIT 1
-            ];
-            if (!programs.isEmpty()) {
-                interaction.Recruitment_Program__c = programs[0].Id;
-                interaction.Academic_Program__c = programs[0].Id;
-            }
-        }
-
-        //Loop through the interaction fields and only copy those that exist and are insertable on the Interaction__c object
-        Map<String, Schema.SObjectField> fieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
-        Interaction__c cleanInteraction = new Interaction__c();
-
-        Map<String, Object> interactionFields = interaction.getPopulatedFieldsAsMap();
-        for (String fieldName : interactionFields.keySet()) {
-            if (fieldMap.containsKey(fieldName)) {
-                Schema.DescribeFieldResult fieldDescribe = fieldMap.get(fieldName).getDescribe();
-                if (fieldDescribe.isCreateable()) {
-                    cleanInteraction.put(fieldName, interactionFields.get(fieldName));
-                } else {
-                    System.debug('Field ' + fieldName + ' is not creatable on Interaction__c.');
-                }
-            } else {
-                System.debug('Field ' + fieldName + ' does not exist on Interaction__c or is not creatable.');
-            }
-        }
-
         if (!Schema.SObjectType.Interaction__c.isCreateable()) {
             throw new AuraHandledException('Insufficient permissions to submit RFI form.');
         }
+        Map<String, Object> incomingFields = interaction.getPopulatedFieldsAsMap();
+        String submittedData = JSON.serializePretty(incomingFields);
+        List<String> gaps = new List<String>();
 
-        Database.DMLOptions dml = new Database.DMLOptions();
-        //Will create duplicate records if not allowed
-        dml.duplicateRuleHeader.allowSave = true;
-        Database.SaveResult result = Database.insert(cleanInteraction, dml);
-        if (!result.isSuccess()) {
-            String errorMessage = '';
-            for (Database.Error err : result.getErrors()) {
-                System.debug(JSON.serializePretty(err));
-                errorMessage += err.getMessage() + ' ';
+        try {
+            if (String.isNotBlank(failureForTest)) {
+                throw new IllegalArgumentException(failureForTest);
             }
-            throw new AuraHandledException(errorMessage.trim());
-        }
+            RFI_Controller__c rfiController = String.isBlank(rfiControllerName) ? null : new rfiControllerReader().getByName(rfiControllerName);
+            interactionRFIFields form = null;
+            Set<String> allowedFields = null;
+            if (rfiController == null) {
+                gaps.add(String.isBlank(rfiControllerName)
+                        ? 'No RFI Controller name was sent, so the fields could not be checked against the form.'
+                        : 'RFI Controller not found: ' + rfiControllerName);
+            } else {
+                try {
+                    form = buildForm(rfiController);
+                    allowedFields = rfiSubmissionGuard.allowedFieldsFor(form.rfiFieldList, form.interaction);
+                } catch (Exception formError) {
+                    form = null;
+                    allowedFields = null;
+                    gaps.add('The form could not be rebuilt to check the fields, so only the fields the server controls were blocked: ' + formError.getMessage());
+                }
+            }
 
-        return result.getId();
+            rfiSubmissionGuard.FilterResult filtered = rfiSubmissionGuard.filterIncoming(incomingFields, allowedFields);
+            Interaction__c cleanInteraction = rfiSubmissionGuard.buildRecord(filtered);
+            List<String> unexpectedFields = new List<String>();
+            for (String ignoredField : filtered.ignored) {
+                if (form == null || !isEchoOfControllerValue(ignoredField, incomingFields.get(ignoredField), form.interaction)) {
+                    unexpectedFields.add(ignoredField);
+                }
+            }
+            if (!unexpectedFields.isEmpty()) {
+                gaps.add('Ignored fields the form does not ask for: ' + String.join(unexpectedFields, ', '));
+            }
+
+            // The controller, not the browser, decides the owner and the lead source
+            if (form != null && form.interaction != null) {
+                if (form.interaction.OwnerId != null) {
+                    cleanInteraction.OwnerId = form.interaction.OwnerId;
+                }
+                if (String.isNotBlank(form.interaction.Lead_Source__c)) {
+                    cleanInteraction.Lead_Source__c = form.interaction.Lead_Source__c;
+                }
+            }
+
+            // Complete the record with the values the old flow set. Never let this block the submission.
+            try {
+                for (String warning : rfiSubmissionProcessor.apply(cleanInteraction, rfiController)) {
+                    gaps.add(warning);
+                }
+            } catch (Exception completionError) {
+                gaps.add('Completion failed, the answers were saved as they are: ' + completionError.getMessage());
+            }
+
+            // A field the running user may not create makes the whole insert fail for a guest. An RFI must
+            // never be lost over one missing field permission, so those fields are dropped and the rest is saved.
+            List<String> removedFields = new List<String>();
+            Interaction__c recordToSave = removeFieldsTheUserCannotCreate(cleanInteraction, removedFields);
+            if (!removedFields.isEmpty()) {
+                gaps.add('Saved without fields the user cannot create (check the RFI User permission set): ' + String.join(removedFields, ', '));
+            }
+
+            Database.DMLOptions dml = new Database.DMLOptions();
+            //Will create duplicate records if not allowed
+            dml.duplicateRuleHeader.allowSave = true;
+            Database.SaveResult result = Database.insert(recordToSave, dml);
+            if (!result.isSuccess()) {
+                String errorMessage = '';
+                for (Database.Error err : result.getErrors()) {
+                    errorMessage += err.getMessage() + ' ';
+                }
+                rfiErrorLogger.log(rfiErrorLogger.failureType, rfiControllerName,
+                        'Creation of Interaction failed on insert.\nError: ' + errorMessage.trim(), submittedData, null);
+                return null;
+            }
+            for (String gap : gaps) {
+                System.debug(LoggingLevel.WARN, 'RFI saved with a gap: ' + gap);
+            }
+            if (!gaps.isEmpty()) {
+                rfiErrorLogger.log(rfiErrorLogger.gapsType, rfiControllerName,
+                        'The Interaction ' + result.getId() + ' was saved, but:\n- ' + String.join(gaps, '\n- '), submittedData, null);
+            }
+            return result.getId();
+        } catch (Exception submissionError) {
+            rfiErrorLogger.log(rfiErrorLogger.failureType, rfiControllerName,
+                    'Creation of Interaction failed because of a caught exception in rfiFormController.submitRfiForm().', submittedData, submissionError);
+            return null;
+        }
+    }
+
+    /**
+     * Loads an RFI Controller the same way the submit and form methods do.
+     *
+     * @param rfiControllerName The exact Name of the RFI_Controller__c record
+     * @return The matching record, or null when none exists
+     */
+    @TestVisible
+    private static RFI_Controller__c loadControllerByName(String rfiControllerName) {
+        return new rfiControllerReader().getByName(rfiControllerName);
+    }
+
+    /**
+     * Returns a copy of the record without the fields the running user has no permission to create. The
+     * names of the removed fields are written to the debug log as a warning so an admin can find the
+     * missing permission.
+     *
+     * @param record The record about to be inserted
+     * @return The record with only creatable fields
+     */
+    @TestVisible
+    private static Interaction__c removeFieldsTheUserCannotCreate(Interaction__c record) {
+        return removeFieldsTheUserCannotCreate(record, new List<String>());
+    }
+
+    /**
+     * Returns a copy of the record without the fields the running user has no permission to create, and
+     * reports which fields were removed.
+     *
+     * @param record The record about to be inserted
+     * @param removedNames Receives the sorted API names of the removed fields
+     * @return The record with only creatable fields
+     */
+    @TestVisible
+    private static Interaction__c removeFieldsTheUserCannotCreate(Interaction__c record, List<String> removedNames) {
+        SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, new List<Interaction__c>{ record });
+        Set<String> removedFields = decision.getRemovedFields().get('Interaction__c');
+        if (removedFields != null && !removedFields.isEmpty()) {
+            List<String> sortedNames = new List<String>(removedFields);
+            sortedNames.sort();
+            removedNames.addAll(sortedNames);
+        }
+        return (Interaction__c) decision.getRecords()[0];
     }
 
     /**
@@ -1215,7 +1366,7 @@ public with sharing class rfiFormController {
                     'expected_start_term__c' => 'Intended_Start_Term__c',
                     'high_school_attended__c' => 'High_School_or_College__c',
                     'high_school_grad_year__c' => 'High_School_Graduation_Year__c',
-                    'phone__c' => 'Home_Phone__c',
+                    'phone__c' => 'Mobile_Phone__c',
                     'comments__c' => 'Has_Question__c',
                     'mail_me__c' => 'Mailed_Program_Information_Requested__c',
                     'ok_to_text__c' => 'Receive_Texts__c',
@@ -1447,6 +1598,10 @@ public with sharing class rfiFormController {
         } catch (Exception e) {
             System.debug('❌ Error processing unified questions: ' + e.getMessage());
             System.debug(e.getStackTraceString());
+            // A form with some questions missing would silently lose answers, so report the failure instead
+            AuraHandledException formError = new AuraHandledException('The questions for this form could not be loaded: ' + e.getMessage());
+            formError.setMessage('The questions for this form could not be loaded: ' + e.getMessage());
+            throw formError;
         }
     }
 }

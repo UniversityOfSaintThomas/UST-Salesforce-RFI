@@ -7,7 +7,7 @@
 //
 // What it repairs
 //   Saved question JSON (RFI_Controller__c.Unified_Questions__c):
-//     - Title, the mail question, Timeline: set the correct Interaction field
+//     - Title, the mail question, Timeline, Phone: set the correct Interaction field (Phone saves to Mobile_Phone__c)
 //     - "I will apply to St Thomas Law as a": set Admit_Type__c
 //     - "When do you plan to start school": removed
 //     - Address 1/2/3, City, State, Zipcode, Country: collapsed into one "Address" question
@@ -28,7 +28,8 @@ Map<String, String> correctedTarget = new Map<String, String>{
     'I would like program information to be mailed to me' => 'Mailed_Program_Information_Requested__c',
     'Mail Information' => 'Mailed_Program_Information_Requested__c',
     'Timeline to Enrollment' => 'Timeline__c',
-    'I will apply to St Thomas Law as a' => 'Admit_Type__c'
+    'I will apply to St Thomas Law as a' => 'Admit_Type__c',
+    'Phone' => 'Mobile_Phone__c'
 };
 Set<String> splitAddress = new Set<String>{ 'Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country' };
 String removedQuestion = 'When do you plan to start school';

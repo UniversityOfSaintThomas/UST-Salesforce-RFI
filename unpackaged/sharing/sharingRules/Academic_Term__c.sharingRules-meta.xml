@@ -14,4 +14,18 @@
         </criteriaItems>
         <includeHVUOwnedRecords>false</includeHVUOwnedRecords>
     </sharingGuestRules>
+    <sharingGuestRules>
+        <fullName>Academic_Term_Guest_User_Applicant</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>Academic Term Guest User Applicant</label>
+        <sharedTo>
+            <guestUser>EASY_Applicant_Portal</guestUser>
+        </sharedTo>
+        <criteriaItems>
+            <field>Name</field>
+            <operation>notEqual</operation>
+            <value>null</value>
+        </criteriaItems>
+        <includeHVUOwnedRecords>false</includeHVUOwnedRecords>
+    </sharingGuestRules>
 </SharingRules>

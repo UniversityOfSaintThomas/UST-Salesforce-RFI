@@ -6,7 +6,7 @@ import {api, LightningElement, track, wire} from 'lwc';
 import {getFieldValue, getRecord} from 'lightning/uiRecordApi';
 import {refreshApex} from '@salesforce/apex';
 import getRFIForm from '@salesforce/apex/rfiFormController.getRFIForm';
-import submitRfiInteraction from '@salesforce/apex/rfiFormController.submitRfiInteraction';
+import submitRfiForm from '@salesforce/apex/rfiFormController.submitRfiForm';
 import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 import {NavigationMixin, CurrentPageReference} from 'lightning/navigation';
 import RFI_CONTROLLER_NAME from '@salesforce/schema/RFI_Controller__c.Name';
@@ -16,6 +16,11 @@ import RFI_CONTROLLER_FIELDS_ORDER from '@salesforce/schema/RFI_Controller__c.Fi
 import RFI_CONTROLLER_ACADEMIC_INTERESTS from '@salesforce/schema/RFI_Controller__c.Academic_Interests_To_Display__c';
 import RFI_CONTROLLER_UNIFIED_QUESTIONS from '@salesforce/schema/RFI_Controller__c.Unified_Questions__c';
 import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
+import { applyFieldAnswer, composeDescription, isEmptyAnswer, toSemicolonList, withAnswer, withMajorPrograms } from 'c/rfiFormUtils';
+
+// Name of the box that opens when a visitor ticks "I have a question". It is not an Interaction field:
+// its text is combined with "Tell us about yourself" into the Description before submit.
+const QUESTION_TEXT_NAME = 'rfiQuestionComments';
 
 const RFI_CONTROLLER_FIELDS = [
     RFI_CONTROLLER_NAME,
@@ -68,6 +73,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     values = {};
     countryOptions = [];
     saving = false;
+    @track loadFailed = false;
 
     // Store the current page reference for URL parameters
     currentPageReference;
@@ -164,6 +170,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         if (data) {
             // Only process if data actually changed
             const dataString = JSON.stringify(data);
+            this.loadFailed = false;
             if (dataString !== this._lastDataString) {
                 this._lastDataString = dataString;
                 this._processFormData(data);
@@ -171,6 +178,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         } else if (error) {
             console.error('Failed to fetch RFI form data', error);
             this.rfiData = undefined;
+            this.loadFailed = true;
         }
     }
 
@@ -300,80 +308,49 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     handleCantFindSchoolChange = (event) => {
         this.cantFindSchool = event.target.checked;
 
-        // If checkbox is checked, clear the school lookup value
-        if (this.cantFindSchool) {
-            // Clear High_School_or_College__c field
-            this.interaction = {...this.interaction, High_School_or_College__c: ''};
-        }
+        // Ticking the box means the school is typed, not looked up: drop the looked-up school.
+        // Unticking means it is looked up: drop the typed name.
+        const staleField = this.cantFindSchool ? 'High_School_or_College__c' : 'School_Name_Text__c';
+        this.interaction = withAnswer(this.interaction, staleField, '');
     }
 
     // Handler for manual school name entry
     handleManualSchoolEntry = (event) => {
-        const schoolName = event.target.value;
-        // Map to High_School_or_College__c field
-        this.interaction = {...this.interaction, High_School_or_College__c: schoolName};
+        // A typed name cannot go into the school lookup. It is saved as text in School_Name_Text__c.
+        this.interaction = withAnswer(this.interaction, 'School_Name_Text__c', event.target.value);
     }
 
     // Handler for the reusable lookup component's custom event 'valueselected'
     handleSchoolSelect = (event) => {
-        // the lookup component may communicate the target field name in a few ways.
-        // Try event.detail.fieldName first, then dataset on currentTarget/target.
-        let name = event.detail?.fieldName || event.currentTarget?.dataset?.fieldName || event.target?.dataset?.fieldName;
         const detail = event.detail || {};
         const selectedId = detail.id || '';
         const display = detail.mainField ? (detail.mainField + (detail.subField ? ' - ' + detail.subField : '')) : '';
 
-        // fallback: if name is still not found, pick the first field marked as isSchoolLookup
-        if (!name) {
-            const fallbackIdx = this._fields.findIndex(f => f.isSchoolLookup);
-            if (fallbackIdx > -1) {
-                name = this._fields[fallbackIdx].name;
-            }
-        }
-
-        if (!name) {
-            // nothing we can do
+        // The lookup does not say which question it belongs to, so find the school question.
+        const idx = this._fields.findIndex(f => f.isSchoolLookup);
+        if (idx === -1) {
             return;
         }
-
-        // update values map
-        this.values = {...this.values, [name]: selectedId};
-
-        // find field and update its value and the interaction SObject mapping
-        const idx = this._fields.findIndex(f => f.name === name);
-        if (idx > -1) {
-            const field = this._fields[idx];
-            const api = (field.fieldInteractionAPIName || '').trim();
-            const updated = {...field, value: selectedId, selectedLabel: display};
-            this._fields = [
-                ...this._fields.slice(0, idx),
-                updated,
-                ...this._fields.slice(idx + 1)
-            ];
-            // Invalidate cache
-            this._processedFieldsCache = null;
-            this._processedFieldsCacheKey = null;
-
-            if (api) {
-                this.interaction = {...this.interaction, [api]: selectedId};
-            }
-        }
+        const field = this._fields[idx];
+        const api = (field.fieldInteractionAPIName || '').trim();
+        this.values = {...this.values, [api]: selectedId};
+        this._fields = [
+            ...this._fields.slice(0, idx),
+            {...field, value: selectedId, selectedLabel: display},
+            ...this._fields.slice(idx + 1)
+        ];
+        this._processedFieldsCache = null;
+        this._processedFieldsCacheKey = null;
+        this.interaction = withAnswer(this.interaction, api, selectedId);
     }
 
     handleAcademicInterestChange = (event) => {
         const value = event.detail?.value ?? event.detail;
-        //Apply multi select values to Major_Program__c, Major_Program_2__c, Major_Program_3__c, Major_Program_4__c fields
-        if (!Array.isArray(value)) return;
-        if (value.length > 0) {
-            //map to Major_Program__c, Major_Program_2__c, Major_Program_3__c, Major_Program_4__c
-            this.interaction = {
-                ...this.interaction,
-                Major_Program_1__c: value[0] || '',
-                Major_Program_2__c: value[1] || '',
-                Major_Program_3__c: value[2] || '',
-                Major_Program_4__c: value[3] || ''
-            };
+        // Emptying the selection must clear all four Major Program fields (F14)
+        if (!Array.isArray(value)) {
+            return;
         }
+        this.interaction = withMajorPrograms(this.interaction, value);
     }
 
     handleCheckboxChange = (event) => {
@@ -464,7 +441,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     handleMultiSelectChange = (event) => {
         const name = event.target.name;
         const value = event.detail?.value ?? event.detail;
-        const fieldIndex = this._fields.findIndex(f => f.name === name);
+        const fieldIndex = this._fields.findIndex(f => f.fieldInteractionAPIName === name);
         if (fieldIndex === -1) return;
 
         const field = this._fields[fieldIndex];
@@ -480,9 +457,8 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this._processedFieldsCache = null;
         this._processedFieldsCacheKey = null;
 
-        if (field.fieldInteractionAPIName) {
-            this.interaction = {...this.interaction, [field.fieldInteractionAPIName]: value};
-        }
+        // Salesforce stores a multi-select as the choices joined with semicolons, not as a list
+        this.interaction = withAnswer(this.interaction, field.fieldInteractionAPIName, toSemicolonList(value));
     }
 
     handlePicklistChange = (event) => {
@@ -524,6 +500,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             Mailing_City__c: address.city || '',
             Mailing_Country__c: countryLabel || '',
             Mailing_State__c: stateLabel || '',
+            State__c: address.province || '',
             Mailing_Postal_Code__c: address.postalCode || ''
         };
     }
@@ -555,21 +532,41 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             });
         }
 
-        // Collect input values for valid inputs
+        // Collect what is typed into the boxes. A blank box never overwrites an answer (several boxes can
+        // save to the same field), and a blank box falls back to the controller default.
         if (isValid) {
-            const allInputs = this.template.querySelectorAll('lightning-input');
-            allInputs.forEach(input => {
+            const answers = {...this.interaction};
+            const defaults = this.rfiData?.interaction || {};
+            const answered = new Set();
+
+            this.template.querySelectorAll('lightning-input').forEach(input => {
                 if (input.name) {
-                    this.interaction[input.name] = input.type === 'checkbox' ? input.checked : input.value;
+                    applyFieldAnswer(answers, defaults, answered, input.name, input.type === 'checkbox' ? input.checked : input.value);
                 }
             });
 
-            const allTextareas = this.template.querySelectorAll('lightning-textarea');
-            allTextareas.forEach(textarea => {
-                if (textarea.name) {
-                    this.interaction[textarea.name] = textarea.value;
+            let questionText = '';
+            let aboutYourselfText = '';
+            this.template.querySelectorAll('lightning-textarea').forEach(textarea => {
+                if (textarea.name === QUESTION_TEXT_NAME) {
+                    questionText = textarea.value;
+                } else if (textarea.name === 'Description__c') {
+                    if (!isEmptyAnswer(textarea.value)) {
+                        aboutYourselfText = textarea.value;
+                    }
+                } else if (textarea.name) {
+                    applyFieldAnswer(answers, defaults, answered, textarea.name, textarea.value);
                 }
             });
+
+            // Both long answers share one field, as before, each under its own heading
+            const description = composeDescription(questionText, aboutYourselfText);
+            if (description) {
+                answers.Description__c = description;
+            } else if (!answered.has('Description__c')) {
+                delete answers.Description__c;
+            }
+            this.interaction = answers;
         }
 
         return isValid;
@@ -617,8 +614,12 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             console.log('Submitting Interaction:', JSON.stringify(this.interaction, null, 2));
 
             try {
-                const result = await submitRfiInteraction({ interaction: this.interaction });
+                const result = await submitRfiForm({ interaction: this.interaction, rfiControllerName: this.effectiveControllerName });
                 console.log('Interaction submission result:', result);
+                if (!result) {
+                    // The server returns no Id when it could not save the RFI (it has recorded the problem)
+                    throw new Error('The submission was not saved.');
+                }
 
                 this.dispatchEvent(
                     new ShowToastEvent({
@@ -688,6 +689,14 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             this._urlParamsCache[param] = '';
             return '';
         }
+    }
+
+    get showSpinner() {
+        return !this.hasData && !this.loadFailed;
+    }
+
+    get showLoadFailure() {
+        return !this.hasData && this.loadFailed;
     }
 
     get hasData() {

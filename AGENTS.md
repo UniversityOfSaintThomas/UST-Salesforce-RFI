@@ -79,7 +79,6 @@ The form is embedded on external marketing/department websites using Lightning O
 ### Tech & conventions
 
 - **Stack:** Salesforce DX + CumulusCI + IntelliJ IDEA + Illuminated Cloud; LWC + Apex
-- **Shell:** PowerShell (Windows) — never use cmd syntax
 - **Org type:** Scratch orgs managed by CumulusCI (`--org dev`)
 - **Testing:** Jest (LWC unit), Apex tests, Robot Framework (E2E)
 - **Deploys:** always **targeted** (`cci task run deploy --path <path> --org dev`) — never

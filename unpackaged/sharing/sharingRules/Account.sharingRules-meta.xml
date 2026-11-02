@@ -19,4 +19,37 @@
         </criteriaItems>
         <includeHVUOwnedRecords>false</includeHVUOwnedRecords>
     </sharingGuestRules>
+    <sharingGuestRules>
+        <fullName>Account_Guest_User_Departments</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>Account Guest User Departments</label>
+        <sharedTo>
+            <guestUser>EASY_Applicant_Portal</guestUser>
+        </sharedTo>
+        <criteriaItems>
+            <field>RecordTypeId</field>
+            <operation>equals</operation>
+            <value>University Department</value>
+        </criteriaItems>
+        <includeHVUOwnedRecords>false</includeHVUOwnedRecords>
+    </sharingGuestRules>
+    <sharingGuestRules>
+        <fullName>Account_Guest_User_Term_Owner</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>Account Guest User Term Owner</label>
+        <sharedTo>
+            <guestUser>EASY_Applicant_Portal</guestUser>
+        </sharedTo>
+        <criteriaItems>
+            <field>Name</field>
+            <operation>equals</operation>
+            <value>University of St Thomas</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>RecordTypeId</field>
+            <operation>equals</operation>
+            <value>Administrative</value>
+        </criteriaItems>
+        <includeHVUOwnedRecords>false</includeHVUOwnedRecords>
+    </sharingGuestRules>
 </SharingRules>

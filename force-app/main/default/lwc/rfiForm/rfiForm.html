@@ -6,8 +6,11 @@
     <lightning-card>
         <div class="slds-grid slds-wrap slds-gutters_medium slds-m-around_xx-small" style="min-height:100px;">
             <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-2">
-                <template if:false={hasData}>
+                <template if:true={showSpinner}>
                     <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </template>
+                <template if:true={showLoadFailure}>
+                    <p class="slds-text-color_error slds-p-around_small" role="alert">We could not load this form. Please try again later.</p>
                 </template>
                 <template if:true={hasData}>
                     <div class="slds-p-vertical_small">
@@ -28,7 +31,7 @@
                                                 <c-reusable-lookup label={f.fieldLabel} selected-icon-name="standard:account" object-label="" object-api-name="Account" field-api-name="Name" other-field-api-name="BillingCity,BillingState,billingPostalCode" placeholder="Search schools" required={f.isRequired} record-type-name="Educational Institution" onvalueselected={handleSchoolSelect} type="High School"></c-reusable-lookup>
                                             </template>
                                             <template if:true={cantFindSchool}>
-                                                <lightning-input type="text" label="Enter your school name" name="High_School_or_College__c" placeholder="Enter your school name" required={f.isRequired} onchange={handleManualSchoolEntry}></lightning-input>
+                                                <lightning-input type="text" label="Enter your school name" name="School_Name_Text__c" placeholder="Enter your school name" required={f.isRequired} onchange={handleManualSchoolEntry}></lightning-input>
                                             </template>
                                             <div class="slds-p-top_xx-small">
                                                 <lightning-input type="checkbox" label="I can't find my school" checked={cantFindSchool} onchange={handleCantFindSchoolChange}></lightning-input>
@@ -81,7 +84,7 @@
                                         <lightning-input type="checkbox" label={f.fieldLabel} name={f.fieldInteractionAPIName} checked={f.value} required={f.isRequired} onchange={handleCheckboxChange}></lightning-input>
                                         <template if:true={f.showDependentField}>
                                             <template if:true={iHaveAQuestion}>
-                                                <lightning-textarea label="Questions/Comments" name="Description" required=true></lightning-textarea>
+                                                <lightning-textarea label="Questions/Comments" name="rfiQuestionComments" required=true></lightning-textarea>
                                             </template>
                                         </template>
                                     </template>

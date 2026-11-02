@@ -136,10 +136,10 @@ suggests it but no submission was run.
 | F8 | "I can't find my school" writes typed text into `High_School_or_College__c`, which is a Lookup. The flow copied `hed__Most_Recent_School__c` to `School_Name_Text__c`, which looks like the intended home for typed names. Probe 2026-10-28: assigning typed text to the lookup deserializes to null with no error, so the answer is lost silently. | `handleManualSchoolEntry`; flow mapping; probe. | Verified code path and silent loss; old form's manual-school handler not read in detail |
 | F9 | `State__c` (restricted) is never written by the form, so `Opportunity.State__c` is blank for NEW (measured, case D: OLD = MN, NEW = blank). `Country__c` appears populated on NEW records only because the field has a picklist default of "United States of America", so an international applicant would be recorded as the USA. The `Mailing_*` pair matches the old flow: Contact mailing fields were identical in OLD and NEW for case D. | Interaction describe; cases A and D. | Verified (measured) |
 | F10 | Both Description writers collide (section 2.1). | `rfiFormController.cls`, `Has_Question__c` help text. | Verified |
-| F11 | `submitRfiInteraction` copies any creatable field the browser sends, including `OwnerId`, `Lead_Source__c` and opportunity fields. The endpoint is reachable by guests through Lightning Out. | Loop over `getPopulatedFieldsAsMap()`. | Verified code path |
-| F12 | Failures are silent: `processUnifiedQuestions` catches every exception and returns a partial form; non-creatable fields are skipped with only a debug line; no error record is written. | `rfiFormController.cls`. | Verified |
+| F11 | `submitRfiInteraction` copies any creatable field the browser sends, including `OwnerId`, `Lead_Source__c` and opportunity fields. The endpoint is reachable by guests through Lightning Out. | Loop over `getPopulatedFieldsAsMap()`. | Verified code path **Fixed in scratch (2026-11-02):** `rfiSubmissionGuard` accepts only fields that belong to the controller's form, tracking fields and the controller's defaults; owner and lead source come from the controller; ~27 server-controlled fields are never taken from the browser. Ignored fields are reported in one Error record. |
+| F12 | Failures are silent: `processUnifiedQuestions` catches every exception and returns a partial form; non-creatable fields are skipped with only a debug line; no error record is written. | `rfiFormController.cls`. | Verified **Fixed in scratch (2026-11-02):** failures write `hed__Error__c` (controller name, what was entered, cause) via `rfiErrorLogger`; `submitRfiForm` returns null instead of throwing so the record is not rolled back, and the page shows an error. A form whose questions cannot be read now fails with a clear message instead of loading partly. |
 | F13 | Duplicate behavior changed from block to allow (section 2.1). | Both Apex classes. | Resolved (D6): RFIs are always accepted. Keep `allowSave = true`; do not add blocking. |
-| F14 | Deselecting all Academic Interests leaves the previous `Major_Program_1..4__c` values in place. | `handleAcademicInterestChange` returns early when the list is empty. | Verified |
+| F14 | Deselecting all Academic Interests leaves the previous `Major_Program_1..4__c` values in place. | `handleAcademicInterestChange` returns early when the list is empty. | Verified **Fixed in scratch (2026-11-02):** emptying Academic Interest clears all four `Major_Program_*` fields (`withMajorPrograms`). |
 | F15 | Repo did not match eda-staging: 8 custom Interaction fields existed only in the org. **Done 2026-10-28:** 7 retrieved into `force-app` (`Partner_Populations_Supported__c`, `Personal_Email__c`, `Preferred_Email__c`, `Preferred_Phone__c`, `Title_Affiliation__c`, `Work_Email__c`, `Work_Phone__c`). `Pardot_Sync_OCB_Formula__c` is in `unpackaged/staging-only/` because a validate-only deploy to the scratch org fails: "formula references fields across 16 unique relationships while only 15 are allowed". It deploys in eda-staging. The flows and `Lead_Preset_Value__mdt` are still not in the repo. | Org describe vs `force-app`; dry-run deploy of all 9 field files to the scratch org (8 passed). | Verified |
 | F16 | `rfiFormController` on eda-staging is **not** the branch version. It still maps `title__c` to `Salutation__c` and still renders the text-message question as a checkbox. The fixes described as deployed on 2026-08-26 are not in staging. | Retrieve of the deployed class and diff against the branch. | Verified |
 | F17 | High School Attended "not displaying on 0229" is not explained by configuration: controllers 0229 and 0356 both include the question and are both undergraduate. | Controller JSON. | Needs a browser repro (Phase 0) |
@@ -155,8 +155,14 @@ suggests it but no submission was run.
 | F27 | **Textareas overwrite each other and the answer is lost.** `_validateForm` copies every textarea and input into the payload by its `name`. Controller 0001 renders nine "Field Label Not Found" textareas (questions the legacy switch does not know: Address 1, 2, 3, City, State, Country, Zipcode, Home and Mobile Phone, St Thomas Law) that all fall back to `Description__c`, so the last blank one overwrites "Tell us about yourself". The "I have a question" box is named `Description`, which is not an Interaction field, so that answer is dropped. | Payload from the browser test: no `Description__c`; a stray `Description` key. | Verified in a browser |
 | F28 | **An empty duplicate input overwrites a real answer.** "When do you plan to start school" and "High School Graduation" both map to `High_School_Graduation_Year__c`; the blank one is sent last, so the 2028 entered was submitted as an empty string. | Payload: `High_School_Graduation_Year__c: ""`. | Verified in a browser |
 | F29 | **Resolved: `Timeline__c` was saved; the admin could not see it.** A scratch org gives the admin every field it knows at build time. A field created later has no field security for anyone, so the admin user could not describe or query `Timeline__c`, and an earlier note in this plan that the value "was sent but not saved" was wrong. After `RFI Controller User` was assigned to administrators and the field added to it, all three browser test records show `Timeline__c = 0-6 Months`. The guest, which holds `RFI User`, was never affected. | Admin describe and query before and after; three saved test Interactions. | Resolved. Process rule: every new field goes into `RFI User` (guest) and `RFI Controller User` (admins) in the same change |
-| F30 | **The single "Phone" question saves to the wrong phone field.** The old form sent it to the Lead mobile phone; the new form sends it to `Home_Phone__c`. It also collides with the Home Phone input: on controller 0001 both write `Home_Phone__c`, and the blank one is copied last, so the typed home phone is lost (payload: `Home_Phone__c: ""`). Open decision: where should "Phone" save? Recommendation: `Mobile_Phone__c`, to match the old form. | Old form handler (`phone_label` case); browser payload; Phase 1 test. | Verified. Needs a decision |
+| F30 | **The single "Phone" question saves to the wrong phone field.** The old form sent it to the Lead mobile phone; the new form sends it to `Home_Phone__c`. It also collides with the Home Phone input: on controller 0001 both write `Home_Phone__c`, and the blank one is copied last, so the typed home phone is lost (payload: `Home_Phone__c: ""`). Open decision: where should "Phone" save? Recommendation: `Mobile_Phone__c`, to match the old form. | Old form handler (`phone_label` case); browser payload; Phase 1 test. | Resolved in scratch (2026-11-02): "Phone" saves to `Mobile_Phone__c`; "Home Phone" keeps `Home_Phone__c`. **Provisional**: expect to revisit, because many people have only one number. |
 | F31 | **`RFI Controller User` in the scratch copy was behind staging.** It lacked the controller fields the Question Manager saves (`Unified_Questions__c`, `Fields_to_Display_Order__c`, four filter fields, `School_College__c`), `Account.School_College_Name__c`, and Apex class access to `rfiFormController`, `ReusableLookupController` and `AcademicInterestSelectorController`. 22 field grants and the 3 class accesses were added to the repo copy on 2026-10-29. In staging 19 users hold this set (14 Enrollment Staff, 1 of them inactive, and 5 administrators, 1 of them inactive), so the repo copy is for scratch orgs only and is never deployed to staging. The differences are recorded for admins in section 9. | Retrieve of both copies; holders query; deploy to scratch. | Verified |
+| F32 | **One missing field permission loses the whole RFI.** The first guest submission after Phase 2 failed with "fields being inaccessible on Interaction__c" for eight fields the server now sets (`Interaction_Source__c`, `Date_Inquiry__c`, `Opportunity_Stage__c`, `Country__c`, `Recruitment_Program__c`, `Academic_Program__c`, `Recruitment_Program_Associated_Schools__c`, `Term__c`). The scratch `RFI User` had them read-only; staging's copy already grants edit on all of them. | Guest browser run; staging and repo `RFI User` compared field by field. | Fixed in scratch: repo `RFI User` grants edit on the ten server-set fields, and `submitRfiForm` now drops any field the user cannot create (`Security.stripInaccessible`) and writes a warning to the debug log, so the RFI is still saved. |
+| F33 | **Per-controller presets never applied on the live path.** The controller reader did not select `Name`, so the preset lookup failed with "SObject row was retrieved via SOQL without querying the requested field: RFI_Controller__c.Name". The processor swallowed it as a warning. Unit tests missed it because they pass a fully loaded record. | Guest debug log (trace flag extended for one hour). | Fixed: `Name` is selected; test `loadControllerByName_includesTheNameSoPresetsCanBeFound_TEST` fails without it. |
+| F34 | **A lookup to a record the user cannot see makes the insert fail.** The processor finds Ids in system mode, but Salesforce refuses the insert when the guest cannot see the record a lookup points to (error: "insufficient access rights on cross-reference id" for the Term). `hed__Term__c` is controlled by its parent Account, and every Term the form uses belongs to the one Administrative account "University of St Thomas". | Guest browser run; `EntityDefinition` sharing models; Term parent query in scratch and staging. | Fixed: the processor clears (and reports) any lookup the running user cannot see. Scratch gets a narrow guest rule for that one account. Staging's Account external default is `Read`, so the guest can probably see it already (check, see section 9 G). |
+| F35 | **`State__c` holds the state code, not the name.** The flow stored `StateCode` (MN); the form saved only the name (`Mailing_State__c` = Minnesota), so name matching could never fill `State__c`. | Flow text; describe of `State__c` in scratch and staging (values are two-letter codes). | Fixed: the form sends the code as `State__c`; Apex keeps it only when it is in the org's own list and falls back to a name match. |
+| F36 | **Phase 2 deleted `handleAcademicInterestChange` from `rfiForm.js`.** The template still bound it, so choosing academic interests saved nothing to `Major_Program_1..4__c`. Neither the Jest tests nor the first guest runs noticed, because no run selected an Academic Interest. Found while starting F14. | Diff of method names between HEAD and the working file; guest payload before and after. | Fixed and covered: the handler is back and two component tests choose programs and empty the selection. Nothing was deployed outside scratch. |
+| F37 | **The page echoes the controller's own owner and lead source back to the server.** The form returns its whole Interaction, so with the allowlist every normal submission would have been reported as having ignored fields. | First guest run after the allowlist (Error record listing `Lead_Source__c`). | Fixed: the echo is recognised and not reported; any different value is. |
 
 ---
 
@@ -352,6 +358,40 @@ versioned in the repo (D7).
 
 **Done when:** every row in section 2.2 matches the old flow for the Phase 0 cases.
 
+**Status (2026-11-02, scratch org only; nothing deployed to staging).**
+
+Built:
+- `rfiSubmissionProcessor` (with sharing; a private `without sharing` reader for the few lookups) and
+  `rfiFormController.submitRfiForm(interaction, controllerName)`. The old `submitRfiInteraction` calls it
+  with no controller name, so existing callers keep working. Completion runs in a try/catch and never blocks the save.
+- Defaults, State/Country from the org's own picklists (D8), undergraduate program rules (D4), school from the
+  major, Term, per-controller presets with `LeadSource` translated (D5), lookups the user cannot see cleared.
+- LWC: new `rfiFormUtils` helper bundle; `rfiForm` sends the controller name, saves multi-selects as
+  semicolon lists, saves a typed school to `School_Name_Text__c`, never lets a blank box overwrite an answer,
+  composes Description with the old headings, and sends the state code.
+
+Tests:
+- Apex: `rfiSubmissionProcessor_TEST` and `rfiFormController_TEST` run together: 117 tests, 115 pass. The
+  2 failures were failing before Phase 2 (`getRFIForm_legacyPath_customLabels_TEST`,
+  `getRFIForm_unifiedPath_preconfiguredTextarea_TEST`).
+- Jest: `rfiFormUtils.test.js` (16) and `rfiForm.submit.test.js` (9) pass. The older `rfiForm.test.js`
+  mocks Apex modules that do not exist and is left alone.
+- Mutation checks (break the code on purpose, confirm a test fails): 19 Apex mutations on the processor and
+  controller, 7 Jest mutations that reintroduce the original bugs, and 6 later ones (strip, lookup clearing,
+  `Name` in the reader, state code kept, unknown code dropped, blank guard). All caught. One Apex mutation
+  first survived (the school overwrite guard); that test was strengthened.
+- Browser, as the anonymous guest on the public scratch site, with every question answered (international
+  transfer applicant): the RFI saves with no warnings, and the Interaction and its Opportunity hold
+  `Webform`, today's inquiry date, stage Inquiry, record type `Inquiry_Opportunity`, program
+  "Undergraduate Transfer (INTL)", `State__c` = MN, Term = Fall 2026, both multi-selects, the typed
+  school, Description with both headings, Timeline, and both phone numbers.
+
+Found only by the guest run (not by unit tests): F32, F33, F34, F35, and a guest sharing gap for Terms.
+Lesson: run as the real guest before calling a change done.
+
+Not done in this phase: the College/School drop-down is populated in scratch by a new guest rule for
+University Department accounts (F26); staging needs the same decision from admins (section 9 C).
+
 ### Phase 3: Hardening
 
 - Allow only the fields the controller's questions, UTM parameters and tracking fields
@@ -381,6 +421,36 @@ versioned in the repo (D7).
 - Because the form is served through Lightning Out, change the Aura dependency app with a
   real content change after deploying the Apex and LWC, then verify a fresh `auraCmpDef`
   request (see the agent-onboarding caching note).
+
+**Status (2026-11-02, scratch org only; nothing deployed to staging).**
+
+Built:
+- `rfiSubmissionGuard` (allowlist, F11), `rfiErrorLogger` (F12), and `rfiFormController.buildForm`, the form-building
+  code that `getRFIForm` and `submitRfiForm` now share, so the fields a submission may set are exactly the fields
+  the visitor was shown. Reading the form on submit costs 18 SOQL queries and about 0.5 s CPU in total for a
+  guest submission (limits: 100 and 10 s).
+- `submitRfiForm` returns null when the RFI cannot be saved (after writing the Error record); the older
+  `submitRfiInteraction` throws in that case so an older page does not show success. An exception would
+  roll the Error record back, which is why the new method returns instead.
+- `rfiForm`: a null result shows the error toast and keeps the answers; a form that cannot load shows a
+  message instead of a spinner; the academic interest handler is back and clears on deselect (F14, F36).
+- Unchanged by design: `allowSave = true` (D6); the RFI is saved without any field the user cannot create.
+
+Tests: Apex 140 run, 138 pass (the same 2 older failures); Jest 33 pass. Sixteen Apex mutations and four
+Jest mutations were each caught by a test. Two survived at first and led to new tests: the
+unexpected-exception path, and the older method throwing on a failed save.
+
+Guest checks on the public scratch site: a normal full submission writes no Error record; a request with
+six extra fields injected in flight (owner set to another user, `Pardot_Sync_OCB__c`, `Banner_ID__c`,
+`Opportunity_Stage__c`, `Lead_Only__c`, and a field the form does not ask for) is saved with the controller's
+owner and none of the injected values, and one Error record lists the ignored fields; a forced failure (invalid
+Citizenship) saves nothing, shows the error toast, and writes one Error record with the controller name and
+what was entered.
+
+Not done, needs an admin decision (also in the 6051 subtask): how the guest reaches Programs, Academic Terms and
+school Accounts. Scratch uses guest sharing rules; the plan's other option is more `without sharing` reader
+code. Read-only check in eda-staging: all 20 controllers with unified questions parse, so none would newly
+fail to load for malformed JSON.
 
 ### Phase 4: Guardrails
 
@@ -416,15 +486,17 @@ versioned in the repo (D7).
 value sets come before the code that uses them.
 1. Fields: `Interaction__c.Timeline__c` (new); the deactivated value in
    `RFI_Controller__c.Fields_to_Display__c` and `Required_Fields__c`.
-2. Apex: `rfiFormController`, `rfiFormController_TEST`. The shared lookup and the Aura app were
-   brought up to date with staging on 2026-10-28.
-3. LWC: `rfiUnifiedQuestionManager`, then the Aura dependency app (make a real content change to the
-   app if a browser keeps an old bundle).
+2. Apex, in this order: `rfiErrorLogger`, `rfiSubmissionGuard`, `rfiSubmissionProcessor`, `rfiFormController`,
+   then the tests `rfiErrorLogger_TEST`, `rfiSubmissionGuard_TEST`, `rfiSubmissionProcessor_TEST`,
+   `rfiFormController_TEST` (the two older `getRFIForm_*` failures in `rfiFormController_TEST` were failing
+   before this work). The shared lookup and the Aura app were brought up to date with staging on 2026-10-28.
+3. LWC: `rfiFormUtils` (new), `rfiForm`, `rfiUnifiedQuestionManager`, then the Aura dependency app (make a
+   real content change to the app if a browser keeps an old bundle).
 4. Admins apply the section 9 notes (class access for `rfiFormController` first).
 5. Run the controller repair, `scripts/apex/migrate_rfi_questions.apex` (dry run first, read the report, then save). In a non-sandbox org the
    script refuses to save until its safety check is edited on purpose.
 6. Smoke test as an anonymous visitor: the form loads, the school and start term lists have choices,
-   a submit saves.
+   a submit saves, and no new row appears in the Error object (`hed__Error__c`) for a normal submit.
 
 ---
 
@@ -546,3 +618,16 @@ The new form reads the controller record through code that does not need a shari
 **E. Worth a look while you are there.** Staging `RFI User` is held by 13 active Enrollment Staff and 3 active administrators as well as the Admissions guest user, and grants read on 315 Contact fields, some of which look sensitive (birthdate, donor status, ethnicity and religion codes). That is your call; it is noted because the guest user holds the same set.
 
 **F. Scratch-only items in the repo (for reference).** `RFI User` and `RFI Controller User` permission sets, the guest sharing rules under `unpackaged/sharing`, and the `apply_admin_permissions_sets` task exist to make scratch orgs work. The task is meant to run once at build time, by design.
+
+**G. What Phase 2 adds for admins to check (staging and production).**
+- The guest needs **edit** on these Interaction fields, because the server now sets them: `Interaction_Source__c`, `Date_Inquiry__c`, `Opportunity_Stage__c`, `Opportunity_Record_Type__c`, `Term__c`, `Academic_Program__c`, `Recruitment_Program__c`, `Recruitment_Program_Associated_Schools__c`, `Country__c`, `State__c`. Staging `RFI User` already grants all ten. If one is missing, the RFI is still saved without that field and the debug log says which.
+- The guest needs the Opportunity record type `Inquiry_Opportunity` to be visible. Staging `RFI User` grants it. Without it the Opportunity gets the wrong record type (F20).
+- **Terms:** every Term the form uses belongs to the Administrative account "University of St Thomas" (100 in staging, plus 1 under an Educational Institution account). A Term is visible only if its Account is. Staging's Account external default is `Read`, so this is probably fine; check that the guest can open that Account. If it cannot, the RFI saves without `Term__c` and the debug log says so.
+- No extra Apex class access is needed: `rfiSubmissionProcessor` is called from `rfiFormController`.
+- The form now sends `State__c` (two-letter code) and expects the org's `State__c` list to contain it. The processor drops a code that is not in the list.
+
+**H. What Phase 3 adds for admins to check (staging and production).**
+- **Error object:** the form now writes `hed__Error__c` records. The guest needs create on `hed__Error__c`; staging `RFI User` already grants create and read. There are two kinds: `ERROR: RFI Form submission failed` (nothing was saved) and `WARNING: RFI Form saved with gaps` (saved, but something was dropped or could not be set, listed in the record). **Decide who watches this object and how often.** A submission that works writes no record; a misconfiguration (for example the guest cannot see Terms) writes one record per submission.
+- **Personal data in Error records:** the message holds what the visitor entered (name, email, phone, address), as the old form's error records did. Limit who can read the Error object accordingly.
+- **Programs, Academic Terms and school Accounts:** still open. The form reads them as the guest (sharing rules in scratch). Choose either guest sharing rules per site (you control what is visible) or more `without sharing` reader code in the controller (same everywhere, no admin work, but the code decides what is visible). Accounts stay under sharing rules unless you say otherwise.
+- A form whose saved questions cannot be read now shows "We could not load this form" instead of a partial form. All 20 staging controllers with unified questions parsed in a read-only check.

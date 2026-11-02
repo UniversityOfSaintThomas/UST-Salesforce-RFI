@@ -1426,4 +1426,348 @@ private class rfiFormController_TEST {
                     questionName + ' points at ' + target + ', which is not a field on Interaction__c');
         }
     }
+
+
+    @IsTest
+    static void phoneQuestion_savesToMobilePhone_onBothPaths_TEST() {
+        // Unified path, including a form saved with the old Home_Phone__c target
+        String unifiedName = insertUnifiedController(new List<Map<String, Object>>{
+                pre(0, 'Phone', 'Home_Phone__c', false)
+        }, 'phone');
+        rfiFormController.interactionRFIFields unifiedWrap = rfiFormController.getRFIForm(unifiedName);
+        System.assertNotEquals(null, fieldFor(unifiedWrap, 'Mobile_Phone__c'), 'Phone saves to Mobile_Phone__c');
+        System.assertEquals(null, fieldFor(unifiedWrap, 'Home_Phone__c'), 'Phone must not save to Home_Phone__c');
+        // Legacy path
+        RFI_Controller__c legacy = new RFI_Controller__c(
+                Academic_Level__c = 'U', Fields_to_Display__c = 'Phone',
+                Redirect_URL__c = 'https://phase2-phone.example.com');
+        insert legacy;
+        rfiFormController.interactionRFIFields legacyWrap = rfiFormController.getRFIForm(uniqueNameFor(legacy.Id));
+        System.assertNotEquals(null, fieldFor(legacyWrap, 'Mobile_Phone__c'));
+        System.assertEquals(null, fieldFor(legacyWrap, 'Home_Phone__c'));
+    }
+
+    @IsTest
+    static void homePhoneQuestion_stillSavesToHomePhone_TEST() {
+        String ctrlName = insertUnifiedController(new List<Map<String, Object>>{
+                pre(0, 'Home Phone', 'Home_Phone__c', false)
+        }, 'homephone');
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(ctrlName);
+        System.assertNotEquals(null, fieldFor(wrap, 'Home_Phone__c'));
+    }
+
+
+    // --- Phase 2: submit completes the record (ECRMSF-6044 to 6046, 6050) ---
+
+    private static Id insertAcademicProgramForSubmit(String name, String bannerProgramCode) {
+        Id academicType = Schema.SObjectType.Program__c.getRecordTypeInfosByDeveloperName().get('Academic_Program').getRecordTypeId();
+        Program__c program = new Program__c(Name = name, RecordTypeId = academicType,
+                Banner_Program_Code__c = bannerProgramCode, Active__c = true);
+        insert program;
+        return program.Id;
+    }
+
+    @IsTest
+    static void submitRfiForm_completesTheRecord_andServerValuesBeatTheBrowser_TEST() {
+        Id firstYearId = insertAcademicProgramForSubmit('Undergraduate First-Year', 'AS_UN_BA');
+        RFI_Controller__c ctrl = new RFI_Controller__c(Academic_Level__c = 'U', School_College__c = 'Undergraduate',
+                Fields_to_Display__c = fieldsToDisplayDefault(), Redirect_URL__c = 'https://phase2-submit.example.com');
+        insert ctrl;
+        String ctrlName = uniqueNameFor(ctrl.Id);
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(
+                First_Name__c = 'Ada', Last_Name__c = 'Lovelace', Email__c = 'ada.phase2@example.invalid',
+                Admit_Type__c = 'First-Year',
+                // values a browser could try to dictate; the server must replace them
+                Interaction_Source__c = 'Application', Date_Inquiry__c = Date.today().addDays(-40)), ctrlName);
+        Test.stopTest();
+        Interaction__c saved = [SELECT Interaction_Source__c, Date_Inquiry__c, Opportunity_Stage__c, Academic_Program__c, Recruitment_Program__c
+                FROM Interaction__c WHERE Id = :savedId];
+        System.assertEquals('Webform', saved.Interaction_Source__c);
+        System.assertEquals(Date.today(), saved.Date_Inquiry__c);
+        System.assertEquals(firstYearId, saved.Academic_Program__c, 'Undergraduate rule program from the controller level');
+        System.assertEquals(firstYearId, saved.Recruitment_Program__c);
+    }
+
+    @IsTest
+    static void submitRfiForm_withUnknownControllerName_stillSavesWithDefaults_TEST() {
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(
+                First_Name__c = 'Grace', Last_Name__c = 'Hopper', Email__c = 'grace.phase2@example.invalid'), 'No Such Controller');
+        Test.stopTest();
+        Interaction__c saved = [SELECT Interaction_Source__c, Academic_Program__c FROM Interaction__c WHERE Id = :savedId];
+        System.assertEquals('Webform', saved.Interaction_Source__c, 'Defaults do not need the controller');
+        System.assertEquals(null, saved.Academic_Program__c);
+    }
+
+    @IsTest
+    static void submitRfiInteraction_oldMethod_stillSavesWithDefaults_TEST() {
+        Id savedId = rfiFormController.submitRfiInteraction(new Interaction__c(
+                First_Name__c = 'Old', Last_Name__c = 'Client', Email__c = 'old.phase2@example.invalid'));
+        System.assertEquals('Webform', [SELECT Interaction_Source__c FROM Interaction__c WHERE Id = :savedId].Interaction_Source__c);
+    }
+
+    @IsTest
+    static void submitRfiForm_withNullInteraction_throwsReadableError_TEST() {
+        Boolean threw = false;
+        try {
+            rfiFormController.submitRfiForm(null, 'x');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw);
+    }
+
+
+    // --- an RFI is never lost over a missing field permission ---
+
+    @IsTest
+    static void removeFieldsTheUserCannotCreate_dropsOnlyTheForbiddenFields_TEST() {
+        List<Profile> profiles = [SELECT Id FROM Profile WHERE Name = 'Minimum Access - Salesforce' LIMIT 1];
+        if (profiles.isEmpty()) {
+            return; // this org has no such profile; the behavior is the same for any restricted user
+        }
+        String suffix = String.valueOf(Math.abs(Crypto.getRandomInteger()));
+        User restricted = new User(
+                Username = 'rfi.restricted.' + suffix + '@example.invalid', LastName = 'Restricted', Email = 'rfi.restricted@example.invalid',
+                Alias = 'rfires', TimeZoneSidKey = 'America/Chicago', LocaleSidKey = 'en_US', EmailEncodingKey = 'UTF-8',
+                LanguageLocaleKey = 'en_US', ProfileId = profiles[0].Id);
+        insert restricted;
+        PermissionSet limited = new PermissionSet(Name = 'ZZ_RFI_Limited_' + suffix, Label = 'ZZ RFI Limited ' + suffix);
+        insert limited;
+        insert new ObjectPermissions(ParentId = limited.Id, SobjectType = 'Interaction__c', PermissionsRead = true, PermissionsCreate = true);
+        insert new FieldPermissions(ParentId = limited.Id, SobjectType = 'Interaction__c', Field = 'Interaction__c.Email__c',
+                PermissionsRead = true, PermissionsEdit = true);
+        insert new PermissionSetAssignment(AssigneeId = restricted.Id, PermissionSetId = limited.Id);
+
+        Interaction__c kept;
+        System.runAs(restricted) {
+            kept = rfiFormController.removeFieldsTheUserCannotCreate(new Interaction__c(
+                    Last_Name__c = 'Lovelace', Email__c = 'ada.limited@example.invalid',
+                    Interaction_Source__c = 'Webform', Date_Inquiry__c = Date.today()));
+        }
+        Map<String, Object> populated = kept.getPopulatedFieldsAsMap();
+        System.assertEquals('Lovelace', populated.get('Last_Name__c'), 'The required last name stays');
+        System.assertEquals('ada.limited@example.invalid', populated.get('Email__c'), 'A field the user may create stays');
+        System.assertEquals(false, populated.containsKey('Interaction_Source__c'), 'A field the user may not create is dropped');
+        System.assertEquals(false, populated.containsKey('Date_Inquiry__c'));
+    }
+
+
+    @IsTest
+    static void loadControllerByName_includesTheNameSoPresetsCanBeFound_TEST() {
+        String uniqueName = insertUnifiedController(new List<Map<String, Object>>{ pre(1, 'First Name', 'First_Name__c', true) }, 'reader');
+        RFI_Controller__c loaded = rfiFormController.loadControllerByName(uniqueName);
+        System.assertNotEquals(null, loaded, 'The controller is found');
+        // Reading Name throws when it was not part of the query, which is how presets silently stopped applying
+        System.assertEquals(uniqueName, loaded.Name);
+    }
+
+
+    // --- Phase 3: only the form's own fields are accepted, and failures are recorded (ECRMSF-6051) ---
+
+    private static String insertNameOnlyController(String marker) {
+        return insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            pre(2, 'Last Name', 'Last_Name__c', true)
+        }, marker);
+    }
+
+    private static List<hed__Error__c> errorRecords() {
+        return [SELECT hed__Error_Type__c, hed__Full_Message__c FROM hed__Error__c];
+    }
+
+    private static String firstActivePicklistValue(Schema.SObjectField field, String different) {
+        for (Schema.PicklistEntry entry : field.getDescribe().getPicklistValues()) {
+            if (entry.isActive() && entry.getValue() != different) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    @IsTest
+    static void submitRfiForm_ignoresFieldsTheFormDoesNotAskFor_andSaysSo_TEST() {
+        String controllerName = insertNameOnlyController('ignore');
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(
+                First_Name__c = 'Ada', Last_Name__c = 'Ignore',
+                Email__c = 'not.asked@example.invalid', Admit_Type__c = 'Transfer', Pardot_Sync_OCB__c = true), controllerName);
+        Test.stopTest();
+        Interaction__c saved = [SELECT First_Name__c, Email__c, Admit_Type__c, Pardot_Sync_OCB__c FROM Interaction__c WHERE Id = :savedId];
+        System.assertEquals('Ada', saved.First_Name__c, 'What the form asks for is saved');
+        System.assertEquals(null, saved.Email__c, 'Not on this form');
+        System.assertEquals(null, saved.Admit_Type__c, 'Not on this form');
+        System.assertEquals(false, saved.Pardot_Sync_OCB__c, 'Server controlled');
+        List<hed__Error__c> errors = errorRecords();
+        System.assertEquals(1, errors.size(), 'One warning record');
+        System.assertEquals(rfiErrorLogger.gapsType, errors[0].hed__Error_Type__c);
+        System.assert(errors[0].hed__Full_Message__c.contains('Admit_Type__c'), errors[0].hed__Full_Message__c);
+        System.assert(errors[0].hed__Full_Message__c.contains(controllerName), 'The record names the controller');
+    }
+
+    @IsTest
+    static void submitRfiForm_aCleanSubmission_writesNoErrorRecord_TEST() {
+        String controllerName = insertNameOnlyController('clean');
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(
+                First_Name__c = 'Ada', Last_Name__c = 'Clean', utm_source__c = 'newsletter',
+                Lead_Website__c = 'https://example.invalid/rfi', Description__c = 'Tell us about yourself from RFI: hi'), controllerName);
+        Test.stopTest();
+        System.assertNotEquals(null, savedId);
+        System.assertEquals(0, errorRecords().size(), 'Nothing to report: ' + errorRecords());
+        System.assertEquals('newsletter', [SELECT utm_source__c FROM Interaction__c WHERE Id = :savedId].utm_source__c, 'Tracking is kept');
+    }
+
+    @IsTest
+    static void submitRfiForm_theControllerDecidesTheOwnerAndLeadSource_TEST() {
+        String controllerLeadSource = firstActivePicklistValue(RFI_Controller__c.Lead_Source__c, null);
+        String injectedLeadSource = firstActivePicklistValue(Interaction__c.Lead_Source__c, controllerLeadSource);
+        List<User> otherUsers = [SELECT Id FROM User WHERE IsActive = TRUE AND Id != :UserInfo.getUserId() LIMIT 1];
+        RFI_Controller__c controller = new RFI_Controller__c(
+                Academic_Level__c = 'U', Fields_to_Display__c = fieldsToDisplayDefault(), Redirect_URL__c = 'https://owner.example.com',
+                Lead_Owner__c = UserInfo.getUserId(), Lead_Source__c = controllerLeadSource,
+                Unified_Questions__c = JSON.serialize(new List<Map<String, Object>>{
+                    pre(1, 'First Name', 'First_Name__c', true), pre(2, 'Last Name', 'Last_Name__c', true) }));
+        insert controller;
+        String controllerName = uniqueNameFor(controller.Id);
+        Interaction__c submitted = new Interaction__c(First_Name__c = 'Ada', Last_Name__c = 'Owner', Lead_Source__c = injectedLeadSource);
+        if (!otherUsers.isEmpty()) {
+            submitted.OwnerId = otherUsers[0].Id;
+        }
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(submitted, controllerName);
+        Test.stopTest();
+        System.assertNotEquals(null, savedId, 'The save failed: ' + errorRecords());
+        Interaction__c saved = [SELECT OwnerId, Lead_Source__c FROM Interaction__c WHERE Id = :savedId];
+        System.assertEquals(UserInfo.getUserId(), saved.OwnerId, 'The controller owner, not the browser one');
+        System.assertEquals(controllerLeadSource, saved.Lead_Source__c, 'The controller lead source, not the browser one');
+    }
+
+    @IsTest
+    static void submitRfiForm_theBrowserEchoingTheControllerOwnerAndSource_isNotReported_TEST() {
+        String controllerLeadSource = firstActivePicklistValue(RFI_Controller__c.Lead_Source__c, null);
+        RFI_Controller__c controller = new RFI_Controller__c(
+                Academic_Level__c = 'U', Fields_to_Display__c = fieldsToDisplayDefault(), Redirect_URL__c = 'https://echo.example.com',
+                Lead_Owner__c = UserInfo.getUserId(), Lead_Source__c = controllerLeadSource,
+                Unified_Questions__c = JSON.serialize(new List<Map<String, Object>>{
+                    pre(1, 'First Name', 'First_Name__c', true), pre(2, 'Last Name', 'Last_Name__c', true) }));
+        insert controller;
+        String controllerName = uniqueNameFor(controller.Id);
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(First_Name__c = 'Ada', Last_Name__c = 'Echo',
+                OwnerId = UserInfo.getUserId(), Lead_Source__c = controllerLeadSource), controllerName);
+        Test.stopTest();
+        System.assertNotEquals(null, savedId);
+        System.assertEquals(0, errorRecords().size(), 'The echo is expected and must not be reported: ' + errorRecords());
+    }
+
+    @IsTest
+    static void isEchoOfControllerValue_onlyTrueForTheSameOwnerOrLeadSource_TEST() {
+        Interaction__c defaults = new Interaction__c(OwnerId = UserInfo.getUserId(), Lead_Source__c = 'Webform');
+        System.assertEquals(true, rfiFormController.isEchoOfControllerValue('OwnerId', UserInfo.getUserId(), defaults));
+        System.assertEquals(true, rfiFormController.isEchoOfControllerValue('Lead_Source__c', 'Webform', defaults));
+        System.assertEquals(false, rfiFormController.isEchoOfControllerValue('Lead_Source__c', 'Other', defaults), 'A different value is not an echo');
+        System.assertEquals(false, rfiFormController.isEchoOfControllerValue('Term__c', 'x', defaults), 'Other fields are always reported');
+        System.assertEquals(false, rfiFormController.isEchoOfControllerValue('OwnerId', UserInfo.getUserId(), null));
+        System.assertEquals(false, rfiFormController.isEchoOfControllerValue('Lead_Source__c', null, defaults));
+    }
+
+    @IsTest
+    static void submitRfiForm_whenTheInsertFails_writesAnErrorRecordAndReturnsNull_TEST() {
+        String controllerName = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'Last Name', 'Last_Name__c', true), pre(2, 'Citizenship', 'Citizenship__c', false)
+        }, 'fail');
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(First_Name__c = 'Ada', Last_Name__c = 'FailsToSave', Citizenship__c = 'ZZ not a value'), controllerName);
+        Test.stopTest();
+        System.assertEquals(null, savedId, 'No Id, so the page can tell the visitor');
+        System.assertEquals(0, [SELECT COUNT() FROM Interaction__c WHERE Last_Name__c = 'FailsToSave']);
+        List<hed__Error__c> errors = errorRecords();
+        System.assertEquals(1, errors.size(), 'The Error record survives because the method returns instead of throwing');
+        System.assertEquals(rfiErrorLogger.failureType, errors[0].hed__Error_Type__c);
+        System.assert(errors[0].hed__Full_Message__c.contains(controllerName));
+        System.assert(errors[0].hed__Full_Message__c.contains('FailsToSave'), 'What was entered is recorded');
+    }
+
+    @IsTest
+    static void submitRfiForm_whenSomethingUnexpectedThrows_writesAnErrorRecordWithTheCauseAndReturnsNull_TEST() {
+        String controllerName = insertNameOnlyController('boom');
+        rfiFormController.failureForTest = 'Simulated unexpected failure';
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(First_Name__c = 'Ada', Last_Name__c = 'Boom'), controllerName);
+        Test.stopTest();
+        System.assertEquals(null, savedId);
+        System.assertEquals(0, [SELECT COUNT() FROM Interaction__c WHERE Last_Name__c = 'Boom']);
+        List<hed__Error__c> errors = [SELECT hed__Error_Type__c, hed__Full_Message__c, hed__Stack_Trace__c FROM hed__Error__c];
+        System.assertEquals(1, errors.size(), 'The Error record survives because the method returns instead of throwing');
+        System.assertEquals(rfiErrorLogger.failureType, errors[0].hed__Error_Type__c);
+        System.assert(errors[0].hed__Full_Message__c.contains(controllerName));
+        System.assert(errors[0].hed__Full_Message__c.contains('Boom'), 'What was entered is recorded');
+        System.assert(errors[0].hed__Stack_Trace__c.contains('Simulated unexpected failure'), errors[0].hed__Stack_Trace__c);
+    }
+
+    @IsTest
+    static void submitRfiInteraction_whenTheSaveFails_throwsSoAnOlderPageDoesNotShowSuccess_TEST() {
+        String message;
+        Test.startTest();
+        try {
+            // No first name, which the object requires, so the insert fails
+            rfiFormController.submitRfiInteraction(new Interaction__c(Last_Name__c = 'OldPageFails'));
+        } catch (AuraHandledException saveError) {
+            message = saveError.getMessage();
+        }
+        Test.stopTest();
+        System.assertNotEquals(null, message, 'The older method must throw when nothing was saved');
+        System.assertEquals(0, [SELECT COUNT() FROM Interaction__c WHERE Last_Name__c = 'OldPageFails']);
+    }
+
+    @IsTest
+    static void submitRfiForm_withNoControllerName_savesAndRecordsTheGap_TEST() {
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(First_Name__c = 'Ada', Last_Name__c = 'NoController', OwnerId = UserInfo.getUserId()), null);
+        Test.stopTest();
+        System.assertNotEquals(null, savedId);
+        List<hed__Error__c> errors = errorRecords();
+        System.assertEquals(1, errors.size());
+        System.assert(errors[0].hed__Full_Message__c.contains('No RFI Controller name'), errors[0].hed__Full_Message__c);
+        System.assert(errors[0].hed__Full_Message__c.contains('OwnerId'), 'The server controlled field was ignored and reported');
+    }
+
+    @IsTest
+    static void getRFIForm_whenTheQuestionsCannotBeRead_failsInsteadOfReturningAPartialForm_TEST() {
+        RFI_Controller__c controller = new RFI_Controller__c(Academic_Level__c = 'U', Fields_to_Display__c = fieldsToDisplayDefault(),
+                Redirect_URL__c = 'https://broken.example.com', Unified_Questions__c = '{this is not json');
+        insert controller;
+        String controllerName = uniqueNameFor(controller.Id);
+        String message;
+        Test.startTest();
+        try {
+            rfiFormController.getRFIForm(controllerName);
+        } catch (AuraHandledException formError) {
+            message = formError.getMessage();
+        }
+        Test.stopTest();
+        System.assertNotEquals(null, message, 'A broken form must not load');
+        System.assert(message.contains('could not be loaded'), message);
+    }
+
+    @IsTest
+    static void buildForm_andTheGuardAgree_everyQuestionFieldIsAllowed_TEST() {
+        String controllerName = insertUnifiedController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true), pre(2, 'Last Name', 'Last_Name__c', true),
+            pre(3, 'Address', 'Mailing_Street__c', false), pre(4, 'High School Attended', 'High_School_or_College__c', false),
+            pre(5, 'Home and Mobile Phone', '', false), pre(6, 'Timeline to Enrollment', 'Timeline__c', false)
+        }, 'agree');
+        rfiFormController.interactionRFIFields form = rfiFormController.buildForm(rfiFormController.loadControllerByName(controllerName));
+        Set<String> allowed = rfiSubmissionGuard.allowedFieldsFor(form.rfiFieldList, form.interaction);
+        for (rfiFormController.rfiField question : form.rfiFieldList) {
+            if (String.isNotBlank(question.fieldInteractionAPIName) && question.isStaticContent != true) {
+                System.assert(allowed.contains(question.fieldInteractionAPIName.toLowerCase()), question.fieldInteractionAPIName + ' must be allowed');
+            }
+        }
+        for (String expected : new List<String>{ 'home_phone__c', 'mobile_phone__c', 'mailing_city__c', 'school_name_text__c', 'timeline__c' }) {
+            System.assert(allowed.contains(expected), expected);
+        }
+    }
 }
