@@ -115,6 +115,24 @@ The single source of truth for `rfiForm` question configuration when using the u
 
 **question `type` values:** `preconfigured` | `custom` | `filter`
 
+**Keys on every question (added 2026-11-02):**
+- `key` is a stable identity (for example `q1l3x9abc4d`), generated once and never changed. **Anything that refers to a question (such as a dependent-question rule) must use `key`, never `id`.** `id` is only the position in the list and changes whenever a question is moved or deleted.
+- `schemaVersion` is the format version the question was saved in (currently 1).
+- The manager does not save its own display flags (`isFirst`, `typeCustom`, `isPicklist` and so on). Older saved lists still contain them; they are ignored.
+- Keys this version does not know are kept when the manager saves, so data written by a newer version is not damaged.
+
+### Changing the question format
+
+The saved list lives in an org, and older saved lists stay there after the code changes. A change that is safe for new data can still break the old. Rules:
+
+1. **Additive only.** Add new keys as optional, with a sensible default when absent. Never rename, remove or change the type of an existing key. To replace one, add the new key, read both, and rewrite old data later with a repair script (`scripts/apex/migrate_rfi_questions.apex` is the model).
+2. **Store identity and choices, work out the rest.** Save what the admin chose. Anything the code can work out (labels from the catalog, field names, display flags) is worked out when the form loads. That is why changing where a question saves needed no data change.
+3. **One reader.** All Apex reads the list through `rfiQuestionReader`; the manager reads it through `readSavedQuestions`. Do not add `JSON.deserializeUntyped` of this field anywhere else. New keys are cleaned up in the reader (convert types, supply defaults), so the rest of the code gets a clean question.
+4. **Skip and report, never guess.** A question the reader cannot understand is left out and described in a warning (position, label, reason). Warnings reach admins as a banner on the controller record page and are written to the Error object when a visitor submits. Only a list that cannot be read at all stops the form.
+5. **Bump `schemaVersion` only when old code would misread new data.** Old code that meets a higher version keeps working on what it understands and reports the rest.
+6. **Keep old shapes as fixtures.** `rfiQuestionReader_TEST` and `rfiUnifiedQuestionManager.schema.test.js` hold real lists copied from eda-staging. Every format change must keep loading them. Add a real sample of any new shape the manager starts writing.
+7. **Reader first.** When a change adds keys, deploy code that reads both shapes before code that writes the new one. Older code ignores unknown keys, so it fails open: a question simply shows or behaves as before.
+
 ### Legacy Fields (still supported, do not remove)
 - `Fields_to_Display__c` + `Interaction_Questions__c` — used by Apex legacy path for controllers not yet using unified questions
 - `Additional_Questions__c` — used by `requestForInformationForm` Lead form only

@@ -15,8 +15,8 @@ List<List<String>> checks = new List<List<String>>();
 
 // ---------------------------------------------------------------- code
 Set<String> expectedClasses = new Set<String>{
-    'rfiFormController', 'rfiSubmissionProcessor', 'rfiSubmissionGuard', 'rfiErrorLogger', 'rfiQuestionCatalog',
-    'rfiFormController_TEST', 'rfiSubmissionProcessor_TEST', 'rfiSubmissionGuard_TEST', 'rfiErrorLogger_TEST', 'rfiQuestionCatalog_TEST'
+    'rfiFormController', 'rfiSubmissionProcessor', 'rfiSubmissionGuard', 'rfiErrorLogger', 'rfiQuestionCatalog', 'rfiQuestionReader',
+    'rfiFormController_TEST', 'rfiSubmissionProcessor_TEST', 'rfiSubmissionGuard_TEST', 'rfiErrorLogger_TEST', 'rfiQuestionCatalog_TEST', 'rfiQuestionReader_TEST'
 };
 Set<String> foundClasses = new Set<String>();
 for (ApexClass apexClass : [SELECT Name FROM ApexClass WHERE Name IN :expectedClasses]) {

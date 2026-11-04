@@ -306,6 +306,42 @@ describe('c-rfi-form submit', () => {
         expect(captured.interaction.Birthdate__c).toBe('2000-01-15');
     });
 
+    describe('messages about saved questions', () => {
+        async function renderWithWarnings(recordId) {
+            const withWarnings = JSON.parse(JSON.stringify(FORM));
+            withWarnings.warnings = ['Question 3 ("Future thing") has the type "matrix", which this version does not know. It was skipped.'];
+            element = createElement('c-rfi-form', { is: RfiForm });
+            element.rfiControllerName = CONTROLLER_NAME;
+            if (recordId) {
+                element.recordId = recordId;
+            }
+            document.body.appendChild(element);
+            getRFIForm.emit(withWarnings);
+            await flushPromises();
+        }
+
+        it('shows the admin the problem when the form sits on the controller record page', async () => {
+            await renderWithWarnings('a18000000000001AAA');
+            const banner = root().querySelector('[data-id="admin-warnings"]');
+            expect(banner).not.toBeNull();
+            expect(banner.textContent).toContain('Future thing');
+            expect(banner.textContent).toContain('Visitors do not see this message');
+        });
+
+        it('never shows it to a visitor on the public site, where there is no record page', async () => {
+            await renderWithWarnings(null);
+            expect(root().querySelector('[data-id="admin-warnings"]')).toBeNull();
+            expect(root().textContent).not.toContain('Future thing');
+        });
+
+        it('shows nothing when there is nothing to report', async () => {
+            await renderForm();
+            element.recordId = 'a18000000000001AAA';
+            await flushPromises();
+            expect(root().querySelector('[data-id="admin-warnings"]')).toBeNull();
+        });
+    });
+
     it('a blank Employer keeps the controller default', async () => {
         await renderForm();
         await submit();

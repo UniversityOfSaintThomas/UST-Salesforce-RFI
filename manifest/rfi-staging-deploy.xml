@@ -17,11 +17,13 @@
     </types>
     <types>
         <members>rfiQuestionCatalog</members>
+        <members>rfiQuestionReader</members>
         <members>rfiErrorLogger</members>
         <members>rfiSubmissionGuard</members>
         <members>rfiSubmissionProcessor</members>
         <members>rfiFormController</members>
         <members>rfiQuestionCatalog_TEST</members>
+        <members>rfiQuestionReader_TEST</members>
         <members>rfiErrorLogger_TEST</members>
         <members>rfiSubmissionGuard_TEST</members>
         <members>rfiSubmissionProcessor_TEST</members>

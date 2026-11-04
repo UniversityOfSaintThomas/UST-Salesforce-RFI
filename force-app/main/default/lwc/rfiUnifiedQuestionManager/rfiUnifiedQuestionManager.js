@@ -54,6 +54,25 @@ const FIELDS = [
     GENERIC_FILTER_8_TO_DISPLAY
 ];
 
+// The version of the saved question format this code writes. Rules for changing it are in docs/AI-TOOLS-CONFIG.md.
+const SCHEMA_VERSION = 1;
+
+// Flags the manager works out for its own screen. They are not configuration, so they are never saved.
+const DERIVED_KEYS = [
+    'typePreconfigured', 'typeCustom', 'typeFilter', 'isPicklist', 'isTextBox', 'isTextarea', 'isEmail',
+    'isCheckbox', 'isDate', 'isStaticContent', 'isFirst', 'isLast'
+];
+
+// A short identity that stays with a question for its whole life. The id is only the position in the list and
+// changes whenever a question is moved or deleted, so anything that points at a question must use the key.
+function newQuestionKey(taken) {
+    let key;
+    do {
+        key = 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    } while (taken.has(key));
+    return key;
+}
+
 export default class RfiUnifiedQuestionManager extends LightningElement {
     @api recordId;
     @track questions = [];
@@ -349,8 +368,8 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
 
         if (unifiedQuestionsJSON) {
             // Load from unified field
-            const parsed = JSON.parse(unifiedQuestionsJSON);
-            if (parsed && parsed.length > 0) {
+            const parsed = this.readSavedQuestions(unifiedQuestionsJSON);
+            if (parsed.length > 0) {
                 this.questions = parsed;
                 this.needsMigration = false;
             } else {
@@ -364,6 +383,25 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
 
         // Ensure IDs are sequential and add computed properties
         this.questions = this.stampComputedProps(this.questions);
+    }
+
+    // Reads the saved list the way the server does: a plain list or an object holding it under "questions", and
+    // anything that is not a question is ignored. Unreadable text does not break the screen, so an admin can still
+    // open it and save a fresh list. Questions of a type this version does not know are kept untouched.
+    readSavedQuestions(savedJson) {
+        let parsed;
+        try {
+            parsed = JSON.parse(savedJson);
+        } catch (error) {
+            this.showToast('Warning', 'The saved question list could not be read, so it was rebuilt from the older settings. Nothing changes until you click Save.', 'warning');
+            return [];
+        }
+        const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.questions) ? parsed.questions : null);
+        if (!list) {
+            this.showToast('Warning', 'The saved question list is not in a form this screen understands, so it was rebuilt from the older settings. Nothing changes until you click Save.', 'warning');
+            return [];
+        }
+        return list.filter((item) => item && typeof item === 'object' && !Array.isArray(item));
     }
 
     migrateFromLegacyStructure() {
@@ -617,13 +655,40 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         this.currentQuestion = { ...this.currentQuestion };
     }
 
+    // The question as it is saved: everything the admin configured, nothing the manager works out for its screen.
+    // Keys this version does not know are kept, so data written by a newer version is not damaged.
+    withoutDerivedFlags(question) {
+        const saved = { ...question };
+        DERIVED_KEYS.forEach((derivedKey) => delete saved[derivedKey]);
+        return saved;
+    }
+
     // Stamps display-only computed flags onto each question after any mutation
     stampComputedProps(questions) {
         const last = questions.length - 1;
+        // Every question keeps a unique key. The first question with a given key keeps it. A question without one
+        // (saved before keys existed) or with a repeated one (a copy) is given a new key.
+        const taken = new Set();
+        const keys = questions.map((q) => {
+            if (q.key && !taken.has(q.key)) {
+                taken.add(q.key);
+                return q.key;
+            }
+            return null;
+        });
+        keys.forEach((key, index) => {
+            if (!key) {
+                keys[index] = newQuestionKey(taken);
+                taken.add(keys[index]);
+            }
+        });
         return questions.map((q, index) => {
             const qt = (q.questionType || '').toLowerCase();
             return {
                 ...q,
+                key: keys[index],
+                // Newer data keeps its own version; this code never lowers it
+                schemaVersion: q.schemaVersion ?? SCHEMA_VERSION,
                 id: index,
                 typePreconfigured: q.type === 'preconfigured',
                 typeCustom: q.type === 'custom',
@@ -951,7 +1016,7 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         try {
             const fields = {
                 Id: this.recordId,
-                [UNIFIED_QUESTIONS_FIELD.fieldApiName]: JSON.stringify(this.questions)
+                [UNIFIED_QUESTIONS_FIELD.fieldApiName]: JSON.stringify(this.questions.map((question) => this.withoutDerivedFlags(question)))
             };
 
             // Write each filter question's selected values back to its _To_Display__c field on the controller

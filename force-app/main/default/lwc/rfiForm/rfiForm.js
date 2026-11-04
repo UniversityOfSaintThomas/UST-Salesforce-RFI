@@ -691,6 +691,19 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         }
     }
 
+    // Problems found in the saved questions. Only admins see them: the component has a recordId only when it sits
+    // on the RFI Controller record page, never on the public site.
+    get adminWarnings() {
+        if (!this.recordId || !Array.isArray(this.rfiData?.warnings)) {
+            return [];
+        }
+        return this.rfiData.warnings.map((text, index) => ({ key: 'warning-' + index, text }));
+    }
+
+    get hasAdminWarnings() {
+        return this.adminWarnings.length > 0;
+    }
+
     get showSpinner() {
         return !this.hasData && !this.loadFailed;
     }

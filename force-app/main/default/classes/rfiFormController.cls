@@ -18,6 +18,8 @@ public with sharing class rfiFormController {
         @AuraEnabled public Boolean iHaveAQuestion { get; set; }
         @AuraEnabled public String redirectUrl { get; set; }
         @AuraEnabled public Boolean redirectAfterSubmission { get; set; }
+        // Problems found in the saved questions (a question that was skipped, for example). Shown to admins only.
+        @AuraEnabled public List<String> warnings = new List<String>();
     }
 
     public class rfiField {
@@ -715,11 +717,20 @@ public with sharing class rfiFormController {
                 hasFirstName = true;
             }
         }
+        // add(0, ...) fails on an empty list in Apex, and a saved list of [] is a valid thing to meet
         if (!hasLastName) {
-            questions.add(0, nameQuestion('Last Name'));
+            addAtFront(questions, nameQuestion('Last Name'));
         }
         if (!hasFirstName) {
-            questions.add(0, nameQuestion('First Name'));
+            addAtFront(questions, nameQuestion('First Name'));
+        }
+    }
+
+    private static void addAtFront(List<rfiField> questions, rfiField question) {
+        if (questions.isEmpty()) {
+            questions.add(question);
+        } else {
+            questions.add(0, question);
         }
     }
 
@@ -1268,6 +1279,14 @@ public with sharing class rfiFormController {
         return controllerValue != null && String.valueOf(controllerValue) == String.valueOf(sentValue);
     }
 
+    /** Lets a test make building one question fail: the question with this label throws. Never set outside tests. */
+    @TestVisible
+    private static String questionFailureForTest;
+
+    /** Like questionFailureForTest, but fails after the question has already been added to the form. Never set outside tests. */
+    @TestVisible
+    private static String questionFailureAfterAddForTest;
+
     /** Lets a test make submitRfiForm hit an unexpected exception. Never set outside tests. */
     @TestVisible
     private static String failureForTest;
@@ -1312,6 +1331,9 @@ public with sharing class rfiFormController {
                 try {
                     form = buildForm(rfiController);
                     allowedFields = rfiSubmissionGuard.allowedFieldsFor(form.rfiFieldList, form.interaction);
+                    for (String formWarning : form.warnings) {
+                        gaps.add('Saved question list: ' + formWarning);
+                    }
                 } catch (Exception formError) {
                     form = null;
                     allowedFields = null;
@@ -1438,7 +1460,11 @@ public with sharing class rfiFormController {
      */
     private static void processUnifiedQuestions(RFI_Controller__c rfiController, interactionRFIFields interactionAndRfi) {
         try {
-            List<Object> unifiedQuestions = (List<Object>) JSON.deserializeUntyped(rfiController.Unified_Questions__c);
+            // One tolerant reader turns the saved JSON into clean questions. A question it cannot understand is
+            // skipped and reported; only a list that cannot be read at all raises an error.
+            rfiQuestionReader.ReadResult saved = rfiQuestionReader.read(rfiController.Unified_Questions__c);
+            List<Map<String, Object>> unifiedQuestions = saved.questions;
+            interactionAndRfi.warnings.addAll(saved.warnings);
 
             // Cache field map outside loop — describe calls are expensive
             Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
@@ -1448,8 +1474,7 @@ public with sharing class rfiFormController {
             Boolean hasAddressQuestion = false;
             Boolean anySplitAddressRequired = false;
             Boolean addressQuestionAdded = false;
-            for (Object scanObj : unifiedQuestions) {
-                Map<String, Object> scanned = (Map<String, Object>) scanObj;
+            for (Map<String, Object> scanned : unifiedQuestions) {
                 String scannedName = String.valueOf(scanned.get('fieldName') != null ? scanned.get('fieldName') : '');
                 if (scannedName == 'Address') {
                     hasAddressQuestion = true;
@@ -1459,177 +1484,199 @@ public with sharing class rfiFormController {
                 }
             }
 
-            for (Object qObj : unifiedQuestions) {
-                Map<String, Object> q = (Map<String, Object>) qObj;
-                String questionType = (String) q.get('type');
-                String savedQuestionName = String.valueOf(q.get('fieldName') != null ? q.get('fieldName') : '');
-                if (questionType == 'preconfigured' && rfiQuestionCatalog.retiredQuestions.contains(savedQuestionName)) {
-                    continue;
-                }
-                if (questionType == 'preconfigured' && splitAddressQuestions.contains(savedQuestionName)) {
-                    if (!hasAddressQuestion && !addressQuestionAdded) {
-                        rfiField addressField = new rfiField();
-                        addressField.fieldLabel = 'Address';
-                        addressField.fieldInteractionAPIName = 'Mailing_Street__c';
-                        addressField.isAddress = true;
-                        addressField.isVisible = true;
-                        addressField.isSelected = false;
-                        addressField.isRequired = anySplitAddressRequired;
-                        interactionAndRfi.rfiFieldList.add(addressField);
-                        addressQuestionAdded = true;
+            for (Map<String, Object> q : unifiedQuestions) {
+                // Each question is processed on its own. If one fails, whatever it half-added is undone, the problem is
+                // reported, and the other questions still load.
+                Integer fieldCountBefore = interactionAndRfi.rfiFieldList.size();
+                Set<String> filterKeysBefore = new Set<String>(interactionAndRfi.filterValues.keySet());
+                try {
+                    if (String.isNotBlank(questionFailureForTest) && questionFailureForTest == String.valueOf(q.get('questionLabel'))) {
+                        throw new IllegalArgumentException('Simulated failure while building the question');
                     }
-                    continue;
-                }
-
-                rfiField newField = new rfiField();
-                rfiField extraField = null;
-                newField.fieldLabel = (String) q.get('questionLabel');
-                newField.isRequired = q.get('isRequired') == true;
-                newField.isVisible = true;
-                newField.isSelected = false;
-
-                if (questionType == 'preconfigured') {
-                    // Older saved forms hold field names that were never right: correct them
-                    String rawApiName = rfiQuestionCatalog.correctStoredApiName((String) q.get('fieldInteractionAPIName'));
-                    String fieldName = savedQuestionName;
-                    // The question name is its identity: the catalog decides where it saves
-                    String catalogTarget = rfiQuestionCatalog.targetFieldFor(fieldName);
-                    if (catalogTarget != null) {
-                        rawApiName = catalogTarget;
+                    String questionType = (String) q.get('type');
+                    String savedQuestionName = String.valueOf(q.get('fieldName') != null ? q.get('fieldName') : '');
+                    if (questionType == 'preconfigured' && rfiQuestionCatalog.retiredQuestions.contains(savedQuestionName)) {
+                        continue;
                     }
-                    newField.fieldInteractionAPIName = rawApiName;
-
-                    // Special handling for known field types
-                    if (fieldName == 'Academic Interest') {
-                        newField.isProgramLookup = true;
-                        newField.max = 4;
-                    } else if (fieldName == 'Address') {
-                        newField.isAddress = true;
-                    } else if (fieldName == 'High School Attended') {
-                        newField.isSchoolLookup = true;
-                    } else if (fieldName == 'Expected Start Term at St Thomas') {
-                        // Intended_Start_Term__c is a lookup to Academic_Term__c, shown as a drop-down of terms
-                        newField.fieldInteractionAPIName = 'Intended_Start_Term__c';
-                        newField.isPicklist = true;
-                        newField.picklistValues = getTerms();
-                    } else if (fieldName == 'St Thomas Colleges') {
-                        // St_Thomas_College_School__c is a lookup to Account, shown as a drop-down of schools
-                        newField.fieldInteractionAPIName = 'St_Thomas_College_School__c';
-                        newField.isPicklist = true;
-                        newField.picklistValues = getUSTSchoolList();
-                    } else if (fieldName == 'Home and Mobile Phone') {
-                        List<rfiField> phoneFields = buildHomeAndMobilePhoneFields(q.get('isRequired') == true, false);
-                        newField = phoneFields[0];
-                        extraField = phoneFields[1];
-                    } else if (fieldName == 'Email') {
-                        newField.isEmail = true;
-                    } else if (fieldName.contains('Phone')) {
-                        newField.isTel = true;
-                    } else if (fieldName == 'Tell us about yourself') {
-                        newField.isTextarea = true;
-                    } else if (fieldName == 'I have a question') {
-                        newField.isCheckbox = true;
-                        newField.showDependentField = true;
-                    } else if (fieldName == 'I would like to receive text messages' || fieldName == 'Receive Text Messages') {
-                        // Receive_Texts__c is a Picklist, not a Boolean — fall through to the
-                        // dynamic picklist detection below instead of forcing a checkbox.
-                    } else if (fieldName == 'I would like program information to be mailed to me' || fieldName == 'Mail Information') {
-                        newField.isCheckbox = true;
+                    if (questionType == 'preconfigured' && splitAddressQuestions.contains(savedQuestionName)) {
+                        if (!hasAddressQuestion && !addressQuestionAdded) {
+                            rfiField addressField = new rfiField();
+                            addressField.fieldLabel = 'Address';
+                            addressField.fieldInteractionAPIName = 'Mailing_Street__c';
+                            addressField.isAddress = true;
+                            addressField.isVisible = true;
+                            addressField.isSelected = false;
+                            addressField.isRequired = anySplitAddressRequired;
+                            interactionAndRfi.rfiFieldList.add(addressField);
+                            addressQuestionAdded = true;
+                        }
+                        continue;
                     }
 
-                    // For remaining fields, check if the Interaction field is a picklist
-                    if (newField.isProgramLookup != true && newField.isAddress != true && newField.isEmail != true
-                            && newField.isTel != true && newField.isTextarea != true && newField.isCheckbox != true
-                            && newField.isSchoolLookup != true
-                            && String.isNotBlank(newField.fieldInteractionAPIName)) {
-                        Schema.SObjectField sField = interactionFieldMap.get(newField.fieldInteractionAPIName.toLowerCase());
-                        if (sField != null) {
-                            Schema.DescribeFieldResult d = sField.getDescribe();
-                            if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
-                                newField.picklistValues = getPicklistOptions(d);
-                                newField.isMultiSelect = true;
-                                newField.max = 4;
-                            } else if (d.getType() == Schema.DisplayType.PICKLIST) {
-                                newField.picklistValues = getPicklistOptions(d);
-                                newField.isPicklist = true;
+                    rfiField newField = new rfiField();
+                    rfiField extraField = null;
+                    newField.fieldLabel = (String) q.get('questionLabel');
+                    newField.isRequired = q.get('isRequired') == true;
+                    newField.isVisible = true;
+                    newField.isSelected = false;
+
+                    if (questionType == 'preconfigured') {
+                        // Older saved forms hold field names that were never right: correct them
+                        String rawApiName = rfiQuestionCatalog.correctStoredApiName((String) q.get('fieldInteractionAPIName'));
+                        String fieldName = savedQuestionName;
+                        // The question name is its identity: the catalog decides where it saves
+                        String catalogTarget = rfiQuestionCatalog.targetFieldFor(fieldName);
+                        if (catalogTarget != null) {
+                            rawApiName = catalogTarget;
+                        }
+                        newField.fieldInteractionAPIName = rawApiName;
+
+                        // Special handling for known field types
+                        if (fieldName == 'Academic Interest') {
+                            newField.isProgramLookup = true;
+                            newField.max = 4;
+                        } else if (fieldName == 'Address') {
+                            newField.isAddress = true;
+                        } else if (fieldName == 'High School Attended') {
+                            newField.isSchoolLookup = true;
+                        } else if (fieldName == 'Expected Start Term at St Thomas') {
+                            // Intended_Start_Term__c is a lookup to Academic_Term__c, shown as a drop-down of terms
+                            newField.fieldInteractionAPIName = 'Intended_Start_Term__c';
+                            newField.isPicklist = true;
+                            newField.picklistValues = getTerms();
+                        } else if (fieldName == 'St Thomas Colleges') {
+                            // St_Thomas_College_School__c is a lookup to Account, shown as a drop-down of schools
+                            newField.fieldInteractionAPIName = 'St_Thomas_College_School__c';
+                            newField.isPicklist = true;
+                            newField.picklistValues = getUSTSchoolList();
+                        } else if (fieldName == 'Home and Mobile Phone') {
+                            List<rfiField> phoneFields = buildHomeAndMobilePhoneFields(q.get('isRequired') == true, false);
+                            newField = phoneFields[0];
+                            extraField = phoneFields[1];
+                        } else if (fieldName == 'Email') {
+                            newField.isEmail = true;
+                        } else if (fieldName.contains('Phone')) {
+                            newField.isTel = true;
+                        } else if (fieldName == 'Tell us about yourself') {
+                            newField.isTextarea = true;
+                        } else if (fieldName == 'I have a question') {
+                            newField.isCheckbox = true;
+                            newField.showDependentField = true;
+                        } else if (fieldName == 'I would like to receive text messages' || fieldName == 'Receive Text Messages') {
+                            // Receive_Texts__c is a Picklist, not a Boolean — fall through to the
+                            // dynamic picklist detection below instead of forcing a checkbox.
+                        } else if (fieldName == 'I would like program information to be mailed to me' || fieldName == 'Mail Information') {
+                            newField.isCheckbox = true;
+                        }
+
+                        // For remaining fields, check if the Interaction field is a picklist
+                        if (newField.isProgramLookup != true && newField.isAddress != true && newField.isEmail != true
+                                && newField.isTel != true && newField.isTextarea != true && newField.isCheckbox != true
+                                && newField.isSchoolLookup != true
+                                && String.isNotBlank(newField.fieldInteractionAPIName)) {
+                            Schema.SObjectField sField = interactionFieldMap.get(newField.fieldInteractionAPIName.toLowerCase());
+                            if (sField != null) {
+                                Schema.DescribeFieldResult d = sField.getDescribe();
+                                if (d.getType() == Schema.DisplayType.MULTIPICKLIST) {
+                                    newField.picklistValues = getPicklistOptions(d);
+                                    newField.isMultiSelect = true;
+                                    newField.max = 4;
+                                } else if (d.getType() == Schema.DisplayType.PICKLIST) {
+                                    newField.picklistValues = getPicklistOptions(d);
+                                    newField.isPicklist = true;
+                                }
                             }
                         }
-                    }
 
-                } else if (questionType == 'filter') {
-                    // Program filter question — drives Academic Programs picklist filtering
-                    String controllerField = (String) q.get('filterControllerField');
-                    String interactionApiName = (String) q.get('filterInteractionAPIName');
-                    String catalogFilterTarget = rfiQuestionCatalog.filterTargetFor((String) q.get('filterControllerField'));
-                    if (catalogFilterTarget != null) {
-                        interactionApiName = catalogFilterTarget;
-                    }
-                    Boolean isSchoolList = q.get('isFilterSchoolList') == true;
+                    } else if (questionType == 'filter') {
+                        // Program filter question — drives Academic Programs picklist filtering
+                        String controllerField = (String) q.get('filterControllerField');
+                        String interactionApiName = (String) q.get('filterInteractionAPIName');
+                        String catalogFilterTarget = rfiQuestionCatalog.filterTargetFor((String) q.get('filterControllerField'));
+                        if (catalogFilterTarget != null) {
+                            interactionApiName = catalogFilterTarget;
+                        }
+                        Boolean isSchoolList = q.get('isFilterSchoolList') == true;
 
-                    newField.fieldInteractionAPIName = interactionApiName;
-                    newField.isProgramFilter = true;
-                    newField.isRequired = true;
+                        newField.fieldInteractionAPIName = interactionApiName;
+                        newField.isProgramFilter = true;
+                        newField.isRequired = true;
 
-                    // Determine the display values to use:
-                    // 1. Prefer filterSelectedValues from the JSON (the admin-chosen subset)
-                    // 2. Fall back to the full _To_Display__c field value on the controller
-                    String displayValues = '';
-                    Object selectedValsObj = q.get('filterSelectedValues');
-                    if (selectedValsObj != null) {
-                        List<Object> selectedList = (List<Object>) selectedValsObj;
-                        if (!selectedList.isEmpty()) {
-                            List<String> selectedStrings = new List<String>();
-                            for (Object sv : selectedList) {
-                                selectedStrings.add(String.valueOf(sv));
+                        // Determine the display values to use:
+                        // 1. Prefer filterSelectedValues from the JSON (the admin-chosen subset)
+                        // 2. Fall back to the full _To_Display__c field value on the controller
+                        String displayValues = '';
+                        Object selectedValsObj = q.get('filterSelectedValues');
+                        if (selectedValsObj != null) {
+                            List<Object> selectedList = (List<Object>) selectedValsObj;
+                            if (!selectedList.isEmpty()) {
+                                List<String> selectedStrings = new List<String>();
+                                for (Object sv : selectedList) {
+                                    selectedStrings.add(String.valueOf(sv));
+                                }
+                                displayValues = String.join(selectedStrings, ';');
                             }
-                            displayValues = String.join(selectedStrings, ';');
+                        }
+                        // Fall back to controller field if JSON values weren't available
+                        if (String.isBlank(displayValues) && String.isNotBlank(controllerField)) {
+                            displayValues = (String) rfiController.get(controllerField);
+                        }
+
+                        // Build picklist options from the resolved display values
+                        if (String.isNotBlank(displayValues)) {
+                            if (isSchoolList) {
+                                newField.picklistValues = getUSTSchoolList(displayValues);
+                            } else {
+                                newField.picklistValues = getOptionsFromDelineatedString(displayValues);
+                            }
+                        }
+
+                        // Register this filter in the filterValues map so the JS knows to wait for it
+                        if (String.isNotBlank(interactionApiName)) {
+                            interactionAndRfi.filterValues.put(interactionApiName, '');
+                        }
+
+                    } else if (questionType == 'custom') {
+                        newField.fieldInteractionAPIName = (String) q.get('fieldToApplyTo');
+                        String qType = String.valueOf(q.get('questionType') != null ? q.get('questionType') : '');
+
+                        if (qType == 'Static content') {
+                            newField.isStaticContent = true;
+                            newField.staticContentHtml = (String) q.get('valuesFlat');
+                        } else if (qType.toLowerCase().contains('picklist') || qType.toLowerCase().contains('combobox')) {
+                            newField.isPicklist = true;
+                            newField.picklistValues = customPicklistOptions(q.get('picklistValues'), newField.fieldInteractionAPIName, interactionFieldMap);
+                        } else if (qType.toLowerCase().contains('textarea')) {
+                            newField.isTextarea = true;
+                        } else if (qType.toLowerCase().contains('email')) {
+                            newField.isEmail = true;
+                        } else if (qType.toLowerCase().startsWith('checkbox')) {
+                            newField.isCheckbox = true;
+                        } else if (qType.toLowerCase().startsWith('date')) {
+                            newField.isDate = true;
+                            newField.inputType = 'date';
+                        }
+                        // Default (text box) falls through to lightning-input in the template
+                    }
+
+                    interactionAndRfi.rfiFieldList.add(newField);
+                    if (extraField != null) {
+                        interactionAndRfi.rfiFieldList.add(extraField);
+                    }
+                    if (String.isNotBlank(questionFailureAfterAddForTest) && questionFailureAfterAddForTest == String.valueOf(q.get('questionLabel'))) {
+                        throw new IllegalArgumentException('Simulated failure after the question was added');
+                    }
+                } catch (Exception questionError) {
+                    while (interactionAndRfi.rfiFieldList.size() > fieldCountBefore) {
+                        interactionAndRfi.rfiFieldList.remove(interactionAndRfi.rfiFieldList.size() - 1);
+                    }
+                    for (String addedKey : new List<String>(interactionAndRfi.filterValues.keySet())) {
+                        if (!filterKeysBefore.contains(addedKey)) {
+                            interactionAndRfi.filterValues.remove(addedKey);
                         }
                     }
-                    // Fall back to controller field if JSON values weren't available
-                    if (String.isBlank(displayValues) && String.isNotBlank(controllerField)) {
-                        displayValues = (String) rfiController.get(controllerField);
-                    }
-
-                    // Build picklist options from the resolved display values
-                    if (String.isNotBlank(displayValues)) {
-                        if (isSchoolList) {
-                            newField.picklistValues = getUSTSchoolList(displayValues);
-                        } else {
-                            newField.picklistValues = getOptionsFromDelineatedString(displayValues);
-                        }
-                    }
-
-                    // Register this filter in the filterValues map so the JS knows to wait for it
-                    if (String.isNotBlank(interactionApiName)) {
-                        interactionAndRfi.filterValues.put(interactionApiName, '');
-                    }
-
-                } else if (questionType == 'custom') {
-                    newField.fieldInteractionAPIName = (String) q.get('fieldToApplyTo');
-                    String qType = String.valueOf(q.get('questionType') != null ? q.get('questionType') : '');
-
-                    if (qType == 'Static content') {
-                        newField.isStaticContent = true;
-                        newField.staticContentHtml = (String) q.get('valuesFlat');
-                    } else if (qType.toLowerCase().contains('picklist') || qType.toLowerCase().contains('combobox')) {
-                        newField.isPicklist = true;
-                        newField.picklistValues = customPicklistOptions(q.get('picklistValues'), newField.fieldInteractionAPIName, interactionFieldMap);
-                    } else if (qType.toLowerCase().contains('textarea')) {
-                        newField.isTextarea = true;
-                    } else if (qType.toLowerCase().contains('email')) {
-                        newField.isEmail = true;
-                    } else if (qType.toLowerCase().startsWith('checkbox')) {
-                        newField.isCheckbox = true;
-                    } else if (qType.toLowerCase().startsWith('date')) {
-                        newField.isDate = true;
-                        newField.inputType = 'date';
-                    }
-                    // Default (text box) falls through to lightning-input in the template
-                }
-
-                interactionAndRfi.rfiFieldList.add(newField);
-                if (extraField != null) {
-                    interactionAndRfi.rfiFieldList.add(extraField);
+                    String failedLabel = String.valueOf(q.get('questionLabel'));
+                    interactionAndRfi.warnings.add('The question "' + failedLabel + '" could not be built and was skipped: ' + questionError.getMessage());
                 }
             }
 

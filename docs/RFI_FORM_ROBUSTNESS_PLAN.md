@@ -168,6 +168,8 @@ suggests it but no submission was run.
 | F40 | **The newer form depended on the manager to include First Name and Last Name.** The older form adds them when missing; the newer one did not. A saved list without them (edited by hand, or saved before the manager protected them) would make every submission fail on the object's required fields. Found by the parity test. | `olderAndNewerForms_giveTheSameFieldsAndControlsForTheSameQuestions_TEST`. | Fixed: the newer form adds both at the front when missing. All 20 staging controllers that use the newer form already contain them (checked read-only). |
 | F41 | **A field the running user cannot read behaves as if it does not exist.** For such a field, Apex describe leaves it out of the field map, `put` fails with "Invalid field", and `stripInaccessible` reports nothing. New fields deployed to a org are not readable by anyone until a permission set grants them (measured in scratch with a throwaway field). So if the person who validates the deployment in eda-staging cannot read `Timeline__c`, `rfiQuestionCatalog_TEST` fails with "Timeline__c is not a field on Interaction__c" even though the code is right. | Scratch probe (create a field, describe it as a user without access); staging field access for `School_Name_Text__c` comes only from permission sets. | Handled in the hand-off order: create `Timeline__c`, give the deploying user read access through a permission set, then validate. No code change. |
 | F42 | **A custom picklist question kept a copy of the field's values, so it went stale.** The manager copied the values into the saved question; the form used the copy. A value added later never appeared, and a retired value was still offered, which the platform rejects on save (the RFI is lost, with an Error record and an error message for the visitor). | Manager and Apex code read; the 2026-11-02 end-to-end test below. | Fixed in scratch: a Picklist question on a picklist or multi-select field always shows the field's live active values, the manager saves no copy, and old copies are ignored and dropped when the question is next edited. A question on a text field still uses the list the admin typed. |
+| F43 | **A saved question list of `[]` made the newer form crash.** The Phase 4 change that adds First and Last Name when missing used `add(0, ...)`, which Apex rejects on an empty list. Before that change an empty list loaded as an empty form. Found while testing how the form reacts to unexpected shapes of the saved JSON. | Probe of 13 crafted shapes in scratch (see the answer on schema changes in the 2026-11-02 conversation notes); `ListException: List index out of bounds: 0`. | Fixed in scratch with a test (`newerForm_withAnEmptySavedList_stillLoadsWithFirstAndLastName_TEST`); the test fails without the fix. |
+| F44 | **The saved question list had no protection against change.** There was no format version, and questions had no stable identity (`id` is the list position and changes on every move or delete). Reading was scattered casts, so a value of the wrong type stopped the whole form (13 shapes tested in scratch: a label saved as a number, picklist choices saved as text, an entry that is not an object, a list wrapped in an object). Others failed silently: `"isRequired":"true"` as text made a question stop being required; an unknown question type produced a question that saves nowhere. Every one of the 179 questions in eda-staging also carried 10 display flags the manager works out for itself. | Probe of 13 shapes against `getRFIForm`; inventory of the saved JSON in eda-staging (20 controllers, 179 questions). | Fixed in scratch: one tolerant reader (`rfiQuestionReader`), a stable `key` and a `schemaVersion` on every question, display flags no longer saved, a broken question skipped and reported instead of stopping the form. Rules for future changes are in `docs/AI-TOOLS-CONFIG.md`, "Changing the question format". |
 
 ---
 
@@ -565,11 +567,37 @@ Done:
   Baseline in eda-staging before the deploy: 5 pass, 4 fail (all four are things this deploy adds: nine classes, `Timeline__c`,
   and the two picklist values still active). It also reports the repair counts: 12 Phone, 2 Title and 2 mail questions,
   1 controller with the start-school question, 1 form with the older split address, and 0 forms without name questions.
-- **Deployment manifest:** `manifest/rfi-staging-deploy.xml`, 17 named components, no permissions and no sharing. A check-only
-  deploy of it to scratch with the five test classes: 17 of 17 components, 163 tests, 0 failures (re-run after the custom question work: it was 155 before).
+- **Deployment manifest:** `manifest/rfi-staging-deploy.xml`, 19 named components, no permissions and no sharing. A check-only
+  deploy of it to scratch with the six test classes: 19 of 19 components, 191 tests, 0 failures (re-run after the schema work; it was 155, then 163, before).
 
 Not done, and why: the deploy itself (yours); the repair script's dry run against staging (it needs the catalog class, which staging
 does not have yet; run it right after the Apex deploy); production (separate story, see below).
+
+**Schema hardening (2026-11-02, ahead of the dependent questions work in ECRMSF-6061; scratch only).**
+- **`rfiQuestionReader`** reads the saved list for the form: keeps unknown keys, accepts the list or an object holding it under
+  `questions`, converts safe wrong types (the text "true", a number used as a label), skips a question it cannot understand
+  (unknown type, no name, no field to save to) and describes each problem by position and label. Only text that is not a list of
+  questions at all still stops the form.
+- **Each question is built on its own.** If one fails while being built, whatever it half-added (the field, a filter
+  registration) is removed, the problem is reported, and the rest load.
+- **Where admins see problems:** a warning banner on the form when it sits on the controller record page (the component has a
+  record id only there, so visitors never see it), and one "saved with gaps" row in the Error object for each submission while the
+  problem persists, naming the question.
+- **The Question Manager writes the new format:** every question gets a stable `key` (a repeated key on a copy is replaced), a
+  `schemaVersion` (never lowered if a newer version wrote it), and the display flags are no longer saved. It keeps keys it does
+  not know, and an unreadable saved list no longer breaks the screen. Existing lists are upgraded the next time an admin saves.
+- **Tests:** `rfiQuestionReader_TEST` (27) with three real lists copied from eda-staging as fixtures, and
+  `rfiUnifiedQuestionManager.schema.test.js` (8) with another. Apex 192 and Jest 56 pass across all suites. Ten reader and
+  isolation mutations and eight manager mutations were each caught. One was missed at first (undoing a half-built question), which
+  led to a second failure hook and test. The three banner mutations were also caught.
+- **Guest check on the public scratch site:** a saved list with a "matrix" question, a custom question with no field, an email
+  question with `"isRequired":"true"` text, and an unknown `visibleWhen` key loaded the three good questions, honoured the text
+  "true" (Email shows as required), showed no banner or internal text to the visitor, saved the submit, and wrote one Error row
+  naming both skipped questions.
+- **Not verified live:** the banner as an admin on the record page (it needs a logged-in session; the Jest tests cover shown with a
+  record id and hidden without). Please look at it once in eda-staging.
+- **Jira:** the dependent-questions work is ECRMSF-6061, a subtask of ECRMSF-5545. Rules in a later change must refer to a
+  question by `key`, never `id`.
 
 **Hand-off checklist for the person deploying to eda-staging.** Order matters; fields come before the code that uses them,
 and the Apex before the LWC that imports it.
@@ -580,9 +608,9 @@ and the Apex before the LWC that imports it.
    grants it, and an invisible field makes `rfiQuestionCatalog_TEST` fail with "not a field on Interaction__c". Use a permission
    set you already hold (or ask admins, section 9 B). Do not use the repo's `RFI_User` or `RFI_Controller_User`: they are not
    deployed to staging.
-3. **Validate without saving** (this runs the five test classes in the org; it writes nothing):
-   `sf project deploy start --dry-run --manifest manifest/rfi-staging-deploy.xml --target-org eda-staging --test-level RunSpecifiedTests --tests rfiFormController_TEST --tests rfiSubmissionProcessor_TEST --tests rfiSubmissionGuard_TEST --tests rfiErrorLogger_TEST --tests rfiQuestionCatalog_TEST`
-   About 163 tests run and all should pass (the same selection did in scratch; the count can differ by a few in another org). A failure that mentions Act-On, DLRS or another Contact,
+3. **Validate without saving** (this runs the six test classes in the org; it writes nothing):
+   `sf project deploy start --dry-run --manifest manifest/rfi-staging-deploy.xml --target-org eda-staging --test-level RunSpecifiedTests --tests rfiFormController_TEST --tests rfiSubmissionProcessor_TEST --tests rfiSubmissionGuard_TEST --tests rfiErrorLogger_TEST --tests rfiQuestionCatalog_TEST --tests rfiQuestionReader_TEST`
+   About 191 tests run and all should pass (the same selection did in scratch; the count can differ by a few in another org). A failure that mentions Act-On, DLRS or another Contact,
    Opportunity or Account trigger is the unknown described in the status above: send it to me. Do not skip it.
 4. **Deploy** (same command without `--dry-run`). One deploy handles the Apex and the LWC that imports it together; do not
    deploy the LWC alone before the Apex. Then make a real content change to `requestForInformationApp.app` if a browser keeps an old bundle (the manifest
@@ -752,3 +780,9 @@ The new form reads the controller record through code that does not need a shari
 - **Birthdate** is now a date picker. Nothing changes for staff, but anyone who typed the date as text before had their whole submission rejected (finding F38).
 
 **J. Custom questions on new Interaction fields (follow-up after Phase 5 preparation).** An admin can now build a question on a new Interaction field without a developer for these field types: text, text area, email, single picklist, checkbox and date. Steps: create the field, give the guest and the admins access through your permission sets, then add a custom question in the Question Manager and pick the field. If the guest has no access to the field, the RFI is still saved without that answer and an Error record names the field. Not available without a developer: lookup fields and multi-select picklists (the Question Manager does not offer them). In a test with temporary fields in scratch, a picklist value added and another retired on the field showed up on the public form with no edit to the question, and a submit with the new value saved.
+
+**K. What the schema hardening adds for admins.**
+- **A warning banner on the form.** When the form sits on the RFI Controller record page and a saved question cannot be shown, a yellow banner lists it by position and label with the reason. Visitors never see it. Fix the question in the Question Manager (or delete it) and save; the banner clears.
+- **A row in the Error object for each submission** while a question is skipped (`WARNING: RFI Form saved with gaps`, "Saved question list: Question N ..."). This is the same row type as other gaps, so the decision in section H about who watches the Error object covers it.
+- **Saving makes older lists current.** The next Save in the Question Manager adds a stable key and version to every question and drops the display flags. Nothing else about a form changes, and a list nobody saves keeps working as it is.
+- **Nothing to grant.** No new permissions are needed.

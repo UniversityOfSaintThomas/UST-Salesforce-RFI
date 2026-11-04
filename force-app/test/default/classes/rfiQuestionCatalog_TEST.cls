@@ -359,6 +359,14 @@ private class rfiQuestionCatalog_TEST {
     }
 
     @IsTest
+    static void newerForm_withAnEmptySavedList_stillLoadsWithFirstAndLastName_TEST() {
+        rfiFormController.interactionRFIFields form = unifiedForm(new List<String>());
+        System.assertEquals(2, form.rfiFieldList.size());
+        System.assertEquals('First_Name__c', form.rfiFieldList[0].fieldInteractionAPIName);
+        System.assertEquals('Last_Name__c', form.rfiFieldList[1].fieldInteractionAPIName);
+    }
+
+    @IsTest
     static void newerForm_doesNotAddNamesThatAreAlreadyThere_TEST() {
         rfiFormController.interactionRFIFields form = unifiedForm(new List<String>{ 'Last Name', 'First Name', 'Email' });
         Integer firstNames = 0;

@@ -12,6 +12,18 @@
                 <template if:true={showLoadFailure}>
                     <p class="slds-text-color_error slds-p-around_small" role="alert">We could not load this form. Please try again later.</p>
                 </template>
+                <template if:true={hasAdminWarnings}>
+                    <div class="slds-notify slds-notify_alert slds-alert_warning slds-m-bottom_small" role="alert" data-id="admin-warnings">
+                        <div>
+                            <p class="slds-text-heading_x-small">Some saved questions were left out of this form. Visitors do not see this message.</p>
+                            <ul class="slds-list_dotted">
+                                <template for:each={adminWarnings} for:item="warning">
+                                    <li key={warning.key}>{warning.text}</li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                </template>
                 <template if:true={hasData}>
                     <div class="slds-p-vertical_small">
                         <template for:each={fields} for:item="f" for:index="index">
