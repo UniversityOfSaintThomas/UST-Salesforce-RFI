@@ -10,6 +10,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import getQuestionCatalog from '@salesforce/apex/rfiFormController.getQuestionCatalog';
 import { getObjectInfo, getPicklistValues, getPicklistValuesByRecordType } from 'lightning/uiObjectInfoApi';
+import { answerChoices, canHaveRule, describeRule, eligibleParents, ruleProblems } from './visibilityRules';
 
 import RFI_CONTROLLER_OBJECT from '@salesforce/schema/RFI_Controller__c';
 import INTERACTION_OBJECT from '@salesforce/schema/Interaction__c';
@@ -56,6 +57,9 @@ const FIELDS = [
 
 // The version of the saved question format this code writes. Rules for changing it are in docs/AI-TOOLS-CONFIG.md.
 const SCHEMA_VERSION = 1;
+
+// The choice in the "Show only when" list that means the question has no rule
+const NO_RULE = 'none';
 
 // Flags the manager works out for its own screen. They are not configuration, so they are never saved.
 const DERIVED_KEYS = [
@@ -718,6 +722,13 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
 
     // Save question from modal
     saveQuestion() {
+        if (this.showRuleEditor && this.currentQuestion.visibleWhen) {
+            const rule = this.currentQuestion.visibleWhen;
+            if (!Array.isArray(rule.equals) || rule.equals.length === 0) {
+                this.showToast('Warning', 'Choose at least one answer for "Show only when", or choose "Always show this question"', 'warning');
+                return;
+            }
+        }
         if (this.modalMode === 'addPreconfigured') {
             this.addPreconfiguredField();
         } else if (this.modalMode === 'editPreconfigured') {
@@ -1010,6 +1021,10 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
 
     // Save to Salesforce
     async handleSave() {
+        if (this.ruleProblemList.length > 0) {
+            this.showToast('Error', 'Fix the "Show only when" rules listed above before saving', 'error');
+            return;
+        }
         this.isLoading = true;
         this.isSaving = true;
 
@@ -1055,6 +1070,109 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
             variant: variant
         });
         this.dispatchEvent(event);
+    }
+
+    // ---- "Show only when" rules ----
+
+    // What the rule functions need to know about the Interaction object, read live from the wired data
+    get ruleContext() {
+        return {
+            fieldDataType: (apiName) => {
+                const meta = this.interactionObjectInfo?.data?.fields?.[apiName];
+                return meta ? String(meta.dataType).toLowerCase() : undefined;
+            },
+            livePicklist: (apiName) => this._interactionPicklistOptions[apiName]
+        };
+    }
+
+    // The list with the plain-words rule description added to each question, for the screen only
+    get questionRows() {
+        return this.questions.map((question) => ({
+            ...question,
+            visibleWhenText: describeRule(question, this.questions, this.ruleContext)
+        }));
+    }
+
+    // Rules that cannot work with the questions as they are now, listed above the table
+    get ruleProblemList() {
+        return ruleProblems(this.questions, this.ruleContext).map((text, index) => ({ id: index, text }));
+    }
+
+    get hasRuleProblems() {
+        return this.ruleProblemList.length > 0;
+    }
+
+    // The editor is offered for questions that can be hidden, when adding a custom question or editing a built-in one
+    get showRuleEditor() {
+        const editable = ['add', 'edit', 'editPreconfigured'].includes(this.modalMode);
+        return this.showModal && editable && canHaveRule(this.currentQuestion);
+    }
+
+    // A new question goes at the end of the list; an existing one is at the position its id gives
+    get _ruleEditorPosition() {
+        return this.modalMode === 'add' ? this.questions.length : this.currentQuestion.id;
+    }
+
+    get _ruleParents() {
+        return eligibleParents(this.questions, this._ruleEditorPosition, this.ruleContext);
+    }
+
+    get ruleParentKey() {
+        return this.currentQuestion.visibleWhen?.key || NO_RULE;
+    }
+
+    get ruleParentOptions() {
+        const options = [{ label: 'Always show this question', value: NO_RULE }];
+        const parents = this._ruleParents;
+        parents.forEach((parent) => options.push({ label: parent.label, value: parent.key }));
+        const chosen = this.currentQuestion.visibleWhen?.key;
+        if (chosen && !parents.some((parent) => parent.key === chosen)) {
+            options.push({ label: 'An earlier question that can no longer be used', value: chosen });
+        }
+        return options;
+    }
+
+    get ruleAnswerOptions() {
+        const chosen = this.currentQuestion.visibleWhen;
+        if (!chosen) {
+            return [];
+        }
+        const parent = this._ruleParents.find((entry) => entry.key === chosen.key);
+        const options = parent ? parent.options.map((option) => ({ label: option.label, value: option.value })) : [];
+        (chosen.equals || []).forEach((value) => {
+            if (!options.some((option) => option.value === value)) {
+                options.push({ label: `${value} (no longer an answer)`, value });
+            }
+        });
+        return options;
+    }
+
+    get ruleAnswers() {
+        return this.currentQuestion.visibleWhen?.equals || [];
+    }
+
+    // Offered when there is an earlier question to depend on, and always when the question already has a rule
+    // (so a rule whose earlier question is gone can still be changed or removed)
+    get showRuleControls() {
+        return this._ruleParents.length > 0 || !!this.currentQuestion.visibleWhen;
+    }
+
+    handleRuleParentChange(event) {
+        const key = event.detail.value;
+        const { visibleWhen, ...rest } = this.currentQuestion;
+        if (key === NO_RULE) {
+            this.currentQuestion = rest;
+        } else if (visibleWhen && visibleWhen.key === key) {
+            return;
+        } else {
+            // The answers belonged to the old earlier question, so start again
+            this.currentQuestion = { ...rest, visibleWhen: { key, equals: [] } };
+        }
+    }
+
+    handleRuleAnswersChange(event) {
+        const visibleWhen = { ...(this.currentQuestion.visibleWhen || {}), equals: event.detail.value };
+        this.currentQuestion = { ...this.currentQuestion, visibleWhen };
     }
 
     // Computed properties

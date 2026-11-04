@@ -46,6 +46,13 @@ public with sharing class rfiFormController {
         @AuraEnabled public Boolean isProgramLookup { get; set; }
         @AuraEnabled public Boolean isProgramFilter { get; set; }
         @AuraEnabled public Boolean showDependentField { get; set; }
+        // The stable key of the saved question this field belongs to (a question can draw more than one field)
+        @AuraEnabled public String questionKey { get; set; }
+        // "Show only when": the Interaction field of the earlier question, how its answer is read ('picklist' or
+        // 'checkbox'), and the answers that reveal this field. Empty when the field always shows.
+        @AuraEnabled public String visibleWhenField { get; set; }
+        @AuraEnabled public String visibleWhenKind { get; set; }
+        @AuraEnabled public List<String> visibleWhenValues { get; set; }
     }
 
     public class programValues {
@@ -699,6 +706,115 @@ public with sharing class rfiFormController {
     }
 
     /**
+     * Turns each question's "show only when" rule into properties on the fields it drew, after checking that the
+     * rule can work with the fields that were actually built. The earlier question must have been built, must save
+     * one answer that is a choice from a list or a tick box, and the dependent question must not be a name
+     * question (the object requires those). A rule that cannot work is ignored and reported, so the question shows.
+     *
+     * @param questions The cleaned saved questions
+     * @param fieldsOfQuestion The fields each question produced, by the question's position; skipped questions are absent
+     * @param warnings Collects a message for every rule that could not be used
+     */
+    @TestVisible
+    private static void applyVisibilityRules(List<Map<String, Object>> questions, Map<Integer, List<rfiField>> fieldsOfQuestion, List<String> warnings) {
+        Map<String, List<rfiField>> fieldsOfKey = new Map<String, List<rfiField>>();
+        for (Integer position = 0; position < questions.size(); position++) {
+            String key = (String) questions[position].get('key');
+            if (String.isNotBlank(key) && fieldsOfQuestion.containsKey(position) && !fieldsOfKey.containsKey(key)) {
+                fieldsOfKey.put(key, fieldsOfQuestion.get(position));
+            }
+        }
+        for (Integer position = 0; position < questions.size(); position++) {
+            Map<String, Object> question = questions[position];
+            if (!question.containsKey('visibleWhen') || !fieldsOfQuestion.containsKey(position)) {
+                continue;
+            }
+            Map<String, Object> rule = (Map<String, Object>) question.get('visibleWhen');
+            List<String> revealingAnswers = (List<String>) rule.get('equals');
+            String name = 'The question "' + String.valueOf(question.get('questionLabel')) + '"';
+            List<rfiField> children = fieldsOfQuestion.get(position);
+            List<rfiField> parentFields = fieldsOfKey.get((String) rule.get('key'));
+
+            String problem = null;
+            for (rfiField child : children) {
+                if (child.fieldInteractionAPIName == 'First_Name__c' || child.fieldInteractionAPIName == 'Last_Name__c') {
+                    problem = 'asks for a name, which every form needs, so it cannot be hidden';
+                }
+            }
+            if (problem == null && parentFields == null) {
+                problem = 'depends on a question that could not be built';
+            }
+            rfiField parent = problem == null ? parentFields[0] : null;
+            String kind = null;
+            if (problem == null) {
+                kind = answerKindOf(parent);
+                if (kind == null) {
+                    problem = 'depends on "' + parent.fieldLabel + '", which is not a choice from a list or a tick box';
+                }
+            }
+            if (problem != null) {
+                warnings.add(name + ' ' + problem + '. Its rule was ignored and it always shows.');
+                continue;
+            }
+            for (rfiField child : children) {
+                child.visibleWhenField = parent.fieldInteractionAPIName;
+                child.visibleWhenKind = kind;
+                child.visibleWhenValues = revealingAnswers;
+            }
+            Set<String> parentAnswers = answersOf(parent, kind);
+            List<String> unknownAnswers = new List<String>();
+            for (String answer : revealingAnswers) {
+                if (!parentAnswers.contains(answer)) {
+                    unknownAnswers.add(answer);
+                }
+            }
+            if (!unknownAnswers.isEmpty()) {
+                warnings.add(name + ' shows only when "' + parent.fieldLabel + '" is ' + String.join(unknownAnswers, ' or ')
+                        + ', but ' + (unknownAnswers.size() == 1 ? 'that is not' : 'those are not') + ' (any longer) an answer to it. '
+                        + (unknownAnswers.size() == revealingAnswers.size() ? 'Nobody can see this question.' : 'It will not show for that answer.'));
+            }
+        }
+    }
+
+    /**
+     * Tells how the answer to a question can be compared by a "show only when" rule.
+     *
+     * @param field The field the earlier question drew
+     * @return 'checkbox', 'picklist', or null when its answer cannot be used by a rule
+     */
+    private static String answerKindOf(rfiField field) {
+        if (field.isProgramFilter == true || field.isProgramLookup == true || field.isSchoolLookup == true || field.isAddress == true
+                || field.isStaticContent == true || field.isMultiSelect == true || field.isDate == true) {
+            return null;
+        }
+        if (field.isCheckbox == true) {
+            return 'checkbox';
+        }
+        if (field.isPicklist == true && String.isNotBlank(field.fieldInteractionAPIName)) {
+            Schema.SObjectField interactionField = Schema.SObjectType.Interaction__c.fields.getMap().get(field.fieldInteractionAPIName.toLowerCase());
+            // A choice that is a record (a term, a school) has a different value in every org, so a rule cannot name it
+            if (interactionField != null && interactionField.getDescribe().getType() == Schema.DisplayType.REFERENCE) {
+                return null;
+            }
+            return 'picklist';
+        }
+        return null;
+    }
+
+    private static Set<String> answersOf(rfiField field, String kind) {
+        Set<String> answers = new Set<String>();
+        if (kind == 'checkbox') {
+            answers.add('true');
+            answers.add('false');
+        } else if (field.picklistValues != null) {
+            for (picklistOption option : field.picklistValues) {
+                answers.add(option.value);
+            }
+        }
+        return answers;
+    }
+
+    /**
      * Makes sure the form asks for first and last name, which Interaction__c requires. The older form definition
      * always adds them; the newer one relied on the Question Manager never removing them. A saved list that lacks
      * them (edited by hand, or saved before that rule) would make every submission fail.
@@ -1343,6 +1459,12 @@ public with sharing class rfiFormController {
 
             rfiSubmissionGuard.FilterResult filtered = rfiSubmissionGuard.filterIncoming(incomingFields, allowedFields);
             Interaction__c cleanInteraction = rfiSubmissionGuard.buildRecord(filtered);
+            if (form != null) {
+                List<String> hiddenAnswers = rfiSubmissionGuard.dropAnswersToHiddenQuestions(form.rfiFieldList, cleanInteraction);
+                if (!hiddenAnswers.isEmpty()) {
+                    gaps.add('Answers to questions hidden by a "show only when" rule were not saved: ' + String.join(hiddenAnswers, ', '));
+                }
+            }
             List<String> unexpectedFields = new List<String>();
             for (String ignoredField : filtered.ignored) {
                 if (form == null || !isEchoOfControllerValue(ignoredField, incomingFields.get(ignoredField), form.interaction)) {
@@ -1484,7 +1606,11 @@ public with sharing class rfiFormController {
                 }
             }
 
+            // The fields each question produced, by the question's position in unifiedQuestions, for the "show only when" pass
+            Map<Integer, List<rfiField>> fieldsOfQuestion = new Map<Integer, List<rfiField>>();
+            Integer questionNumber = -1;
             for (Map<String, Object> q : unifiedQuestions) {
+                questionNumber++;
                 // Each question is processed on its own. If one fails, whatever it half-added is undone, the problem is
                 // reported, and the other questions still load.
                 Integer fieldCountBefore = interactionAndRfi.rfiFieldList.size();
@@ -1659,13 +1785,18 @@ public with sharing class rfiFormController {
                         // Default (text box) falls through to lightning-input in the template
                     }
 
+                    newField.questionKey = (String) q.get('key');
                     interactionAndRfi.rfiFieldList.add(newField);
+                    List<rfiField> builtFields = new List<rfiField>{ newField };
                     if (extraField != null) {
+                        extraField.questionKey = (String) q.get('key');
                         interactionAndRfi.rfiFieldList.add(extraField);
+                        builtFields.add(extraField);
                     }
                     if (String.isNotBlank(questionFailureAfterAddForTest) && questionFailureAfterAddForTest == String.valueOf(q.get('questionLabel'))) {
                         throw new IllegalArgumentException('Simulated failure after the question was added');
                     }
+                    fieldsOfQuestion.put(questionNumber, builtFields);
                 } catch (Exception questionError) {
                     while (interactionAndRfi.rfiFieldList.size() > fieldCountBefore) {
                         interactionAndRfi.rfiFieldList.remove(interactionAndRfi.rfiFieldList.size() - 1);
@@ -1679,6 +1810,8 @@ public with sharing class rfiFormController {
                     interactionAndRfi.warnings.add('The question "' + failedLabel + '" could not be built and was skipped: ' + questionError.getMessage());
                 }
             }
+
+            applyVisibilityRules(unifiedQuestions, fieldsOfQuestion, interactionAndRfi.warnings);
 
             System.debug('✅ Processed ' + unifiedQuestions.size() + ' unified questions');
 

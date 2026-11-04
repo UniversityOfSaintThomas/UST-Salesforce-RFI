@@ -85,3 +85,4 @@ robot/UST-RFI/results/
 code-analyzer.yml
 /.agentbridge/
 /package-lock.json
+.playwright-mcp/

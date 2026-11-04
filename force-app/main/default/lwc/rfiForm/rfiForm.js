@@ -16,7 +16,10 @@ import RFI_CONTROLLER_FIELDS_ORDER from '@salesforce/schema/RFI_Controller__c.Fi
 import RFI_CONTROLLER_ACADEMIC_INTERESTS from '@salesforce/schema/RFI_Controller__c.Academic_Interests_To_Display__c';
 import RFI_CONTROLLER_UNIFIED_QUESTIONS from '@salesforce/schema/RFI_Controller__c.Unified_Questions__c';
 import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
-import { applyFieldAnswer, composeDescription, isEmptyAnswer, toSemicolonList, withAnswer, withMajorPrograms } from 'c/rfiFormUtils';
+import {
+    applyFieldAnswer, composeDescription, hiddenQuestions, isEmptyAnswer, isQuestionShown, toSemicolonList,
+    withAnswer, withMajorPrograms, withoutHiddenAnswers
+} from 'c/rfiFormUtils';
 
 // Name of the box that opens when a visitor ticks "I have a question". It is not an Interaction field:
 // its text is combined with "Tell us about yourself" into the Description before submit.
@@ -200,8 +203,31 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this.programValues = this.rfiData.programValues;
         this.stateOptions = this.rfiData.stateOptions;
         this.cantFindSchool = this.rfiData.cantFindSchool;
+        this._forgetHiddenAnswers();
         this.redirectUrl = this.rfiData.redirectUrl;
         this.redirectAfterSubmission = this.rfiData.redirectAfterSubmission;
+    }
+
+    /**
+     * Forgets what the form holds for questions that a "show only when" rule hides: the stored answers, and the
+     * school and question-box switches that belong to those questions. Called whenever an answer that a rule can
+     * depend on changes, when the form loads, and when it is reset. A question that comes back after being hidden
+     * starts empty.
+     */
+    _forgetHiddenAnswers() {
+        const hidden = hiddenQuestions(this._fields, this.interaction);
+        const cleaned = withoutHiddenAnswers(this.interaction, this._fields);
+        if (cleaned !== this.interaction) {
+            this.interaction = cleaned;
+        }
+        hidden.forEach(field => {
+            if (field.isSchoolLookup) {
+                this.cantFindSchool = false;
+            }
+            if (field.showDependentField) {
+                this.iHaveAQuestion = false;
+            }
+        });
     }
 
     /**
@@ -237,7 +263,8 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 value: f.value,
                 selectedLabel: f.selectedLabel,
                 isProgramFilter: f.isProgramFilter,
-                isProgramLookup: f.isProgramLookup
+                isProgramLookup: f.isProgramLookup,
+                shown: isQuestionShown(f, this.interaction)
             })),
             filterValues: this.filterValues,
             allFiltersAnswered: this.allFiltersAnswered
@@ -251,13 +278,23 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this._processedFieldsCache = this._fields.map((field, index) => ({
             ...field,
             key: field.fieldInteractionAPIName || field.name || `field-${index}`,
-            isVisible: true,
+            // A question with a "show only when" rule is drawn only while the earlier answer calls for it
+            isVisible: isQuestionShown(field, this.interaction),
             // Program lookup is disabled (locked) until all filters are selected
             isDisabled: field.isProgramLookup ? !filtersAnswered : (field.isDisabled || false)
         }));
 
         this._processedFieldsCacheKey = cacheKey;
         return this._processedFieldsCache;
+    }
+
+    /**
+     * The questions to draw. A question that a "show only when" rule hides is left out of this list rather than drawn
+     * as an empty slot: with empty slots in the list, the page matches questions by position, and every question below
+     * one that appears or disappears is drawn again, which unticks a tick box and empties a text box.
+     */
+    get shownFields() {
+        return this.fields.filter(field => field.isVisible);
     }
 
     /**
@@ -366,6 +403,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         if (name) {
             this.interaction = {...this.interaction, [name]: checked};
         }
+        this._forgetHiddenAnswers();
     }
 
     // Public handler that uses debounced internal method
@@ -465,6 +503,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         const selectedValue = event.detail.value;
         const name = event.target.name;
         this.interaction = {...this.interaction, [name]: selectedValue};
+        this._forgetHiddenAnswers();
     }
 
     // Store address for processing on submit
@@ -750,6 +789,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
         // Invalidate caches
         this._invalidateCaches();
+        this._forgetHiddenAnswers();
 
         // Clear all input elements in the template
         const allInputs = this.template.querySelectorAll('lightning-input');

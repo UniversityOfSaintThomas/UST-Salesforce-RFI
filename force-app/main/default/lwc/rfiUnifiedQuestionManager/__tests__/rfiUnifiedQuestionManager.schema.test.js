@@ -86,11 +86,11 @@ describe('c-rfi-unified-question-manager saved question format', () => {
     it('keeps a key it has never heard of, so data from a newer version is not damaged', async () => {
         const newer = [
             { id: 0, type: 'preconfigured', fieldName: 'First Name', questionLabel: 'First Name', fieldInteractionAPIName: 'First_Name__c', isRequired: true,
-              key: 'qkept', schemaVersion: 1, visibleWhen: { key: 'qother', equals: ['International'] }, somethingNew: [1, 2] }
+              key: 'qkept', schemaVersion: 1, showOnPlatforms: { key: 'qother', equals: ['International'] }, somethingNew: [1, 2] }
         ];
         const element = await render(JSON.stringify(newer));
         const saved = (await save(element))[0];
-        expect(saved.visibleWhen).toEqual({ key: 'qother', equals: ['International'] });
+        expect(saved.showOnPlatforms).toEqual({ key: 'qother', equals: ['International'] });
         expect(saved.somethingNew).toEqual([1, 2]);
         expect(saved.key).toBe('qkept');
     });

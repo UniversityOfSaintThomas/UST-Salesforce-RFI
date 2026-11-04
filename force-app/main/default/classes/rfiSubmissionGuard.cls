@@ -128,6 +128,107 @@ public with sharing class rfiSubmissionGuard {
     }
 
     /**
+     * Throws away the answers to questions that a "show only when" rule hides. The page already leaves them out;
+     * this is the server's own check, so an answer to a hidden question is never saved, whatever was sent.
+     *
+     * A field is only cleared when no visible question writes it too. Two questions can save to the same field
+     * (Employer and Company, or the two long text boxes that share Description), and clearing it would delete the
+     * answer of the visible one.
+     *
+     * @param questions The fields of the form, with their rules
+     * @param record The Interaction about to be saved; cleared fields are set to null
+     * @return The API names of the fields that held an answer and were cleared
+     */
+    public static List<String> dropAnswersToHiddenQuestions(List<rfiFormController.rfiField> questions, Interaction__c record) {
+        List<String> cleared = new List<String>();
+        if (questions == null || record == null) {
+            return cleared;
+        }
+        Map<String, Object> answers = new Map<String, Object>();
+        for (String fieldName : record.getPopulatedFieldsAsMap().keySet()) {
+            answers.put(fieldName.toLowerCase(), record.get(fieldName));
+        }
+        Set<String> writtenByShown = new Set<String>();
+        List<rfiFormController.rfiField> hidden = new List<rfiFormController.rfiField>();
+        for (rfiFormController.rfiField question : questions) {
+            if (question == null || question.isStaticContent == true) {
+                continue;
+            }
+            if (String.isNotBlank(question.visibleWhenField) && !isShown(question, answers)) {
+                hidden.add(question);
+            } else {
+                writtenByShown.addAll(fieldsWrittenBy(question));
+            }
+        }
+        Set<String> alreadyCleared = new Set<String>();
+        for (rfiFormController.rfiField question : hidden) {
+            for (String written : fieldsWrittenBy(question)) {
+                if (writtenByShown.contains(written) || alreadyCleared.contains(written)) {
+                    continue;
+                }
+                Object current = answers.get(written);
+                if (current != null && String.isNotBlank(String.valueOf(current)) && Schema.SObjectType.Interaction__c.fields.getMap().containsKey(written)) {
+                    String apiName = Schema.SObjectType.Interaction__c.fields.getMap().get(written).getDescribe().getName();
+                    record.put(apiName, null);
+                    cleared.add(apiName);
+                    alreadyCleared.add(written);
+                }
+            }
+        }
+        cleared.sort();
+        return cleared;
+    }
+
+    /**
+     * Tells whether a question's "show only when" rule is met by the answers.
+     *
+     * @param question The field with its rule
+     * @param answers The submitted answers by lower case API name
+     * @return True when the earlier question's answer is one of the revealing answers
+     */
+    @TestVisible
+    private static Boolean isShown(rfiFormController.rfiField question, Map<String, Object> answers) {
+        Object answer = answers.get(question.visibleWhenField.toLowerCase());
+        String text;
+        if (question.visibleWhenKind == 'checkbox') {
+            // An unticked box may arrive as false or not at all: both mean "not checked"
+            text = answer == true ? 'true' : 'false';
+        } else {
+            text = answer == null ? '' : String.valueOf(answer);
+        }
+        return question.visibleWhenValues != null && question.visibleWhenValues.contains(text);
+    }
+
+    /**
+     * The Interaction fields a question saves answers to, in lower case: its own field and the extra ones
+     * its kind of question writes.
+     *
+     * @param question The field of the form
+     * @return The lower case API names
+     */
+    @TestVisible
+    private static Set<String> fieldsWrittenBy(rfiFormController.rfiField question) {
+        Set<String> written = new Set<String>();
+        if (String.isNotBlank(question.fieldInteractionAPIName)) {
+            written.add(question.fieldInteractionAPIName.toLowerCase());
+        }
+        if (question.isAddress == true) {
+            written.addAll(addressCompanionFields);
+        }
+        if (question.isSchoolLookup == true) {
+            written.add('school_name_text__c');
+        }
+        if (question.isProgramLookup == true) {
+            written.addAll(majorProgramFields);
+        }
+        if (question.showDependentField == true) {
+            written.add('has_question__c');
+            written.add('description__c');
+        }
+        return written;
+    }
+
+    /**
      * @return The names (lower case) of program filters that have no field on Interaction__c. The page sends
      *         them with the other answers, and there is nothing to save, so they are dropped without a report.
      */

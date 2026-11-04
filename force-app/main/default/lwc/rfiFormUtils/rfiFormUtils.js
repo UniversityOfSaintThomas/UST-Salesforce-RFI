@@ -118,3 +118,99 @@ export function withMajorPrograms(interaction, programIds) {
         Major_Program_4__c: chosen[3] || ''
     };
 }
+
+const ADDRESS_FIELDS = ['mailing_street__c', 'mailing_city__c', 'mailing_state__c', 'mailing_country__c', 'mailing_postal_code__c', 'state__c'];
+const PROGRAM_FIELDS = ['major_program_1__c', 'major_program_2__c', 'major_program_3__c', 'major_program_4__c'];
+
+/**
+ * Tells whether a question is shown, given the answers so far. A question with no "show only when" rule always
+ * shows. Otherwise the answer to the earlier question must be one of the revealing answers. A tick box that was never
+ * touched counts as not checked, and a missing answer never reveals a question.
+ * The server makes the same decision when the form is saved, so keep the two in step.
+ *
+ * @param {object} field The form field, with visibleWhenField, visibleWhenKind and visibleWhenValues from the server
+ * @param {object} answers The answers so far, by Interaction field API name
+ * @returns {boolean} True when the question should be shown
+ */
+export function isQuestionShown(field, answers) {
+    if (!field || !field.visibleWhenField) {
+        return true;
+    }
+    const answer = (answers || {})[field.visibleWhenField];
+    const text = field.visibleWhenKind === 'checkbox'
+        ? String(answer === true)
+        : (answer === undefined || answer === null ? '' : String(answer));
+    return Array.isArray(field.visibleWhenValues) && field.visibleWhenValues.includes(text);
+}
+
+/**
+ * The Interaction fields a question saves answers to, in lower case: its own field and the extra ones its kind of
+ * question writes. This matches the server's list.
+ *
+ * @param {object} field The form field
+ * @returns {string[]} Lower case API names
+ */
+export function fieldsWrittenBy(field) {
+    const written = [];
+    if (field.fieldInteractionAPIName) {
+        written.push(field.fieldInteractionAPIName.toLowerCase());
+    }
+    if (field.isAddress) {
+        written.push(...ADDRESS_FIELDS);
+    }
+    if (field.isSchoolLookup) {
+        written.push('school_name_text__c');
+    }
+    if (field.isProgramLookup) {
+        written.push(...PROGRAM_FIELDS);
+    }
+    if (field.showDependentField) {
+        written.push('has_question__c', 'description__c');
+    }
+    return written;
+}
+
+/**
+ * Finds the questions that are hidden by a "show only when" rule right now.
+ *
+ * @param {object[]} fields The form fields
+ * @param {object} answers The answers so far
+ * @returns {object[]} The hidden fields
+ */
+export function hiddenQuestions(fields, answers) {
+    return (fields || []).filter(field => field && !isQuestionShown(field, answers));
+}
+
+/**
+ * Throws away the answers to hidden questions. A field is only cleared when no visible question saves to it too
+ * (two questions can share a field, such as Employer and Company).
+ *
+ * @param {object} answers The answers so far, by Interaction field API name
+ * @param {object[]} fields The form fields
+ * @returns {object} The same object when nothing was cleared, otherwise a copy without the hidden answers
+ */
+export function withoutHiddenAnswers(answers, fields) {
+    const hidden = hiddenQuestions(fields, answers);
+    if (hidden.length === 0) {
+        return answers;
+    }
+    const shownFields = new Set();
+    (fields || []).filter(field => field && !field.isStaticContent && !hidden.includes(field))
+        .forEach(field => fieldsWrittenBy(field).forEach(name => shownFields.add(name)));
+    const doomed = new Set();
+    hidden.forEach(field => fieldsWrittenBy(field).forEach(name => {
+        if (!shownFields.has(name)) {
+            doomed.add(name);
+        }
+    }));
+    const kept = {};
+    let changed = false;
+    Object.keys(answers || {}).forEach(apiName => {
+        if (doomed.has(apiName.toLowerCase())) {
+            changed = true;
+        } else {
+            kept[apiName] = answers[apiName];
+        }
+    });
+    return changed ? kept : answers;
+}

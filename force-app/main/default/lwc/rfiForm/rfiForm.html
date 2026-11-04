@@ -26,8 +26,7 @@
                 </template>
                 <template if:true={hasData}>
                     <div class="slds-p-vertical_small">
-                        <template for:each={fields} for:item="f" for:index="index">
-                            <template lwc:if={f.isVisible}>
+                        <template for:each={shownFields} for:item="f" for:index="index">
                                 <div key={f.key} class="slds-m-vertical_x-small">
                                     <template lwc:if={f.isProgramFilter}>
                                         <lightning-combobox label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} onchange={handleProgramFilterChange}></lightning-combobox>
@@ -109,7 +108,6 @@
                                         <lightning-input type={f.inputType} label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired}></lightning-input>
                                     </template>
                                 </div>
-                            </template>
                         </template>
                         <div class="slds-m-top_medium">
                             <lightning-button variant="brand" label="Submit" onclick={handleSubmit} disabled={saving}></lightning-button>

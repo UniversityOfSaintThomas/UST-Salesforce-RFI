@@ -13,6 +13,21 @@
                 </div>
             </template>
 
+            <!-- "Show only when" rules that cannot work -->
+            <template if:true={hasRuleProblems}>
+                <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium" role="alert" data-id="rule-problems">
+                    <span class="slds-assistive-text">Error</span>
+                    <div>
+                        <p><strong>These "Show only when" rules need attention before you can save:</strong></p>
+                        <ul class="slds-list_dotted">
+                            <template for:each={ruleProblemList} for:item="problem">
+                                <li key={problem.id}>{problem.text}</li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+            </template>
+
             <!-- Action Buttons -->
             <div class="slds-grid slds-gutters slds-m-bottom_medium">
                 <div class="slds-col">
@@ -65,7 +80,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <template for:each={questions} for:item="question">
+                            <template for:each={questionRows} for:item="question">
                                 <tr key={question.id}
                                     class="slds-hint-parent question-row"
                                     draggable="true"
@@ -120,6 +135,11 @@
                                         <template if:true={question.questionType}>
                                             <div class="slds-text-color_weak slds-text-body_small">
                                                 Type: {question.questionType} → {question.fieldToApplyTo}
+                                            </div>
+                                        </template>
+                                        <template if:true={question.visibleWhenText}>
+                                            <div class="slds-text-body_small slds-text-color_success" data-id="rule-text">
+                                                {question.visibleWhenText}
                                             </div>
                                         </template>
                                     </td>
@@ -449,6 +469,42 @@
                                     </lightning-input>
                                 </div>
                             </template>
+                        </div>
+                    </template>
+
+                    <!-- Show only when -->
+                    <template if:true={showRuleEditor}>
+                        <div class="slds-m-top_medium" data-id="rule-editor">
+                            <div class="slds-box slds-box_x-small">
+                                <p class="slds-text-title_caps slds-m-bottom_x-small">Show only when</p>
+                                <template if:true={showRuleControls}>
+                                    <lightning-combobox
+                                        name="ruleParent"
+                                        label="Show this question only when the answer to"
+                                        value={ruleParentKey}
+                                        options={ruleParentOptions}
+                                        onchange={handleRuleParentChange}>
+                                    </lightning-combobox>
+                                    <template if:true={currentQuestion.visibleWhen}>
+                                        <lightning-checkbox-group
+                                            name="ruleAnswers"
+                                            label="is one of"
+                                            options={ruleAnswerOptions}
+                                            value={ruleAnswers}
+                                            onchange={handleRuleAnswersChange}>
+                                        </lightning-checkbox-group>
+                                    </template>
+                                    <p class="slds-text-body_small slds-text-color_weak slds-m-top_x-small">
+                                        Visitors who have not given one of these answers do not see this question, and it is never required of them.
+                                        Only questions above this one that are a choice from a list or a tick box can be used.
+                                    </p>
+                                </template>
+                                <template if:false={showRuleControls}>
+                                    <p class="slds-text-body_small slds-text-color_weak" data-id="rule-no-parents">
+                                        This question always shows. To show it only for certain answers, add a choice-from-a-list or tick box question above it first.
+                                    </p>
+                                </template>
+                            </div>
                         </div>
                     </template>
 

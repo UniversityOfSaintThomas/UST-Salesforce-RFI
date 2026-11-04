@@ -479,4 +479,81 @@ private class rfiQuestionCatalog_TEST {
         }
         System.assertEquals(0, [SELECT COUNT() FROM hed__Error__c], 'A form filled in correctly must not log a problem: ' + [SELECT hed__Full_Message__c FROM hed__Error__c]);
     }
+
+
+    /**
+     * The Question Manager offers a built-in question as the "earlier question" of a "show only when" rule when
+     * its Interaction field is a picklist or a tick box (it reads that from the field's data type). The form
+     * accepts the rule by looking at the field it built. This test makes sure the two always agree, for every
+     * question an admin can add, so the manager never offers a choice the form will then refuse.
+     */
+    @IsTest
+    static void everyBuiltInQuestion_canBeAnEarlierQuestion_exactlyWhenItsFieldIsAPicklistOrATickBox_TEST() {
+        Map<String, Schema.SObjectField> fields = interactionFields();
+        List<Map<String, Object>> questions = new List<Map<String, Object>>();
+        List<String> names = new List<String>{ 'First Name', 'Last Name' };
+        for (String questionName : usableOfferedQuestionNames()) {
+            if (!names.contains(questionName)) {
+                names.add(questionName);
+            }
+        }
+        Integer position = 0;
+        for (String questionName : names) {
+            questions.add(new Map<String, Object>{
+                'id' => position++, 'type' => 'preconfigured', 'fieldName' => questionName, 'questionLabel' => questionName,
+                'fieldInteractionAPIName' => '', 'isRequired' => false, 'key' => 'qparent' + position
+            });
+        }
+        Integer parentCount = questions.size();
+        for (Integer parentIndex = 2; parentIndex < parentCount; parentIndex++) {
+            String target = rfiQuestionCatalog.targetFieldFor(names[parentIndex]);
+            Schema.DescribeFieldResult describe = String.isNotBlank(target) && fields.containsKey(target.toLowerCase())
+                    ? fields.get(target.toLowerCase()).getDescribe() : null;
+            String answer = 'true';
+            if (describe != null && describe.getType() == Schema.DisplayType.PICKLIST) {
+                answer = 'unlisted answer';
+                for (Schema.PicklistEntry entry : describe.getPicklistValues()) {
+                    if (entry.isActive()) {
+                        answer = entry.getValue();
+                        break;
+                    }
+                }
+            }
+            questions.add(new Map<String, Object>{
+                'id' => position++, 'type' => 'custom', 'questionLabel' => 'Child of ' + names[parentIndex], 'questionType' => 'Text box',
+                'fieldToApplyTo' => 'Employer__c', 'isRequired' => false, 'key' => 'qchild' + position,
+                'visibleWhen' => new Map<String, Object>{ 'key' => 'qparent' + (parentIndex + 1), 'equals' => new List<String>{ answer } }
+            });
+        }
+        String formName = insertControllerAndGetName(new RFI_Controller__c(
+                Academic_Level__c = 'U', Fields_to_Display__c = firstOffered(),
+                Unified_Questions__c = JSON.serialize(questions), Redirect_URL__c = 'https://catalog-rules.example.com'));
+        rfiFormController.interactionRFIFields form = rfiFormController.buildForm(rfiFormController.loadControllerByName(formName));
+
+        Map<String, Boolean> serverAccepted = new Map<String, Boolean>();
+        for (rfiFormController.rfiField built : form.rfiFieldList) {
+            if (built.fieldLabel != null && built.fieldLabel.startsWith('Child of ')) {
+                serverAccepted.put(built.fieldLabel.substringAfter('Child of '), String.isNotBlank(built.visibleWhenField));
+            }
+        }
+        List<String> disagreements = new List<String>();
+        Integer offered = 0;
+        for (Integer parentIndex = 2; parentIndex < parentCount; parentIndex++) {
+            String questionName = names[parentIndex];
+            String target = rfiQuestionCatalog.targetFieldFor(questionName);
+            Schema.DisplayType type = String.isNotBlank(target) && fields.containsKey(target.toLowerCase())
+                    ? fields.get(target.toLowerCase()).getDescribe().getType() : null;
+            Boolean managerOffers = type == Schema.DisplayType.PICKLIST || type == Schema.DisplayType.BOOLEAN;
+            if (managerOffers) {
+                offered++;
+            }
+            if (!serverAccepted.containsKey(questionName)) {
+                disagreements.add(questionName + ' (the child question was not built)');
+            } else if (serverAccepted.get(questionName) != managerOffers) {
+                disagreements.add(questionName + ': manager offers ' + managerOffers + ', form accepts ' + serverAccepted.get(questionName));
+            }
+        }
+        System.assertEquals(0, disagreements.size(), 'The manager and the form disagree about: ' + String.join(disagreements, '; '));
+        System.assert(offered >= 3, 'Expected several built-in questions to qualify, found ' + offered);
+    }
 }

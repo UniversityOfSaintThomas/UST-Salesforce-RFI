@@ -170,6 +170,7 @@ suggests it but no submission was run.
 | F42 | **A custom picklist question kept a copy of the field's values, so it went stale.** The manager copied the values into the saved question; the form used the copy. A value added later never appeared, and a retired value was still offered, which the platform rejects on save (the RFI is lost, with an Error record and an error message for the visitor). | Manager and Apex code read; the 2026-11-02 end-to-end test below. | Fixed in scratch: a Picklist question on a picklist or multi-select field always shows the field's live active values, the manager saves no copy, and old copies are ignored and dropped when the question is next edited. A question on a text field still uses the list the admin typed. |
 | F43 | **A saved question list of `[]` made the newer form crash.** The Phase 4 change that adds First and Last Name when missing used `add(0, ...)`, which Apex rejects on an empty list. Before that change an empty list loaded as an empty form. Found while testing how the form reacts to unexpected shapes of the saved JSON. | Probe of 13 crafted shapes in scratch (see the answer on schema changes in the 2026-11-02 conversation notes); `ListException: List index out of bounds: 0`. | Fixed in scratch with a test (`newerForm_withAnEmptySavedList_stillLoadsWithFirstAndLastName_TEST`); the test fails without the fix. |
 | F44 | **The saved question list had no protection against change.** There was no format version, and questions had no stable identity (`id` is the list position and changes on every move or delete). Reading was scattered casts, so a value of the wrong type stopped the whole form (13 shapes tested in scratch: a label saved as a number, picklist choices saved as text, an entry that is not an object, a list wrapped in an object). Others failed silently: `"isRequired":"true"` as text made a question stop being required; an unknown question type produced a question that saves nowhere. Every one of the 179 questions in eda-staging also carried 10 display flags the manager works out for itself. | Probe of 13 shapes against `getRFIForm`; inventory of the saved JSON in eda-staging (20 controllers, 179 questions). | Fixed in scratch: one tolerant reader (`rfiQuestionReader`), a stable `key` and a `schemaVersion` on every question, display flags no longer saved, a broken question skipped and reported instead of stopping the form. Rules for future changes are in `docs/AI-TOOLS-CONFIG.md`, "Changing the question format". |
+| F45 | **A question that appeared or disappeared redrew every question below it.** Found while testing dependent questions as a visitor on the public scratch site, not by the Jest tests. The form hid a question with `lwc:if` inside the loop, which leaves an empty slot, and LWC then matches questions by position. So when "Visa status" appeared, the "Send me mail" tick box below it was replaced by a new, unticked one. The saved record had `Mailed_Program_Information_Requested__c` = false although the visitor had ticked it, and text typed in later questions would have been emptied the same way. | Browser probe that tags the checkbox element: after the dependent question appeared the element was new and unticked (`NEW ELEMENT`, `checked:false`). Three Jest tests that compare element identity failed before the fix and pass after it. | Fixed in scratch: the loop draws only the shown questions (`shownFields`), so LWC matches by key and keeps the elements. The same probe now reports the original element, still ticked, with the typed text intact. Rule recorded in `docs/AI-TOOLS-CONFIG.md`. |
 
 ---
 
@@ -568,7 +569,7 @@ Done:
   and the two picklist values still active). It also reports the repair counts: 12 Phone, 2 Title and 2 mail questions,
   1 controller with the start-school question, 1 form with the older split address, and 0 forms without name questions.
 - **Deployment manifest:** `manifest/rfi-staging-deploy.xml`, 19 named components, no permissions and no sharing. A check-only
-  deploy of it to scratch with the six test classes: 19 of 19 components, 191 tests, 0 failures (re-run after the schema work; it was 155, then 163, before).
+  deploy of it to scratch with the six test classes: 19 of 19 components, 222 tests, 0 failures (re-run after the dependent questions work; it was 191, 163 and 155 before).
 
 Not done, and why: the deploy itself (yours); the repair script's dry run against staging (it needs the catalog class, which staging
 does not have yet; run it right after the Apex deploy); production (separate story, see below).
@@ -591,13 +592,46 @@ does not have yet; run it right after the Apex deploy); production (separate sto
   isolation mutations and eight manager mutations were each caught. One was missed at first (undoing a half-built question), which
   led to a second failure hook and test. The three banner mutations were also caught.
 - **Guest check on the public scratch site:** a saved list with a "matrix" question, a custom question with no field, an email
-  question with `"isRequired":"true"` text, and an unknown `visibleWhen` key loaded the three good questions, honoured the text
+  question with `"isRequired":"true"` text, and an unknown `visibleWhen` key (at that time not yet a feature) loaded the three good questions, honoured the text
   "true" (Email shows as required), showed no banner or internal text to the visitor, saved the submit, and wrote one Error row
   naming both skipped questions.
 - **Not verified live:** the banner as an admin on the record page (it needs a logged-in session; the Jest tests cover shown with a
   record id and hidden without). Please look at it once in eda-staging.
 - **Jira:** the dependent-questions work is ECRMSF-6061, a subtask of ECRMSF-5545. Rules in a later change must refer to a
   question by `key`, never `id`.
+
+**Dependent questions (2026-11-04, ECRMSF-6061; scratch only; nothing was written to eda-staging).** A question can now be shown only
+when an earlier answer calls for it. Rules and limits are in `docs/AI-TOOLS-CONFIG.md`; in short: one condition, one level, the earlier
+question is a choice from a list or a tick box, a hidden question is never required and its answer is thrown away.
+- **Format:** an optional `visibleWhen` on a question, `{ "key": <key of the earlier question>, "equals": [answers] }`. Additive, so
+  `schemaVersion` stays 1, and code that does not know it shows the question as before (fails open).
+- **Server:** `rfiQuestionReader` checks the rule (complete, earlier question exists and comes first, no chain, not a program filter).
+  `rfiFormController.applyVisibilityRules` checks it against the fields that were built (the earlier question saves a picklist or a
+  tick box value, the dependent one is not a name question). A rule that cannot work is ignored, the question shows, and the problem goes
+  to the admin banner and the Error row. `rfiSubmissionGuard.dropAnswersToHiddenQuestions` throws away answers to hidden questions on
+  submit and names them in the "saved with gaps" row.
+- **Form:** `rfiFormUtils` decides what is shown; `rfiForm` draws only the shown questions, forgets a hidden question's answer (and its
+  school and question-box switches) the moment it hides, on load and on reset, and a hidden required question never blocks a submit.
+- **Question Manager:** a "Show only when" section in the question dialog (earlier question, then answers from the live picklist), the
+  rule in words in the list, a warning above the table and a refused save while a rule cannot work (a deleted or moved question can
+  break one). The decision logic is in `visibilityRules.js` inside the manager bundle, so the manifest still has 19 components.
+- **Tests:** Apex 223 and Jest 162 pass. Each behaviour was broken on purpose and a test had to fail: 27 on the server, 22 on the form and
+  its helpers, 27 in the manager. Several first survived and led to new tests (an answer with stray spaces, a tick box that stores a
+  picklist answer, unknown parts of a rule surviving an edit, a broken rule when nothing else qualifies, and the data type of every field a
+  built-in question can save to). Four more survived because the code they changed was unreachable or unused (a second clearing step at
+  submit, two bits of lookup bookkeeping that nothing reads, an early return); that code was removed. One (the position of a new
+  question) changes nothing, because a new question has no id yet, and was left. An Apex parity test builds one form with every built-in
+  question and checks that the manager offers a question as an "earlier question" exactly when the form accepts it (picklist or tick
+  box); breaking either side was caught.
+- **Guest check on the public scratch site** (a picklist parent, a tick box parent and a rule that points at a deleted question): the
+  hidden questions were not drawn; choosing "International" drew the required "Visa status" and an empty submit was blocked with the
+  standard message; changing the answer back removed it and a submit went through with the text never saved; the tick box revealed
+  "Mailing note"; the orphaned rule's question showed as normal and one "saved with gaps" row named it. This run found F45.
+- **Not verified live:** the manager dialog and the warning above the table as an admin (they need a logged-in session; the Jest tests
+  drive both). Please try it once in eda-staging after the deploy: add a Picklist or Checkbox question, then a second question with
+  "Show only when" set to it.
+- **Left as is:** `rfiForm/__tests__/rfiForm.test.js` (from the Lead to Interaction switch, commit 0434009) cannot load because it
+  imports an Apex module that does not exist in the mock setup. It failed before this work and is not part of the six suites above.
 
 **Hand-off checklist for the person deploying to eda-staging.** Order matters; fields come before the code that uses them,
 and the Apex before the LWC that imports it.
@@ -610,7 +644,7 @@ and the Apex before the LWC that imports it.
    deployed to staging.
 3. **Validate without saving** (this runs the six test classes in the org; it writes nothing):
    `sf project deploy start --dry-run --manifest manifest/rfi-staging-deploy.xml --target-org eda-staging --test-level RunSpecifiedTests --tests rfiFormController_TEST --tests rfiSubmissionProcessor_TEST --tests rfiSubmissionGuard_TEST --tests rfiErrorLogger_TEST --tests rfiQuestionCatalog_TEST --tests rfiQuestionReader_TEST`
-   About 191 tests run and all should pass (the same selection did in scratch; the count can differ by a few in another org). A failure that mentions Act-On, DLRS or another Contact,
+   About 222 tests run and all should pass (the same selection did in scratch; the count can differ by a few in another org). A failure that mentions Act-On, DLRS or another Contact,
    Opportunity or Account trigger is the unknown described in the status above: send it to me. Do not skip it.
 4. **Deploy** (same command without `--dry-run`). One deploy handles the Apex and the LWC that imports it together; do not
    deploy the LWC alone before the Apex. Then make a real content change to `requestForInformationApp.app` if a browser keeps an old bundle (the manifest
@@ -786,3 +820,15 @@ The new form reads the controller record through code that does not need a shari
 - **A row in the Error object for each submission** while a question is skipped (`WARNING: RFI Form saved with gaps`, "Saved question list: Question N ..."). This is the same row type as other gaps, so the decision in section H about who watches the Error object covers it.
 - **Saving makes older lists current.** The next Save in the Question Manager adds a stable key and version to every question and drops the display flags. Nothing else about a form changes, and a list nobody saves keeps working as it is.
 - **Nothing to grant.** No new permissions are needed.
+
+**L. What dependent questions add for admins (ECRMSF-6061).**
+- **A "Show only when" section in the question dialog.** Pick an earlier question that is a choice from a list or a tick box, then the
+  answers that reveal this one. Nothing changes for any form until an admin sets a rule.
+- **A hidden question is not asked.** Visitors who do not give a revealing answer never see it, it is never required of them, and what they
+  typed before changing their answer is not saved. A rule with a wrong or missing earlier question is ignored and the question shows.
+- **Check after changing a list.** Deleting or moving a question can break a rule that depends on it. The manager lists the broken rules above
+  the table and will not save until each is fixed. On the form, the yellow banner (record page) and the "saved with gaps" row in the Error
+  object describe a rule that could not be used.
+- **Reports:** an answer to a hidden question is empty on the Interaction, the same as if the question had not been on the form. Where a
+  report needs to tell "not asked" from "not answered", use the earlier answer.
+- **Nothing to grant.** No new fields, classes or permissions are needed.

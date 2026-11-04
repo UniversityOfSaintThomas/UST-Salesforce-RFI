@@ -1929,4 +1929,163 @@ private class rfiFormController_TEST {
         System.assertEquals(true, question.isDate);
         System.assertEquals('date', question.inputType);
     }
+
+
+    // --- "show only when" rules (ECRMSF-6061) ---
+
+    private static Map<String, Object> keyed(Map<String, Object> question, String key) {
+        question.put('key', key);
+        return question;
+    }
+
+    private static Map<String, Object> whenAnswer(Map<String, Object> question, String parentKey, List<String> answers) {
+        question.put('visibleWhen', new Map<String, Object>{ 'key' => parentKey, 'equals' => answers });
+        return question;
+    }
+
+    private static String insertDependentController(List<Map<String, Object>> questions, String marker) {
+        return insertUnifiedController(questions, marker);
+    }
+
+    @IsTest
+    static void aDependentQuestion_carriesItsRuleOnTheFieldItDraws_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            keyed(pre(2, 'Citizenship', 'Citizenship__c', false), 'qcitizen'),
+            whenAnswer(keyed(custom(3, 'Visa status', 'Text box', 'Employer__c', null), 'qvisa'), 'qcitizen', new List<String>{ 'International' })
+        }, 'rule');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        System.assertEquals(0, form.warnings.size(), String.valueOf(form.warnings));
+        rfiFormController.rfiField child = fieldFor(form, 'Employer__c');
+        System.assertEquals('Citizenship__c', child.visibleWhenField);
+        System.assertEquals('picklist', child.visibleWhenKind);
+        System.assertEquals(new List<String>{ 'International' }, child.visibleWhenValues);
+        System.assertEquals('qvisa', child.questionKey);
+        System.assertEquals(null, fieldFor(form, 'Citizenship__c').visibleWhenField, 'The earlier question always shows');
+    }
+
+    @IsTest
+    static void aTickBoxCanBeTheEarlierQuestion_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            keyed(custom(2, 'Send me mail', 'Checkbox', 'Mailed_Program_Information_Requested__c', null), 'qmail'),
+            whenAnswer(custom(3, 'Mailing note', 'Text box', 'Employer__c', null), 'qmail', new List<String>{ 'true' })
+        }, 'tick');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        System.assertEquals(0, form.warnings.size(), String.valueOf(form.warnings));
+        System.assertEquals('checkbox', fieldFor(form, 'Employer__c').visibleWhenKind);
+    }
+
+    @IsTest
+    static void aQuestionThatDrawsTwoFields_hidesBoth_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            keyed(pre(2, 'Citizenship', 'Citizenship__c', false), 'qcitizen'),
+            whenAnswer(keyed(pre(3, 'Home and Mobile Phone', '', false), 'qphones'), 'qcitizen', new List<String>{ 'International' })
+        }, 'two');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        System.assertEquals('Citizenship__c', fieldFor(form, 'Home_Phone__c').visibleWhenField);
+        System.assertEquals('Citizenship__c', fieldFor(form, 'Mobile_Phone__c').visibleWhenField);
+    }
+
+    @IsTest
+    static void aRuleOnAQuestionThatDependsOnAnEarlierTextBox_isIgnored_andReported_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            keyed(pre(2, 'Email', 'Email__c', false), 'qemail'),
+            whenAnswer(custom(3, 'Why', 'Text box', 'Employer__c', null), 'qemail', new List<String>{ 'a@b.c' })
+        }, 'text');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        System.assertEquals(null, fieldFor(form, 'Employer__c').visibleWhenField, 'The question shows');
+        System.assertEquals(1, form.warnings.size());
+        System.assert(form.warnings[0].contains('Why') && form.warnings[0].contains('not a choice from a list or a tick box'), form.warnings[0]);
+    }
+
+    @IsTest
+    static void aChoiceThatIsARecord_cannotBeTheEarlierQuestion_becauseItsValueDiffersInEveryOrg_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            keyed(pre(2, 'Expected Start Term at St Thomas', 'Intended_Start_Term__c', false), 'qterm'),
+            whenAnswer(custom(3, 'Why', 'Text box', 'Employer__c', null), 'qterm', new List<String>{ 'a0i000000000001' })
+        }, 'record');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        System.assertEquals(null, fieldFor(form, 'Employer__c').visibleWhenField);
+        System.assertEquals(1, form.warnings.size());
+    }
+
+    @IsTest
+    static void aNameQuestion_cannotBeHidden_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            keyed(pre(1, 'Citizenship', 'Citizenship__c', false), 'qcitizen'),
+            whenAnswer(pre(2, 'First Name', 'First_Name__c', true), 'qcitizen', new List<String>{ 'International' })
+        }, 'name');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        System.assertEquals(null, fieldFor(form, 'First_Name__c').visibleWhenField);
+        System.assert(form.warnings[0].contains('every form needs'), form.warnings[0]);
+    }
+
+    @IsTest
+    static void aRevealingAnswerTheFieldDoesNotHave_isReported_soNobodyIsLeftWithAnInvisibleQuestion_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            keyed(pre(2, 'Citizenship', 'Citizenship__c', false), 'qcitizen'),
+            whenAnswer(custom(3, 'Visa status', 'Text box', 'Employer__c', null), 'qcitizen', new List<String>{ 'Retired Answer' })
+        }, 'unknownanswer');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        System.assertEquals('Citizenship__c', fieldFor(form, 'Employer__c').visibleWhenField, 'The rule stays so the admin sees what they set');
+        System.assertEquals(1, form.warnings.size());
+        System.assert(form.warnings[0].contains('Nobody can see this question'), form.warnings[0]);
+    }
+
+    @IsTest
+    static void aBrokenRule_ontheForm_reachesTheAdminAsAWarning_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true),
+            whenAnswer(custom(2, 'Visa status', 'Text box', 'Employer__c', null), 'qgone', new List<String>{ 'International' })
+        }, 'broken');
+        rfiFormController.interactionRFIFields form = rfiFormController.getRFIForm(name);
+        System.assertEquals(null, fieldFor(form, 'Employer__c').visibleWhenField);
+        System.assertEquals(1, form.warnings.size());
+        System.assert(form.warnings[0].contains('Visa status'), form.warnings[0]);
+    }
+
+    @IsTest
+    static void submit_dropsTheAnswerToAHiddenQuestion_andSaysSo_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true), pre(2, 'Last Name', 'Last_Name__c', true),
+            keyed(pre(3, 'Citizenship', 'Citizenship__c', false), 'qcitizen'),
+            whenAnswer(custom(4, 'Visa status', 'Text box', 'Employer__c', null), 'qcitizen', new List<String>{ 'International' })
+        }, 'submithidden');
+        String notInternational = null;
+        for (Schema.PicklistEntry entry : Interaction__c.Citizenship__c.getDescribe().getPicklistValues()) {
+            if (entry.isActive() && entry.getValue() != 'International') { notInternational = entry.getValue(); break; }
+        }
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(First_Name__c = 'Ada', Last_Name__c = 'Hidden',
+                Citizenship__c = notInternational, Employer__c = 'Typed before changing the answer'), name);
+        Test.stopTest();
+        System.assertNotEquals(null, savedId, String.valueOf(errorRecords()));
+        Interaction__c saved = [SELECT Citizenship__c, Employer__c FROM Interaction__c WHERE Id = :savedId];
+        System.assertEquals(notInternational, saved.Citizenship__c, 'The visible answer is kept');
+        System.assertNotEquals('Typed before changing the answer', saved.Employer__c, 'The answer to the hidden question is not saved');
+        List<hed__Error__c> errors = errorRecords();
+        System.assertEquals(1, errors.size());
+        System.assert(errors[0].hed__Full_Message__c.contains('hidden by a "show only when" rule'), errors[0].hed__Full_Message__c);
+        System.assert(errors[0].hed__Full_Message__c.contains('Employer__c'), errors[0].hed__Full_Message__c);
+    }
+
+    @IsTest
+    static void submit_keepsTheAnswerWhenTheRuleIsMet_TEST() {
+        String name = insertDependentController(new List<Map<String, Object>>{
+            pre(1, 'First Name', 'First_Name__c', true), pre(2, 'Last Name', 'Last_Name__c', true),
+            keyed(pre(3, 'Citizenship', 'Citizenship__c', false), 'qcitizen'),
+            whenAnswer(custom(4, 'Visa status', 'Text box', 'Employer__c', null), 'qcitizen', new List<String>{ 'International' })
+        }, 'submitshown');
+        Test.startTest();
+        Id savedId = rfiFormController.submitRfiForm(new Interaction__c(First_Name__c = 'Ada', Last_Name__c = 'Shown',
+                Citizenship__c = 'International', Employer__c = 'F-1 student'), name);
+        Test.stopTest();
+        System.assertEquals('F-1 student', [SELECT Employer__c FROM Interaction__c WHERE Id = :savedId].Employer__c);
+        System.assertEquals(0, errorRecords().size(), String.valueOf(errorRecords()));
+    }
 }

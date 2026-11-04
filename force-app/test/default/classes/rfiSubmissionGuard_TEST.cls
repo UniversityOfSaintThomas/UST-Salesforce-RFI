@@ -136,4 +136,99 @@ private class rfiSubmissionGuard_TEST {
         System.assertEquals(expected, rfiSubmissionGuard.filterOnlyFieldNames());
         System.assert(!expected.isEmpty());
     }
+
+
+    // ---------- answers to questions hidden by a "show only when" rule ----------
+
+    private static rfiFormController.rfiField dependent(String field, String parentField, String kind, List<String> answers) {
+        rfiFormController.rfiField question = question(field);
+        question.visibleWhenField = parentField;
+        question.visibleWhenKind = kind;
+        question.visibleWhenValues = answers;
+        return question;
+    }
+
+    @IsTest
+    static void dropAnswersToHiddenQuestions_clearsOnlyTheHiddenOne_andNamesIt_TEST() {
+        Interaction__c record = new Interaction__c(Citizenship__c = 'US Citizen', Employer__c = 'typed', Email__c = 'keep@example.invalid');
+        List<String> cleared = rfiSubmissionGuard.dropAnswersToHiddenQuestions(new List<rfiFormController.rfiField>{
+            question('Citizenship__c'), question('Email__c'), dependent('Employer__c', 'Citizenship__c', 'picklist', new List<String>{ 'International' })
+        }, record);
+        System.assertEquals(new List<String>{ 'Employer__c' }, cleared);
+        System.assertEquals(null, record.Employer__c);
+        System.assertEquals('keep@example.invalid', record.Email__c);
+        System.assertEquals('US Citizen', record.Citizenship__c);
+    }
+
+    @IsTest
+    static void dropAnswersToHiddenQuestions_keepsTheAnswerWhenTheRuleIsMet_TEST() {
+        Interaction__c record = new Interaction__c(Citizenship__c = 'International', Employer__c = 'typed');
+        List<String> cleared = rfiSubmissionGuard.dropAnswersToHiddenQuestions(new List<rfiFormController.rfiField>{
+            question('Citizenship__c'), dependent('Employer__c', 'Citizenship__c', 'picklist', new List<String>{ 'Other', 'International' })
+        }, record);
+        System.assertEquals(0, cleared.size());
+        System.assertEquals('typed', record.Employer__c);
+    }
+
+    @IsTest
+    static void dropAnswersToHiddenQuestions_aMissingEarlierAnswer_hidesTheQuestion_TEST() {
+        Interaction__c record = new Interaction__c(Employer__c = 'typed');
+        List<String> cleared = rfiSubmissionGuard.dropAnswersToHiddenQuestions(new List<rfiFormController.rfiField>{
+            question('Citizenship__c'), dependent('Employer__c', 'Citizenship__c', 'picklist', new List<String>{ 'International' })
+        }, record);
+        System.assertEquals(new List<String>{ 'Employer__c' }, cleared);
+    }
+
+    @IsTest
+    static void dropAnswersToHiddenQuestions_aTickBox_unticked_orNotSentAtAll_meansNotChecked_TEST() {
+        List<rfiFormController.rfiField> form = new List<rfiFormController.rfiField>{
+            question('Has_Question__c'), dependent('Employer__c', 'Has_Question__c', 'checkbox', new List<String>{ 'false' })
+        };
+        Interaction__c notSent = new Interaction__c(Employer__c = 'typed');
+        System.assertEquals(0, rfiSubmissionGuard.dropAnswersToHiddenQuestions(form, notSent).size(), 'Not sent counts as not checked, so a rule for "false" is met');
+        Interaction__c unticked = new Interaction__c(Has_Question__c = false, Employer__c = 'typed');
+        System.assertEquals(0, rfiSubmissionGuard.dropAnswersToHiddenQuestions(form, unticked).size());
+        Interaction__c ticked = new Interaction__c(Has_Question__c = true, Employer__c = 'typed');
+        System.assertEquals(new List<String>{ 'Employer__c' }, rfiSubmissionGuard.dropAnswersToHiddenQuestions(form, ticked));
+        System.assertEquals(null, ticked.Employer__c);
+    }
+
+    @IsTest
+    static void dropAnswersToHiddenQuestions_aFieldAVisibleQuestionAlsoWrites_isNotCleared_TEST() {
+        // Employer and Company are two questions that both save to Employer__c; hiding one must not delete the other's answer
+        Interaction__c record = new Interaction__c(Citizenship__c = 'US Citizen', Employer__c = 'typed in the visible one');
+        List<String> cleared = rfiSubmissionGuard.dropAnswersToHiddenQuestions(new List<rfiFormController.rfiField>{
+            question('Citizenship__c'), question('Employer__c'), dependent('Employer__c', 'Citizenship__c', 'picklist', new List<String>{ 'International' })
+        }, record);
+        System.assertEquals(0, cleared.size());
+        System.assertEquals('typed in the visible one', record.Employer__c);
+    }
+
+    @IsTest
+    static void dropAnswersToHiddenQuestions_aHiddenAddress_clearsEveryAddressField_TEST() {
+        rfiFormController.rfiField address = dependent('Mailing_Street__c', 'Citizenship__c', 'picklist', new List<String>{ 'International' });
+        address.isAddress = true;
+        Interaction__c record = new Interaction__c(Citizenship__c = 'US Citizen', Mailing_Street__c = '1 Main', Mailing_City__c = 'Saint Paul', Mailing_Postal_Code__c = '55105');
+        List<String> cleared = rfiSubmissionGuard.dropAnswersToHiddenQuestions(new List<rfiFormController.rfiField>{ question('Citizenship__c'), address }, record);
+        System.assertEquals(new List<String>{ 'Mailing_City__c', 'Mailing_Postal_Code__c', 'Mailing_Street__c' }, cleared);
+        System.assertEquals(null, record.Mailing_City__c);
+    }
+
+    @IsTest
+    static void dropAnswersToHiddenQuestions_aBlankAnswerIsNotReported_andNothingBreaksOnNulls_TEST() {
+        Interaction__c record = new Interaction__c(Citizenship__c = 'US Citizen', Employer__c = '');
+        System.assertEquals(0, rfiSubmissionGuard.dropAnswersToHiddenQuestions(new List<rfiFormController.rfiField>{
+            question('Citizenship__c'), dependent('Employer__c', 'Citizenship__c', 'picklist', new List<String>{ 'International' })
+        }, record).size());
+        System.assertEquals(0, rfiSubmissionGuard.dropAnswersToHiddenQuestions(null, record).size());
+        System.assertEquals(0, rfiSubmissionGuard.dropAnswersToHiddenQuestions(new List<rfiFormController.rfiField>{ null }, null).size());
+    }
+
+    @IsTest
+    static void dropAnswersToHiddenQuestions_staticContentTakesNoAnswer_TEST() {
+        rfiFormController.rfiField note = dependent('Employer__c', 'Citizenship__c', 'picklist', new List<String>{ 'International' });
+        note.isStaticContent = true;
+        Interaction__c record = new Interaction__c(Citizenship__c = 'US Citizen', Employer__c = 'typed');
+        System.assertEquals(0, rfiSubmissionGuard.dropAnswersToHiddenQuestions(new List<rfiFormController.rfiField>{ question('Citizenship__c'), note }, record).size());
+    }
 }

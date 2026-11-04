@@ -12,6 +12,11 @@
  *  - The list may be a plain list (what is saved today) or an object that holds it under "questions" (room for a
  *    future wrapper).
  *
+ * A question may carry a "show only when" rule (visibleWhen: the key of an earlier question and the answers that reveal
+ * this one). The reader checks that the rule is complete and that it can work in this list: the earlier question
+ * exists and really is earlier, it has no rule of its own (one level only), and the dependent question is not a program
+ * filter. A rule that fails a check is removed and reported, so the question simply always shows.
+ *
  * Only a list that cannot be read at all (not JSON, or not a list) throws, because there is no form to build.
  *
  * Rules for changing the saved format are in docs/AI-TOOLS-CONFIG.md under "Changing the question format".
@@ -65,6 +70,7 @@ public with sharing class rfiQuestionReader {
         }
 
         Map<String, Integer> positionOfKey = new Map<String, Integer>();
+        List<Integer> positions = new List<Integer>();
         Integer position = 0;
         for (Object entry : entries) {
             position++;
@@ -82,8 +88,49 @@ public with sharing class rfiQuestionReader {
                 }
             }
             result.questions.add(question);
+            positions.add(position);
         }
+        checkRules(result, positions, positionOfKey);
         return result;
+    }
+
+    /**
+     * Removes the "show only when" rules that cannot work in this list, and says why.
+     *
+     * @param result The questions read so far; rules are removed from them and warnings added
+     * @param positions The saved position of each question in result.questions, in the same order
+     * @param positionOfKey The saved position of each key
+     */
+    private static void checkRules(ReadResult result, List<Integer> positions, Map<String, Integer> positionOfKey) {
+        Map<String, Map<String, Object>> questionOfKey = new Map<String, Map<String, Object>>();
+        for (Map<String, Object> question : result.questions) {
+            String key = (String) question.get('key');
+            if (String.isNotBlank(key) && !questionOfKey.containsKey(key)) {
+                questionOfKey.put(key, question);
+            }
+        }
+        for (Integer index = 0; index < result.questions.size(); index++) {
+            Map<String, Object> question = result.questions[index];
+            if (!question.containsKey('visibleWhen')) {
+                continue;
+            }
+            Integer position = positions[index];
+            String parentKey = (String) ((Map<String, Object>) question.get('visibleWhen')).get('key');
+            String problem = null;
+            if (question.get('type') == 'filter') {
+                problem = 'is a program filter, and a program filter always shows because it narrows the program list';
+            } else if (!questionOfKey.containsKey(parentKey)) {
+                problem = 'depends on a question that is not available (it was deleted, or it could not be read)';
+            } else if (positionOfKey.get(parentKey) >= position) {
+                problem = 'depends on a question that does not come before it in the list';
+            } else if (questionOfKey.get(parentKey).containsKey('visibleWhen')) {
+                problem = 'depends on a question that itself shows only under a condition. Only one level is supported';
+            }
+            if (problem != null) {
+                question.remove('visibleWhen');
+                result.warnings.add(describe(question, position) + ' ' + problem + '. Its rule was ignored and it always shows.');
+            }
+        }
     }
 
     /**
@@ -179,7 +226,59 @@ public with sharing class rfiQuestionReader {
             }
             question.put('filterSelectedValues', selectedValues);
         }
+        normalizeRule(source, question, position, warnings);
         return question;
+    }
+
+    /**
+     * Cleans up a question's "show only when" rule: the earlier question's key and the answers that reveal this one.
+     * A rule that is not complete is removed and reported.
+     *
+     * @param source The saved question
+     * @param question The cleaned question; its visibleWhen is replaced or removed
+     * @param position The question's position, for messages
+     * @param warnings Collects a message for every problem
+     */
+    private static void normalizeRule(Map<String, Object> source, Map<String, Object> question, Integer position, List<String> warnings) {
+        Object saved = source.get('visibleWhen');
+        question.remove('visibleWhen');
+        if (saved == null) {
+            return;
+        }
+        if (!(saved instanceof Map<String, Object>)) {
+            warnings.add(describe(source, position) + ' has a "show only when" rule that cannot be read. The rule was ignored and the question always shows.');
+            return;
+        }
+        Map<String, Object> rule = new Map<String, Object>((Map<String, Object>) saved); // keeps parts this version does not know
+        String parentKey = textOf(rule.get('key'));
+        List<String> answers = answerList(rule.get('equals'));
+        if (String.isBlank(parentKey) || answers.isEmpty()) {
+            warnings.add(describe(source, position) + ' has a "show only when" rule that is incomplete: it needs an earlier question and at least one answer. The rule was ignored and the question always shows.');
+            return;
+        }
+        rule.put('key', parentKey);
+        rule.put('equals', answers);
+        question.put('visibleWhen', rule);
+    }
+
+    /**
+     * Reads the answers that reveal a question. A single value is treated as a list of one, and true or false
+     * become the text "true" or "false", which is how a checkbox answer is compared.
+     *
+     * @param saved The saved value
+     * @return The answers as text, without blanks
+     */
+    @TestVisible
+    private static List<String> answerList(Object saved) {
+        List<String> answers = new List<String>();
+        List<Object> items = saved instanceof List<Object> ? (List<Object>) saved : new List<Object>{ saved };
+        for (Object item : items) {
+            String text = textOf(item);
+            if (String.isNotBlank(text)) {
+                answers.add(text.trim());
+            }
+        }
+        return answers;
     }
 
     /**

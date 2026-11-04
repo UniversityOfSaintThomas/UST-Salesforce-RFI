@@ -321,4 +321,120 @@ private class rfiQuestionReader_TEST {
         }
         return false;
     }
+
+
+    // ---------- "show only when" rules ----------
+
+    private static String parentQuestion() {
+        return '{"id":1,"type":"preconfigured","fieldName":"Citizenship","questionLabel":"Citizenship","fieldInteractionAPIName":"Citizenship__c","key":"qcitizen"}';
+    }
+
+    private static String childQuestion(String rule) {
+        return '{"id":2,"type":"custom","questionLabel":"Visa status","questionType":"Text box","fieldToApplyTo":"Employer__c","key":"qvisa","visibleWhen":' + rule + '}';
+    }
+
+    @IsTest
+    static void aCompleteRule_isKeptWithItsAnswersAsText_TEST() {
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + parentQuestion() + ',' + childQuestion('{"key":"qcitizen","equals":["International","Other"]}') + ']');
+        System.assertEquals(0, result.warnings.size(), String.valueOf(result.warnings));
+        Map<String, Object> rule = (Map<String, Object>) result.questions[2].get('visibleWhen');
+        System.assertEquals('qcitizen', rule.get('key'));
+        System.assertEquals(new List<String>{ 'International', 'Other' }, (List<String>) rule.get('equals'));
+    }
+
+    @IsTest
+    static void aSingleAnswer_aNumber_andATrueOrFalse_areAllReadAsText_TEST() {
+        System.assertEquals(new List<String>{ 'International' }, rfiQuestionReader.answerList('International'));
+        System.assertEquals(new List<String>{ '2' }, rfiQuestionReader.answerList(2));
+        System.assertEquals(new List<String>{ 'true', 'false' }, rfiQuestionReader.answerList(new List<Object>{ true, false }));
+        System.assertEquals(new List<String>(), rfiQuestionReader.answerList(null));
+        System.assertEquals(new List<String>{ 'A' }, rfiQuestionReader.answerList(new List<Object>{ 'A', '', null, '  ' }), 'Blanks are left out');
+        System.assertEquals(new List<String>{ 'International' }, rfiQuestionReader.answerList(new List<Object>{ '  International ' }), 'Stray spaces from hand-edited data do not stop a match');
+    }
+
+    @IsTest
+    static void aRuleWithNoAnswersOrNoEarlierQuestion_isRemoved_andReported_TEST() {
+        for (String incomplete : new List<String>{ '{"key":"qcitizen","equals":[]}', '{"key":"qcitizen"}', '{"equals":["International"]}', '{"key":"","equals":["x"]}' }) {
+            rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + parentQuestion() + ',' + childQuestion(incomplete) + ']');
+            System.assertEquals(3, result.questions.size(), 'The question itself still loads: ' + incomplete);
+            System.assertEquals(false, result.questions[2].containsKey('visibleWhen'), incomplete);
+            System.assert(anyWarningContains(result.warnings, 'Visa status'), incomplete + ' ' + result.warnings);
+            System.assert(anyWarningContains(result.warnings, 'incomplete'), incomplete + ' ' + result.warnings);
+        }
+    }
+
+    @IsTest
+    static void aRuleThatIsNotAnObject_isRemoved_andReported_TEST() {
+        for (String broken : new List<String>{ '"International"', '[1,2]', '7' }) {
+            rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + parentQuestion() + ',' + childQuestion(broken) + ']');
+            System.assertEquals(false, result.questions[2].containsKey('visibleWhen'), broken);
+            System.assert(anyWarningContains(result.warnings, 'cannot be read'), broken + ' ' + result.warnings);
+        }
+    }
+
+    @IsTest
+    static void aRuleKeepsPartsThisVersionDoesNotKnow_TEST() {
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + parentQuestion() + ',' + childQuestion('{"key":"qcitizen","equals":["International"],"operator":"in","futurePart":{"a":1}}') + ']');
+        Map<String, Object> rule = (Map<String, Object>) result.questions[2].get('visibleWhen');
+        System.assertEquals(true, rule.containsKey('futurePart'), 'Newer data is not damaged');
+        System.assertEquals('in', rule.get('operator'));
+    }
+
+    @IsTest
+    static void aRuleThatPointsAtAMissingQuestion_isRemoved_andReported_TEST() {
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + childQuestion('{"key":"qgone","equals":["International"]}') + ']');
+        System.assertEquals(false, result.questions[1].containsKey('visibleWhen'));
+        System.assert(anyWarningContains(result.warnings, 'Visa status'), String.valueOf(result.warnings));
+        System.assert(anyWarningContains(result.warnings, 'not available'), String.valueOf(result.warnings));
+    }
+
+    @IsTest
+    static void aRuleThatPointsAtALaterQuestion_isRemoved_andReported_TEST() {
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + childQuestion('{"key":"qcitizen","equals":["International"]}') + ',' + parentQuestion() + ']');
+        System.assertEquals(false, result.questions[1].containsKey('visibleWhen'));
+        System.assert(anyWarningContains(result.warnings, 'does not come before'), String.valueOf(result.warnings));
+    }
+
+    @IsTest
+    static void aRuleThatPointsAtItself_isRemoved_TEST() {
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + childQuestion('{"key":"qvisa","equals":["x"]}') + ']');
+        System.assertEquals(false, result.questions[1].containsKey('visibleWhen'));
+        System.assert(anyWarningContains(result.warnings, 'does not come before'), String.valueOf(result.warnings));
+    }
+
+    @IsTest
+    static void aChainOfRules_isNotSupported_theSecondLinkIsRemoved_TEST() {
+        String middle = '{"id":2,"type":"custom","questionLabel":"Middle","questionType":"Picklist","fieldToApplyTo":"Citizenship__c","key":"qmiddle","visibleWhen":{"key":"qcitizen","equals":["International"]}}';
+        String last = '{"id":3,"type":"custom","questionLabel":"Last link","questionType":"Text box","fieldToApplyTo":"Employer__c","key":"qlast","visibleWhen":{"key":"qmiddle","equals":["x"]}}';
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + parentQuestion() + ',' + middle + ',' + last + ']');
+        System.assertEquals(true, result.questions[2].containsKey('visibleWhen'), 'The first link is fine');
+        System.assertEquals(false, result.questions[3].containsKey('visibleWhen'), 'Only one level is supported');
+        System.assert(anyWarningContains(result.warnings, 'Only one level'), String.valueOf(result.warnings));
+    }
+
+    @IsTest
+    static void aProgramFilter_cannotBeHidden_TEST() {
+        String filter = '{"id":2,"type":"filter","questionLabel":"Degree","filterControllerField":"Degree_Types_To_Display__c","key":"qfilter","visibleWhen":{"key":"qcitizen","equals":["International"]}}';
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + parentQuestion() + ',' + filter + ']');
+        System.assertEquals(3, result.questions.size());
+        System.assertEquals(false, result.questions[2].containsKey('visibleWhen'));
+        System.assert(anyWarningContains(result.warnings, 'program filter'), String.valueOf(result.warnings));
+    }
+
+    @IsTest
+    static void aRuleOnAQuestionWithNoKeyOfItsOwn_stillWorks_TEST() {
+        // The child needs no key; only the parent does
+        String child = '{"id":2,"type":"custom","questionLabel":"Visa status","questionType":"Text box","fieldToApplyTo":"Employer__c","visibleWhen":{"key":"qcitizen","equals":["International"]}}';
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + parentQuestion() + ',' + child + ']');
+        System.assertEquals(true, result.questions[2].containsKey('visibleWhen'));
+        System.assertEquals(0, result.warnings.size());
+    }
+
+    @IsTest
+    static void aRuleOnASkippedQuestion_isNotChecked_andDoesNotBreakTheOthers_TEST() {
+        String skipped = '{"id":2,"type":"matrix","questionLabel":"Future","key":"qfuture","visibleWhen":{"key":"qnone","equals":["x"]}}';
+        rfiQuestionReader.ReadResult result = read('[' + baseline() + ',' + skipped + ']');
+        System.assertEquals(1, result.questions.size());
+        System.assertEquals(1, result.warnings.size(), 'Only the unknown type is reported: ' + result.warnings);
+    }
 }

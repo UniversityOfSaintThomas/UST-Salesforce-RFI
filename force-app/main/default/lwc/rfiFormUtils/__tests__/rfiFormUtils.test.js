@@ -1,10 +1,14 @@
 import {
     applyFieldAnswer,
     composeDescription,
+    fieldsWrittenBy,
+    hiddenQuestions,
     isEmptyAnswer,
+    isQuestionShown,
     toSemicolonList,
     withAnswer,
-    withMajorPrograms
+    withMajorPrograms,
+    withoutHiddenAnswers
 } from '../rfiFormUtils';
 
 describe('isEmptyAnswer', () => {
@@ -143,5 +147,133 @@ describe('withMajorPrograms', () => {
         const before = { Major_Program_1__c: 'a1' };
         withMajorPrograms(before, []);
         expect(before.Major_Program_1__c).toBe('a1');
+    });
+});
+
+const picklistRule = (field, values, parent = 'Citizenship__c') => ({
+    fieldInteractionAPIName: field, visibleWhenField: parent, visibleWhenKind: 'picklist', visibleWhenValues: values
+});
+const checkboxRule = (field, values, parent = 'Has_Question__c') => ({
+    fieldInteractionAPIName: field, visibleWhenField: parent, visibleWhenKind: 'checkbox', visibleWhenValues: values
+});
+
+describe('isQuestionShown', () => {
+    it('always shows a question with no rule', () => {
+        expect(isQuestionShown({ fieldInteractionAPIName: 'Employer__c' }, {})).toBe(true);
+        expect(isQuestionShown(undefined, {})).toBe(true);
+    });
+
+    it('shows a question only for the revealing answers', () => {
+        const field = picklistRule('Employer__c', ['International', 'Other']);
+        expect(isQuestionShown(field, { Citizenship__c: 'International' })).toBe(true);
+        expect(isQuestionShown(field, { Citizenship__c: 'Other' })).toBe(true);
+        expect(isQuestionShown(field, { Citizenship__c: 'US Citizen' })).toBe(false);
+    });
+
+    it('hides the question until the earlier one is answered', () => {
+        const field = picklistRule('Employer__c', ['International']);
+        expect(isQuestionShown(field, {})).toBe(false);
+        expect(isQuestionShown(field, { Citizenship__c: '' })).toBe(false);
+        expect(isQuestionShown(field, { Citizenship__c: null })).toBe(false);
+        expect(isQuestionShown(field, undefined)).toBe(false);
+    });
+
+    it('matches answers exactly, not by upper or lower case', () => {
+        expect(isQuestionShown(picklistRule('E__c', ['International']), { Citizenship__c: 'international' })).toBe(false);
+    });
+
+    it('reads an untouched tick box as not checked', () => {
+        expect(isQuestionShown(checkboxRule('E__c', ['false']), {})).toBe(true);
+        expect(isQuestionShown(checkboxRule('E__c', ['true']), {})).toBe(false);
+    });
+
+    it('reads a ticked and an unticked box', () => {
+        expect(isQuestionShown(checkboxRule('E__c', ['true']), { Has_Question__c: true })).toBe(true);
+        expect(isQuestionShown(checkboxRule('E__c', ['true']), { Has_Question__c: false })).toBe(false);
+        expect(isQuestionShown(checkboxRule('E__c', ['false']), { Has_Question__c: false })).toBe(true);
+    });
+
+    it('does not treat the text "true" as a ticked box', () => {
+        expect(isQuestionShown(checkboxRule('E__c', ['true']), { Has_Question__c: 'true' })).toBe(false);
+    });
+
+    it('a rule with no revealing answers never shows the question', () => {
+        expect(isQuestionShown(picklistRule('E__c', undefined), { Citizenship__c: 'x' })).toBe(false);
+        expect(isQuestionShown(picklistRule('E__c', []), { Citizenship__c: 'x' })).toBe(false);
+    });
+});
+
+describe('fieldsWrittenBy', () => {
+    it('is the question field, lower case', () => {
+        expect(fieldsWrittenBy({ fieldInteractionAPIName: 'Employer__c' })).toEqual(['employer__c']);
+    });
+    it('adds the address, school, program and question-box fields', () => {
+        expect(fieldsWrittenBy({ fieldInteractionAPIName: 'Mailing_Street__c', isAddress: true })).toEqual(expect.arrayContaining(['mailing_city__c', 'state__c']));
+        expect(fieldsWrittenBy({ fieldInteractionAPIName: 'High_School_or_College__c', isSchoolLookup: true })).toContain('school_name_text__c');
+        expect(fieldsWrittenBy({ fieldInteractionAPIName: 'Major_Program_1__c', isProgramLookup: true })).toEqual(expect.arrayContaining(['major_program_4__c']));
+        expect(fieldsWrittenBy({ fieldInteractionAPIName: 'Has_Question__c', showDependentField: true })).toEqual(expect.arrayContaining(['has_question__c', 'description__c']));
+    });
+    it('copes with a field that has no name', () => {
+        expect(fieldsWrittenBy({})).toEqual([]);
+    });
+});
+
+describe('hiddenQuestions', () => {
+    it('lists the questions whose rule is not met', () => {
+        const shown = { fieldInteractionAPIName: 'Citizenship__c' };
+        const hidden = picklistRule('Employer__c', ['International']);
+        expect(hiddenQuestions([shown, hidden], { Citizenship__c: 'US Citizen' })).toEqual([hidden]);
+        expect(hiddenQuestions([shown, hidden], { Citizenship__c: 'International' })).toEqual([]);
+        expect(hiddenQuestions(undefined, {})).toEqual([]);
+    });
+});
+
+describe('withoutHiddenAnswers', () => {
+    const fields = [
+        { fieldInteractionAPIName: 'Citizenship__c' },
+        picklistRule('Employer__c', ['International'])
+    ];
+
+    it('throws away the answer to a hidden question and keeps the rest', () => {
+        const result = withoutHiddenAnswers({ Citizenship__c: 'US Citizen', Employer__c: 'typed', Email__c: 'a@b.c' }, fields);
+        expect(result).toEqual({ Citizenship__c: 'US Citizen', Email__c: 'a@b.c' });
+    });
+
+    it('returns the same object when nothing is hidden or nothing was answered', () => {
+        const answers = { Citizenship__c: 'International', Employer__c: 'typed' };
+        expect(withoutHiddenAnswers(answers, fields)).toBe(answers);
+        const unanswered = { Citizenship__c: 'US Citizen' };
+        expect(withoutHiddenAnswers(unanswered, fields)).toBe(unanswered);
+    });
+
+    it('does not change the object it was given', () => {
+        const answers = { Citizenship__c: 'US Citizen', Employer__c: 'typed' };
+        withoutHiddenAnswers(answers, fields);
+        expect(answers.Employer__c).toBe('typed');
+    });
+
+    it('keeps a field that a visible question also saves to', () => {
+        const both = [...fields, { fieldInteractionAPIName: 'Employer__c' }];
+        expect(withoutHiddenAnswers({ Citizenship__c: 'US Citizen', Employer__c: 'typed' }, both).Employer__c).toBe('typed');
+    });
+
+    it('a visible static note does not count as a question that saves the field', () => {
+        const withNote = [...fields, { fieldInteractionAPIName: 'Employer__c', isStaticContent: true }];
+        expect(withoutHiddenAnswers({ Citizenship__c: 'US Citizen', Employer__c: 'typed' }, withNote).Employer__c).toBeUndefined();
+    });
+
+    it('clears every address field when the address is hidden', () => {
+        const address = { ...picklistRule('Mailing_Street__c', ['International']), isAddress: true };
+        const result = withoutHiddenAnswers({ Citizenship__c: 'US Citizen', Mailing_Street__c: '1', Mailing_City__c: 'c', State__c: 'MN', Mailing_Postal_Code__c: '5' }, [fields[0], address]);
+        expect(result).toEqual({ Citizenship__c: 'US Citizen' });
+    });
+
+    it('compares field names without regard to upper and lower case', () => {
+        expect(withoutHiddenAnswers({ Citizenship__c: 'US Citizen', EMPLOYER__C: 'typed' }, fields).EMPLOYER__C).toBeUndefined();
+    });
+
+    it('copes with no answers and no fields', () => {
+        expect(withoutHiddenAnswers(undefined, fields)).toBeUndefined();
+        expect(withoutHiddenAnswers({ a: 1 }, undefined)).toEqual({ a: 1 });
     });
 });

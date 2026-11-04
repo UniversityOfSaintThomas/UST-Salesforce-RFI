@@ -121,6 +121,40 @@ The single source of truth for `rfiForm` question configuration when using the u
 - The manager does not save its own display flags (`isFirst`, `typeCustom`, `isPicklist` and so on). Older saved lists still contain them; they are ignored.
 - Keys this version does not know are kept when the manager saves, so data written by a newer version is not damaged.
 
+**"Show only when" rules (`visibleWhen`, optional; ECRMSF-6061):**
+
+```json
+{ "id": 3, "type": "custom", "questionLabel": "Visa status", "questionType": "Text box required",
+  "fieldToApplyTo": "Employer__c", "key": "qvisa",
+  "visibleWhen": { "key": "qcitizen", "equals": ["International", "Other"] } }
+```
+
+- The question is shown only while the answer to the **earlier** question whose `key` is `qcitizen` is one of `equals`. For a tick box
+  the answers are the text `"true"` and `"false"` (an untouched box counts as `"false"`).
+- **One level, one condition.** The earlier question must itself have no rule. It must come before this question in the list, and be a
+  choice from a list (a built-in question that saves to a picklist, or a custom Picklist) or a tick box (a built-in or custom
+  Checkbox). A choice that is a record (term, school, program), a multi-select, text and date answers cannot be used, and neither can
+  a program filter. A program filter and the two name questions cannot carry a rule.
+- **A hidden question is not asked.** It is not drawn, is never required, its answer is thrown away in the browser the moment it hides
+  (and when the form loads or resets), and the server throws away any answer to it again on submit (`rfiSubmissionGuard.dropAnswersToHiddenQuestions`).
+  The row "saved with gaps" in the Error object names any such answer that arrives, so a hand-built request leaves a trace. A field that a
+  visible question also saves to (Employer and Company, the two long text boxes that share Description) is never cleared.
+- **A rule that cannot work is ignored, and the question shows.** The reader (`rfiQuestionReader`) and `rfiFormController.applyVisibilityRules`
+  drop a rule that is incomplete, points at a question that is gone, comes after the question it depends on, depends on a rule of its own,
+  or depends on an answer that is not a choice or tick box. Each is reported like any other problem (the banner on the controller record
+  page and the Error row). A rule that waits for an answer the earlier question no longer has is kept, so the admin sees what they set, and
+  is reported. Visitors never see any of this.
+- **The manager** offers the rule in the question dialog ("Show only when"), lists the eligible earlier questions, and shows the
+  answers from the live picklist. It warns above the table and refuses to save while any rule cannot work. Deleting or moving a question
+  can break a rule; the warning says which and how to fix it.
+- **Older code ignores `visibleWhen`**, so a form written with rules still works on earlier code: the questions simply always show.
+  `schemaVersion` stays 1 because the change is additive.
+- Rules are stored by `key`, never by `id` or position. The manager works out the plain-words description shown in the list each time; it
+  is not saved.
+- The page keeps the questions it draws in a list of only the shown ones (`shownFields`). Do not go back to drawing every question
+  and hiding some with `lwc:if`: LWC then matches questions by position and redraws every question below a change, which unticks
+  tick boxes and empties text boxes the visitor already filled in.
+
 ### Changing the question format
 
 The saved list lives in an org, and older saved lists stay there after the code changes. A change that is safe for new data can still break the old. Rules:
