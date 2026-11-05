@@ -55,6 +55,22 @@ function debounce(func, wait) {
 
 export default class RfiForm extends NavigationMixin(LightningElement) {
     @api rfiControllerName;
+
+    /**
+     * The attribute name the legacy requestForInformationForm embeds pass (for example
+     * {"rfi_controller": "RFI Controller 0001"}). Accepting it lets an existing Lightning Out page switch to this form
+     * by changing only the component name. When both are given, rfiControllerName wins.
+     */
+    // eslint-disable-next-line camelcase
+    @api
+    get rfi_controller() {
+        return this._legacyControllerName;
+    }
+    set rfi_controller(value) {
+        this._legacyControllerName = value;
+    }
+    _legacyControllerName;
+
     @api recordId;
     @api googleApiKey;
 
@@ -161,9 +177,9 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     // Getter to determine which controller name to use
-    // Priority: 1) @api property set by parent, 2) value from record
+    // Priority: 1) rfiControllerName set by parent, 2) legacy rfi_controller set by parent, 3) value from record
     get effectiveControllerName() {
-        return this.rfiControllerName || this._controllerNameFromRecord;
+        return this.rfiControllerName || this._legacyControllerName || this._controllerNameFromRecord;
     }
 
     @wire(getRFIForm, {rfiControllerName: '$effectiveControllerName'})
