@@ -3,7 +3,7 @@
  -->
 <!-- RFI Form -->
 <template>
-    <lightning-card>
+    <div class="slds-card slds-card__body_inner">
         <div class="slds-grid slds-wrap slds-gutters_medium slds-m-around_xx-small" style="min-height:100px;">
             <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-2">
                 <template if:true={showSpinner}>
@@ -25,7 +25,7 @@
                     </div>
                 </template>
                 <template if:true={hasData}>
-                    <div class="slds-p-vertical_small">
+                    <div class="slds-p-bottom_small">
                         <template for:each={shownFields} for:item="f" for:index="index">
                                 <div key={f.key} class="slds-m-vertical_x-small">
                                     <template lwc:if={f.isProgramFilter}>
@@ -116,5 +116,5 @@
                 </template>
             </div>
         </div>
-    </lightning-card>
+    </div>
 </template>
