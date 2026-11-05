@@ -114,7 +114,8 @@ private class rfiFormController_TEST {
                 },
                 new Map<String, Object>{
                         'id' => 5, 'type' => 'custom', 'questionLabel' => 'Work Email',
-                        'questionType' => 'Email', 'fieldToApplyTo' => 'Email__c', 'isRequired' => true
+                        'questionType' => 'Email', 'fieldToApplyTo' => 'Email__c', 'isRequired' => true,
+                        'assistiveText' => '  Use your work address.  '
                 },
                 new Map<String, Object>{
                         'id' => 6, 'type' => 'custom', 'questionLabel' => 'Preferred Campus',
@@ -525,6 +526,26 @@ private class rfiFormController_TEST {
             }
         }
         System.assert(foundEmail, 'Should find Work Email field');
+    }
+
+    @IsTest
+    static void getRFIForm_unifiedPath_customQuestionHelpText_isPassedToTheForm_TEST() {
+        Test.startTest();
+        rfiFormController.interactionRFIFields wrap = rfiFormController.getRFIForm(unifiedCtrlName());
+        Test.stopTest();
+        Boolean checkedWithHelp = false;
+        Boolean checkedWithout = false;
+        for (rfiFormController.rfiField f : wrap.rfiFieldList) {
+            if (f.fieldLabel == 'Work Email') {
+                System.assertEquals('Use your work address.', f.helpText, 'Help text should arrive trimmed');
+                checkedWithHelp = true;
+            } else if (f.fieldLabel == 'Preferred Campus') {
+                System.assertEquals(null, f.helpText, 'A question saved without help text should have none');
+                checkedWithout = true;
+            }
+        }
+        System.assert(checkedWithHelp, 'Should find Work Email field');
+        System.assert(checkedWithout, 'Should find Preferred Campus field');
     }
 
     @IsTest

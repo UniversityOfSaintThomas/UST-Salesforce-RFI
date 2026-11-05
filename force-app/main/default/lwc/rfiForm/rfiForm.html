@@ -29,11 +29,11 @@
                         <template for:each={shownFields} for:item="f" for:index="index">
                                 <div key={f.key} class="slds-m-vertical_x-small">
                                     <template lwc:if={f.isProgramFilter}>
-                                        <lightning-combobox label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} onchange={handleProgramFilterChange}></lightning-combobox>
+                                        <lightning-combobox label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} onchange={handleProgramFilterChange} field-level-help={f.helpText}></lightning-combobox>
                                     </template>
                                     <template lwc:elseif={f.isAddress}>
                                         <div class="slds-m-bottom_x-small slds-form-element">
-                                            <lightning-input-address address-label={f.fieldLabel} street-label="Street" city-label="City" province-label="State/Province" postal-code-label="Zip/Postal Code" country-label="Country" country="US" hide-province="true" required={f.isRequired} data-field-name={f.name} country-options={countryOptions} province-options={stateOptions} onchange={handleAddressChange}></lightning-input-address>
+                                            <lightning-input-address address-label={f.fieldLabel} street-label="Street" city-label="City" province-label="State/Province" postal-code-label="Zip/Postal Code" country-label="Country" country="US" hide-province="true" required={f.isRequired} data-field-name={f.name} country-options={countryOptions} province-options={stateOptions} onchange={handleAddressChange} field-level-help={f.helpText}></lightning-input-address>
                                         </div>
                                     </template>
                                     <template lwc:elseif={f.isSchoolLookup}>
@@ -77,22 +77,22 @@
                                         </template>
                                     </template>
                                     <template lwc:elseif={f.isPicklist}>
-                                        <lightning-combobox label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} onchange={handlePicklistChange}></lightning-combobox>
+                                        <lightning-combobox label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} onchange={handlePicklistChange} field-level-help={f.helpText}></lightning-combobox>
                                     </template>
                                     <template lwc:elseif={f.isMultiSelect}>
                                         <c-multi-select-pills-groupable label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} max={f.max} onchange={handleMultiSelectChange}></c-multi-select-pills-groupable>
                                     </template>
                                     <template lwc:elseif={f.isTel}>
-                                        <lightning-input type="tel" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired}></lightning-input>
+                                        <lightning-input type="tel" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
                                     </template>
                                     <template lwc:elseif={f.isEmail}>
-                                        <lightning-input type="email" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired}></lightning-input>
+                                        <lightning-input type="email" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
                                     </template>
                                     <template lwc:elseif={f.isTextarea}>
-                                        <lightning-textarea label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired}></lightning-textarea>
+                                        <lightning-textarea label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-textarea>
                                     </template>
                                     <template lwc:elseif={f.isCheckbox}>
-                                        <lightning-input type="checkbox" label={f.fieldLabel} name={f.fieldInteractionAPIName} checked={f.value} required={f.isRequired} onchange={handleCheckboxChange}></lightning-input>
+                                        <lightning-input type="checkbox" label={f.fieldLabel} name={f.fieldInteractionAPIName} checked={f.value} required={f.isRequired} onchange={handleCheckboxChange} field-level-help={f.helpText}></lightning-input>
                                         <template if:true={f.showDependentField}>
                                             <template if:true={iHaveAQuestion}>
                                                 <lightning-textarea label="Questions/Comments" name="rfiQuestionComments" required=true></lightning-textarea>
@@ -105,7 +105,7 @@
                                         </div>
                                     </template>
                                     <template lwc:else>
-                                        <lightning-input type={f.inputType} label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired}></lightning-input>
+                                        <lightning-input type={f.inputType} label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
                                     </template>
                                 </div>
                         </template>

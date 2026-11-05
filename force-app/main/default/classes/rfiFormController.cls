@@ -24,6 +24,8 @@ public with sharing class rfiFormController {
 
     public class rfiField {
         @AuraEnabled public String fieldLabel { get; set; }
+        // The admin's "Help Text" for the question (saved as assistiveText); shown as the "i" tip beside the label
+        @AuraEnabled public String helpText { get; set; }
         @AuraEnabled public String fieldInteractionAPIName { get; set; }
         @AuraEnabled public List<picklistOption> picklistValues { get; set; }
         @AuraEnabled public Boolean isVisible { get; set; }
@@ -1785,6 +1787,10 @@ public with sharing class rfiFormController {
                         // Default (text box) falls through to lightning-input in the template
                     }
 
+                    Object savedHelpText = q.get('assistiveText');
+                    if (savedHelpText != null && String.isNotBlank(String.valueOf(savedHelpText))) {
+                        newField.helpText = String.valueOf(savedHelpText).trim();
+                    }
                     newField.questionKey = (String) q.get('key');
                     interactionAndRfi.rfiFieldList.add(newField);
                     List<rfiField> builtFields = new List<rfiField>{ newField };
