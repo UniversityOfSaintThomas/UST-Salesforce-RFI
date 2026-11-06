@@ -25,6 +25,9 @@ import {
 // its text is combined with "Tell us about yourself" into the Description before submit.
 const QUESTION_TEXT_NAME = 'rfiQuestionComments';
 
+// Most animation frames (about 16 ms each) to wait for the form to stop changing height before scrolling anyway
+const MAX_SCROLL_WAIT_FRAMES = 60;
+
 const RFI_CONTROLLER_FIELDS = [
     RFI_CONTROLLER_NAME,
     RFI_CONTROLLER_ID,
@@ -83,6 +86,15 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     @track iHaveAQuestion;
     @track loadingPrograms = false;
 
+    // Message shown next to the Submit button when the form is not on a record page (see _showMessage)
+    @track statusMessage = null;
+    // False for one render after a successful submit, so the questions are drawn again from scratch
+    formResetting = false;
+    // What to bring into view after the next render: 'status' for the message
+    _pendingScroll = null;
+    // True while _scrollWhenSettled is waiting for the next animation frame
+    _scrollWatchRunning = false;
+
     // Redirect settings from RFI Controller
     redirectUrl;
     redirectAfterSubmission;
@@ -129,6 +141,97 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     connectedCallback() {
         // Initialize debounced handlers
         this._debouncedProgramFilterChange = debounce(this._processProgramFilterChange.bind(this), 200);
+    }
+
+    renderedCallback() {
+        if (this._pendingScroll === 'status' && !this._scrollWatchRunning) {
+            this._scrollWhenSettled();
+        }
+    }
+
+    /**
+     * Scrolls to the status message once the form has stopped changing height. After a reset the questions are drawn
+     * again a moment after the message appears (measured in Lightning Out: the first render still has no questions,
+     * and they come back about 90 ms later). Scrolling in that gap aims at a short page, and the page grows past the
+     * message as soon as the questions are back. The height is compared frame to frame, so this does not depend on
+     * the order in which the framework draws things.
+     *
+     * @param {number} attempt Frames waited so far
+     * @param {number} lastHeight Form height seen in the previous frame
+     */
+    _scrollWhenSettled(attempt = 0, lastHeight = -1) {
+        this._scrollWatchRunning = true;
+        requestAnimationFrame(() => {
+            if (this._pendingScroll !== 'status') {
+                this._scrollWatchRunning = false;
+                return;
+            }
+            const host = this.template.host;
+            const height = host ? host.getBoundingClientRect().height : 0;
+            if (!this.formResetting && (height === lastHeight || attempt >= MAX_SCROLL_WAIT_FRAMES)) {
+                this._scrollWatchRunning = false;
+                const message = this.template.querySelector('[data-id="status-message"]');
+                if (message) {
+                    this._pendingScroll = null;
+                    this._bringIntoView(message);
+                }
+                return;
+            }
+            this._scrollWhenSettled(attempt + 1, height);
+        });
+    }
+
+    /**
+     * Scrolls an element to the middle of the window. Quick jump instead of a glide for visitors who ask their
+     * device to reduce motion.
+     *
+     * @param {Element} element The element to bring into view
+     */
+    _bringIntoView(element) {
+        if (!element || typeof element.scrollIntoView !== 'function') {
+            return;
+        }
+        const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        element.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block: 'center'});
+    }
+
+    /**
+     * Tells the visitor how the submit went. Toasts only exist inside Salesforce pages and do nothing in Lightning Out,
+     * so a toast is used only when the form sits on a record page (an admin previewing the form). Everywhere else the
+     * message is drawn next to the Submit button, in plain words.
+     *
+     * @param {string} variant 'success' or 'error'
+     * @param {string} title Toast title (admin only)
+     * @param {string} text The message
+     */
+    _showMessage(variant, title, text) {
+        if (this.showsToasts) {
+            this.dispatchEvent(new ShowToastEvent({title, message: text, variant}));
+            return;
+        }
+        this.statusMessage = {variant, text};
+        this._pendingScroll = 'status';
+    }
+
+    get showsToasts() {
+        return !!this.recordId;
+    }
+
+    get showFields() {
+        return !this.formResetting;
+    }
+
+    get hasStatusMessage() {
+        return !!this.statusMessage;
+    }
+
+    get statusClass() {
+        const theme = this.statusMessage?.variant === 'success' ? 'slds-theme_success' : 'slds-theme_error';
+        return 'slds-notify slds-notify_alert slds-m-top_small ' + theme;
+    }
+
+    get statusRole() {
+        return this.statusMessage?.variant === 'success' ? 'status' : 'alert';
     }
 
     @wire(getRecord, {recordId: "$recordId", fields: RFI_CONTROLLER_FIELDS})
@@ -561,11 +664,27 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     /**
+     * Puts the keyboard cursor in the topmost question that has an error and scrolls it into view. The questions are
+     * checked one kind at a time, so the list is not in page order until it is sorted here.
+     *
+     * @param {Element[]} invalidElements The questions that failed validation
+     */
+    _focusFirstInvalid(invalidElements) {
+        const [first] = [...invalidElements].sort((a, b) =>
+            (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+        if (typeof first.focus === 'function') {
+            first.focus();
+        }
+        this._bringIntoView(first);
+    }
+
+    /**
      * Validate all form elements
      * Returns true if all elements are valid
      */
     _validateForm() {
         let isValid = true;
+        const invalidElements = [];
 
         // Validate all input types in a single pass per type
         const validationConfigs = [
@@ -580,11 +699,16 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
             elements.forEach(element => {
                 if (element[config.checkMethod] && !element[config.checkMethod]()) {
                     isValid = false;
+                    invalidElements.push(element);
                     if (element[config.reportMethod]) {
                         element[config.reportMethod]();
                     }
                 }
             });
+        }
+
+        if (invalidElements.length > 0) {
+            this._focusFirstInvalid(invalidElements);
         }
 
         // Collect what is typed into the boxes. A blank box never overwrites an answer (several boxes can
@@ -654,6 +778,9 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
     }
 
     async handleSubmit() {
+        // A message from the last attempt is out of date as soon as the visitor tries again
+        this.statusMessage = null;
+
         // Validate the form
         const isValid = this._validateForm();
 
@@ -676,30 +803,17 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                     throw new Error('The submission was not saved.');
                 }
 
-                this.dispatchEvent(
-                    new ShowToastEvent({
-                        title: 'Success',
-                        message: 'Your information has been submitted successfully.',
-                        variant: 'success'
-                    })
-                );
-
                 // Redirect if configured on the RFI Controller
                 if (this.redirectAfterSubmission && this.redirectUrl) {
                     window.open(this.redirectUrl, '_self');
                 } else {
-                    // No redirect - reset the form for new submission
+                    // No redirect - clear the form for the next request, then say it was received
                     this.resetForm();
+                    this._showMessage('success', 'Success', 'Thank you! We received your request for information.');
                 }
             } catch (error) {
                 console.error('Error submitting Interaction:', error);
-                this.dispatchEvent(
-                    new ShowToastEvent({
-                        title: 'Error',
-                        message: 'There was an error submitting your information. Please try again later.',
-                        variant: 'error'
-                    })
-                );
+                this._showMessage('error', 'Error', 'We could not send your request. Please try again in a few minutes.');
             } finally {
                 this.saving = false;
             }
@@ -807,34 +921,15 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this._invalidateCaches();
         this._forgetHiddenAnswers();
 
-        // Clear all input elements in the template
-        const allInputs = this.template.querySelectorAll('lightning-input');
-        allInputs.forEach(input => {
-            if (input.type === 'checkbox') {
-                input.checked = false;
-            } else {
-                input.value = '';
-            }
-        });
+        // Forget the address typed last time, or the next request would be sent with it
+        this._pendingAddress = null;
 
-        // Clear textarea elements
-        const allTextareas = this.template.querySelectorAll('lightning-textarea');
-        allTextareas.forEach(textarea => {
-            textarea.value = '';
-        });
-
-        // Clear combobox/picklist elements
-        const allComboboxes = this.template.querySelectorAll('lightning-combobox');
-        allComboboxes.forEach(combobox => {
-            combobox.value = '';
-        });
-
-        // Reset multi-select components
-        const allMultiSelects = this.template.querySelectorAll('c-multi-select-pills-groupable');
-        allMultiSelects.forEach(multiSelect => {
-            if (multiSelect.reset) {
-                multiSelect.reset();
-            }
+        // Draw every question again from scratch. Clearing the boxes one by one missed the address, the school
+        // lookup and the picked choices; new boxes start empty. The flag goes back to false after the page has
+        // drawn the empty state.
+        this.formResetting = true;
+        Promise.resolve().then(() => {
+            this.formResetting = false;
         });
     }
 }

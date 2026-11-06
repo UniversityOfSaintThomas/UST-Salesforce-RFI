@@ -272,7 +272,11 @@ describe('c-rfi-form submit', () => {
         await type(inputByLabel('Last Name'), 'Lovelace');
         await submit();
         expect(submitRfiForm).toHaveBeenCalledTimes(1);
-        expect(toasts.map((t) => t.variant)).toEqual(['error']);
+        // No record page here, so the message is drawn in the form rather than as a toast (toasts do not exist in Lightning Out)
+        expect(toasts).toEqual([]);
+        const message = root().querySelector('[data-id="status-message"]');
+        expect(message.getAttribute('role')).toBe('alert');
+        expect(message.textContent).toContain('could not send your request');
         expect(openSpy).not.toHaveBeenCalled();
         expect(inputByLabel('First Name').value).toBe('Ada');
         openSpy.mockRestore();
