@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Academic_Program__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <deprecated>false</deprecated>
+    <description>The official plan or program the individual applies for. A lookup to Program with a filter criteria of Record Type = Academic Program.</description>
+    <inlineHelpText>The official plan or program the individual applies for.</inlineHelpText>
+    <label>Academic Program</label>
+    <referenceTo>Program__c</referenceTo>
+    <relationshipLabel>Interactions (Academic Program)</relationshipLabel>
+    <relationshipName>Academic_Program_Interactions</relationshipName>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

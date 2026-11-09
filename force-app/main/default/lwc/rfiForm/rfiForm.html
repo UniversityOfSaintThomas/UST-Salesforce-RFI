@@ -1,0 +1,127 @@
+<!--
+ - Created by Thad-PC-2019 on 9/23/2025.
+ -->
+<!-- RFI Form -->
+<template>
+    <div class="slds-card slds-card__body_inner">
+        <div class="slds-grid slds-wrap slds-gutters_medium slds-m-around_xx-small" style="min-height:100px;">
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-2">
+                <template if:true={showSpinner}>
+                    <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </template>
+                <template if:true={showLoadFailure}>
+                    <p class="slds-text-color_error slds-p-around_small" role="alert">We could not load this form. Please try again later.</p>
+                </template>
+                <template if:true={hasAdminWarnings}>
+                    <div class="slds-notify slds-notify_alert slds-alert_warning slds-m-bottom_small" role="alert" data-id="admin-warnings">
+                        <div>
+                            <p class="slds-text-heading_x-small">Some saved questions were left out of this form. Visitors do not see this message.</p>
+                            <ul class="slds-list_dotted">
+                                <template for:each={adminWarnings} for:item="warning">
+                                    <li key={warning.key}>{warning.text}</li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                </template>
+                <template if:true={hasData}>
+                    <div class="slds-p-bottom_small">
+                        <template if:true={showFields}>
+                        <template for:each={shownFields} for:item="f" for:index="index">
+                                <div key={f.key} class="slds-m-vertical_x-small">
+                                    <template lwc:if={f.isProgramFilter}>
+                                        <lightning-combobox label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} onchange={handleProgramFilterChange} field-level-help={f.helpText}></lightning-combobox>
+                                    </template>
+                                    <template lwc:elseif={f.isAddress}>
+                                        <div class="slds-m-bottom_x-small slds-form-element">
+                                            <lightning-input-address address-label={f.fieldLabel} street-label="Street" city-label="City" province-label="State/Province" postal-code-label="Zip/Postal Code" country-label="Country" country="US" hide-province="true" required={f.isRequired} data-field-name={f.name} country-options={countryOptions} province-options={stateOptions} onchange={handleAddressChange} field-level-help={f.helpText}></lightning-input-address>
+                                        </div>
+                                    </template>
+                                    <template lwc:elseif={f.isSchoolLookup}>
+                                        <div class="slds-m-bottom_x-small slds-form-element">
+                                            <template if:false={cantFindSchool}>
+                                                <c-reusable-lookup label={f.fieldLabel} selected-icon-name="standard:account" object-label="" object-api-name="Account" field-api-name="Name" other-field-api-name="BillingCity,BillingState,billingPostalCode" placeholder="Search schools" required={f.isRequired} record-type-name="Educational Institution" onvalueselected={handleSchoolSelect} type="High School"></c-reusable-lookup>
+                                            </template>
+                                            <template if:true={cantFindSchool}>
+                                                <lightning-input type="text" label="Enter your school name" name="School_Name_Text__c" placeholder="Enter your school name" required={f.isRequired} onchange={handleManualSchoolEntry}></lightning-input>
+                                            </template>
+                                            <div class="slds-p-top_xx-small">
+                                                <lightning-input type="checkbox" label="I can't find my school" checked={cantFindSchool} onchange={handleCantFindSchoolChange}></lightning-input>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template lwc:elseif={f.isProgramLookup}>
+                                        <template if:true={loadingPrograms}>
+                                            <div class="slds-m-bottom_x-small slds-form-element">
+                                                <div class="slds-form-element__label slds-text-heading_small slds-m-bottom_x-small">Academic Interest</div>
+                                                <div class="slds-align_absolute-center slds-p-around_medium">
+                                                    <lightning-spinner alternative-text="Loading programs" size="small"></lightning-spinner>
+                                                    <p class="slds-m-top_small slds-text-color_weak">Loading academic programs...</p>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template if:false={loadingPrograms}>
+                                            <template if:true={f.isDisabled}>
+                                                <div class="slds-m-bottom_x-small slds-form-element">
+                                                    <label class="slds-form-element__label">{f.fieldLabel}</label>
+                                                    <div class="slds-form-element__control">
+                                                        <div class="slds-box slds-theme_shade slds-text-color_weak slds-p-around_small" style="border-radius:4px;">
+                                                            <lightning-icon icon-name="utility:lock" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                                                            Please answer all filter questions above to unlock academic programs.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            <template if:false={f.isDisabled}>
+                                                <c-multi-select-pills-groupable label={f.fieldLabel} name={f.fieldInteractionAPIName} options={programValues} required={f.isRequired} max={f.max} onchange={handleAcademicInterestChange}></c-multi-select-pills-groupable>
+                                            </template>
+                                        </template>
+                                    </template>
+                                    <template lwc:elseif={f.isPicklist}>
+                                        <lightning-combobox label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} onchange={handlePicklistChange} field-level-help={f.helpText}></lightning-combobox>
+                                    </template>
+                                    <template lwc:elseif={f.isMultiSelect}>
+                                        <c-multi-select-pills-groupable label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} max={f.max} onchange={handleMultiSelectChange}></c-multi-select-pills-groupable>
+                                    </template>
+                                    <template lwc:elseif={f.isTel}>
+                                        <lightning-input type="tel" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
+                                    </template>
+                                    <template lwc:elseif={f.isEmail}>
+                                        <lightning-input type="email" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
+                                    </template>
+                                    <template lwc:elseif={f.isTextarea}>
+                                        <lightning-textarea label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-textarea>
+                                    </template>
+                                    <template lwc:elseif={f.isCheckbox}>
+                                        <lightning-input type="checkbox" label={f.fieldLabel} name={f.fieldInteractionAPIName} checked={f.value} required={f.isRequired} onchange={handleCheckboxChange} field-level-help={f.helpText}></lightning-input>
+                                        <template if:true={f.showDependentField}>
+                                            <template if:true={iHaveAQuestion}>
+                                                <lightning-textarea label="Questions/Comments" name="rfiQuestionComments" required=true></lightning-textarea>
+                                            </template>
+                                        </template>
+                                    </template>
+                                    <template lwc:elseif={f.isStaticContent}>
+                                        <div class="slds-m-bottom_x-small">
+                                            <lightning-formatted-rich-text value={f.staticContentHtml}></lightning-formatted-rich-text>
+                                        </div>
+                                    </template>
+                                    <template lwc:else>
+                                        <lightning-input type={f.inputType} label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
+                                    </template>
+                                </div>
+                        </template>
+                        </template>
+                        <template if:true={hasStatusMessage}>
+                            <div class={statusClass} role={statusRole} data-id="status-message">
+                                <p class="slds-text-heading_x-small">{statusMessage.text}</p>
+                            </div>
+                        </template>
+                        <div class="slds-m-top_medium">
+                            <lightning-button variant="brand" label="Submit" onclick={handleSubmit} disabled={saving}></lightning-button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</template>

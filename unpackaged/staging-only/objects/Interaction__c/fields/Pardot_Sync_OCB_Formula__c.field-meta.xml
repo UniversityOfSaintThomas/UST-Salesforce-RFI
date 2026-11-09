@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Pardot_Sync_OCB_Formula__c</fullName>
+    <description>Formula field created on Interaction used to populate the Contact Pardot_Sync_OCB__c field via Interaction mapping instead of using the Lead field.</description>
+    <formula>BEGINS(Recruitment_Program__r.Banner_Program_Code__c, &apos;BU_&apos;) ||
+ISPICKVAL(St_Thomas_College_School__r.School_College_Name__c, &apos;Opus College of Business&apos;)||
+BEGINS(utm_campaign__c, &apos;ocb&apos;)</formula>
+    <inlineHelpText>This field populates the Contact Pardot Sync OCB field via  an Interaction Mapping Record.</inlineHelpText>
+    <label>Pardot Sync OCB - Formula</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

@@ -1,0 +1,152 @@
+<template>
+    <div class="slds-box_border slds-grid slds-wrap">
+        <div class="slds-p-around_small slds-col slds-size_1-of-1 slds-large-size_12-of-12">
+            <lightning-card title={displayLabel} icon-name="standard:filter">
+                <div slot="actions">
+                    <template if:true={isSaving}>
+                        <lightning-spinner alternative-text="Saving..." size="small"></lightning-spinner>
+                    </template>
+                    <template if:false={isSaving}>
+                        <template if:true={hasSelections}>
+                            <lightning-badge label={selectionCount}></lightning-badge>
+                        </template>
+                    </template>
+                </div>
+
+                <div class="slds-p-top_medium">
+                    <template if:true={isLoading}>
+                        <div class="slds-align_absolute-center slds-m-vertical_large">
+                            <lightning-spinner alternative-text="Loading programs..." size="medium"></lightning-spinner>
+                        </div>
+                    </template>
+
+                    <template if:true={error}>
+                        <div class="slds-text-color_error slds-m-bottom_small">
+                            <lightning-icon icon-name="utility:error" size="small" class="slds-m-right_x-small"></lightning-icon>
+                            Error loading programs: {error.body.message}
+                        </div>
+                    </template>
+
+                    <template if:false={isLoading}>
+                        <template if:false={error}>
+                            <div class="slds-text-body_small slds-m-bottom_small slds-text-color_weak">
+                                Select which programs should appear on the public-facing RFI form.
+                                Programs are filtered by the Academic Level and School/College set on this RFI Controller.
+                            </div>
+
+                            <!-- Custom Dual Listbox -->
+                            <div class="slds-form-element dual-listbox-container">
+                                <div class="slds-form-element__control">
+                                    <div class="slds-dueling-list dual-listbox-layout">
+                                        <!-- Available Programs -->
+                                        <div class="slds-dueling-list__column">
+                                            <span class="slds-form-element__label slds-form-element__legend">Available Programs</span>
+                                            <div class="slds-dueling-list__options slds-float_left">
+                                                <ul
+                                                        class="slds-listbox slds-listbox_vertical slds-scrollable_y"
+                                                        role="listbox"
+                                                        aria-label="Available Programs"
+                                                        aria-multiselectable="true">
+                                                    <template for:each={availableOptions} for:item="option">
+                                                        <template if:true={option.is_group}>
+                                                            <li key={option.key} role="presentation" class={option.headerClass}>
+                                                                <div class="slds-listbox__option slds-listbox__option_plain">
+                                                                    <h3 class="slds-text-title_caps slds-p-horizontal_small">{option.label}</h3>
+                                                                </div>
+                                                            </li>
+                                                        </template>
+                                                        <template if:false={option.is_group}>
+                                                            <li key={option.key} role="presentation" class="slds-listbox__item">
+                                                                <div
+                                                                        class="slds-listbox__option slds-listbox__option_plain slds-media slds-media_small slds-media_center"
+                                                                        role="option"
+                                                                        data-value={option.value}
+                                                                        data-label={option.displayLabel}
+                                                                        onclick={handleAvailableClick}
+                                                                        ondblclick={handleAvailableDoubleClick}
+                                                                        tabindex="0">
+                                                            <span class="slds-media__body">
+                                                                <span title={option.displayLabel}>{option.displayLabel}</span>
+                                                            </span>
+                                                                </div>
+                                                            </li>
+                                                        </template>
+                                                    </template>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        <!-- Control Buttons -->
+                                        <div class="slds-dueling-list__column">
+                                            <button
+                                                    class="slds-button slds-button_icon slds-button_icon-container"
+                                                    title="Move selection to Selected Programs"
+                                                    onclick={handleMoveToSelected}
+                                                    disabled={moveToSelectedDisabled}>
+                                                <lightning-icon icon-name="utility:right" size="small" alternative-text="Move to Selected"></lightning-icon>
+                                                <span class="slds-assistive-text">Move to Selected</span>
+                                            </button>
+                                            <button
+                                                    class="slds-button slds-button_icon slds-button_icon-container"
+                                                    title="Move selection to Available Programs"
+                                                    onclick={handleMoveToAvailable}
+                                                    disabled={moveToAvailableDisabled}>
+                                                <lightning-icon icon-name="utility:left" size="small" alternative-text="Move to Available"></lightning-icon>
+                                                <span class="slds-assistive-text">Move to Available</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Selected Programs -->
+                                        <div class="slds-dueling-list__column">
+                                            <span class="slds-form-element__label slds-form-element__legend">Selected Programs ({selectionCount})</span>
+                                            <div class="slds-dueling-list__options slds-float_left">
+                                                <ul
+                                                        class="slds-listbox slds-listbox_vertical slds-scrollable_y"
+                                                        role="listbox"
+                                                        aria-label="Selected Programs"
+                                                        aria-multiselectable="true">
+                                                    <template for:each={selectedOptions} for:item="option">
+                                                        <template if:true={option.is_group}>
+                                                            <li key={option.key} role="presentation" class={option.headerClass}>
+                                                                <div class="slds-listbox__option slds-listbox__option_plain">
+                                                                    <h3 class="slds-text-title_caps slds-p-horizontal_small">{option.label}</h3>
+                                                                </div>
+                                                            </li>
+                                                        </template>
+                                                        <template if:false={option.is_group}>
+                                                            <li key={option.key} role="presentation" class="slds-listbox__item">
+                                                                <div
+                                                                        class="slds-listbox__option slds-listbox__option_plain slds-media slds-media_small slds-media_center"
+                                                                        role="option"
+                                                                        data-value={option.value}
+                                                                        data-label={option.displayLabel}
+                                                                        onclick={handleSelectedClick}
+                                                                        ondblclick={handleSelectedDoubleClick}
+                                                                        tabindex="0">
+                                                            <span class="slds-media__body">
+                                                                <span title={option.displayLabel}>{option.displayLabel}</span>
+                                                            </span>
+                                                                </div>
+                                                            </li>
+                                                        </template>
+                                                    </template>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <template if:true={hasSelections}>
+                                <div class="slds-text-body_small slds-m-top_small slds-text-color_success">
+                                    <lightning-icon icon-name="utility:success" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                                    Selections saved automatically
+                                </div>
+                            </template>
+                        </template>
+                    </template>
+                </div>
+            </lightning-card>
+        </div>
+    </div>
+</template>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>67.0</apiVersion>
+    <isExposed>true</isExposed>
+    <masterLabel>Academic Interest Selector</masterLabel>
+    <description>Admin tool to select which academic programs appear on public-facing RFI forms. Displays all available programs grouped by school/degree and saves selections to Academic_Interests_To_Display__c field.</description>
+    <targets>
+        <target>lightning__RecordPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage">
+            <objects>
+                <object>RFI_Controller__c</object>
+            </objects>
+            <property name="label" type="String" label="Label" default="Select Academic Interests to Display on RFI"
+                description="Card title label" />
+            <property name="maxSelections" type="Integer" label="Max Selections (Not Used)" default="999"
+                description="This property is not used by the admin tool but kept for backward compatibility" />
+            <property name="required" type="Boolean" label="Required (Not Used)" default="false"
+                description="This property is not used by the admin tool but kept for backward compatibility" />
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
+

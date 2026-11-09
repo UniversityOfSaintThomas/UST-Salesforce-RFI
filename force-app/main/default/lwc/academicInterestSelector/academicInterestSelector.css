@@ -1,0 +1,157 @@
+lightning-card {
+    height: 100%;
+}
+
+.slds-align_absolute-center {
+    min-height: 200px;
+}
+
+lightning-icon {
+    vertical-align: middle;
+}
+
+/* Dual Listbox Container - Width fills, height fixed */
+.dual-listbox-container {
+    width: 100%;
+}
+
+/* Dual Listbox Layout - Horizontal flex, fills width */
+.dual-listbox-layout {
+    display: flex;
+    width: 100%;
+}
+
+.dual-listbox-layout .slds-dueling-list__column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Arrow column - smaller, fixed width */
+.dual-listbox-layout .slds-dueling-list__column:nth-child(2) {
+    flex: 0 0 60px;
+    justify-content: center;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+/* List boxes - Fixed height of 400px */
+.slds-dueling-list__options {
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    background-color: white;
+    height: 400px;
+    max-height: 400px;
+    width: auto;
+}
+
+.slds-listbox {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.slds-listbox__item {
+    cursor: pointer;
+    user-select: none;
+}
+
+.slds-listbox__item:not(.group-header):hover .slds-listbox__option {
+    background-color: #f3f3f3;
+}
+
+.slds-listbox__option {
+    padding: 0.5rem 0.75rem;
+}
+
+/* Selected state styling */
+.slds-listbox__option.slds-is-selected,
+.slds-is-selected > .slds-listbox__option,
+.slds-listbox__item.slds-is-selected .slds-listbox__option {
+    background-color: #0070d2;
+    color: white;
+}
+
+.slds-listbox__item.slds-is-selected .slds-listbox__option:hover {
+    background-color: #005fb2;
+}
+
+/* Group headers - Bold, non-selectable, and sticky */
+.group-header {
+    cursor: default;
+    background-color: #f4f6f9;
+    border-bottom: 1px solid #d8dde6;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    pointer-events: none; /* Non-selectable */
+    user-select: none; /* Can't select text */
+}
+
+.group-header .slds-listbox__option {
+    padding: 0.25rem 0.75rem;
+}
+
+.group-header h3 {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #3e3e3c;
+}
+
+/* School-level headers (level 1) - Prominent styling */
+.school-header {
+    background-color: #e8eaed;
+    z-index: 2; /* Higher than degree headers */
+}
+
+.school-header h3 {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #080707;
+}
+
+/* Degree-level headers (level 2) - Sub-group styling with indentation */
+.degree-header {
+    background-color: #f4f6f9;
+    z-index: 1;
+}
+
+.degree-header .slds-listbox__option {
+    padding-left: 1.5rem; /* Indent to show hierarchy */
+}
+
+.degree-header h3 {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: #54698d;
+}
+
+/* Arrow buttons */
+.dual-listbox-layout .slds-dueling-list__column button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+}
+
+.slds-form-element__legend {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Scrollbar styling */
+.slds-scrollable_y::-webkit-scrollbar {
+    width: 8px;
+}
+
+.slds-scrollable_y::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.slds-scrollable_y::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.slds-scrollable_y::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
