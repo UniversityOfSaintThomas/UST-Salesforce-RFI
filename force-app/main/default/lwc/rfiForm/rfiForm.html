@@ -5,7 +5,15 @@
 <template>
     <div class="slds-card slds-card__body_inner">
         <div class="slds-grid slds-wrap slds-gutters_medium slds-m-around_xx-small" style="min-height:100px;">
-            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-2">
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-2 slds-is-relative" aria-busy={saving}>
+                <template if:true={saving}>
+                    <div class="submit-overlay" data-id="submit-overlay">
+                        <div class="submit-overlay__message" role="status">
+                            <div class="submit-overlay__spinner"></div>
+                            <p class="slds-text-heading_small slds-m-top_small">Submitting your request...</p>
+                        </div>
+                    </div>
+                </template>
                 <template if:true={showSpinner}>
                     <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
                 </template>
@@ -84,10 +92,10 @@
                                         <c-multi-select-pills-groupable label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} max={f.max} onchange={handleMultiSelectChange}></c-multi-select-pills-groupable>
                                     </template>
                                     <template lwc:elseif={f.isTel}>
-                                        <lightning-input type="tel" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
+                                        <lightning-input type="tel" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText} pattern={phonePattern} message-when-pattern-mismatch={phoneErrorMessage}></lightning-input>
                                     </template>
                                     <template lwc:elseif={f.isEmail}>
-                                        <lightning-input type="email" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
+                                        <lightning-input type="email" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText} pattern={emailPattern} message-when-pattern-mismatch={emailErrorMessage}></lightning-input>
                                     </template>
                                     <template lwc:elseif={f.isTextarea}>
                                         <lightning-textarea label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-textarea>

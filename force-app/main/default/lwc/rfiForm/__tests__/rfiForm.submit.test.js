@@ -351,4 +351,66 @@ describe('c-rfi-form submit', () => {
         await submit();
         expect(captured.interaction.Employer__c).toBe('No Company');
     });
+
+    describe('while a submission is in progress', () => {
+        const overlay = () => root().querySelector('[data-id="submit-overlay"]');
+        const submitButton = () => Array.from(root().querySelectorAll('lightning-button')).find((b) => b.label === 'Submit');
+
+        async function renderAndFill(formData = FORM) {
+            element = createElement('c-rfi-form', { is: RfiForm });
+            element.rfiControllerName = CONTROLLER_NAME;
+            document.body.appendChild(element);
+            getRFIForm.emit(JSON.parse(JSON.stringify(formData)));
+            await flushPromises();
+            await type(inputByLabel('First Name'), 'Ada');
+            await type(inputByLabel('Last Name'), 'Lovelace');
+        }
+
+        it('grays out the form with a message and disables Submit until the server answers, then removes the overlay', async () => {
+            let finish;
+            submitRfiForm.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+            await renderAndFill();
+            expect(overlay()).toBeNull();
+
+            await submit();
+            expect(overlay()).not.toBeNull();
+            expect(overlay().textContent).toContain('Submitting your request');
+            expect(submitButton().disabled).toBe(true);
+
+            finish('a10000000000001AAA');
+            await flushPromises();
+            await flushPromises();
+            expect(overlay()).toBeNull();
+            expect(submitButton().disabled).toBe(false);
+        });
+
+        it('removes the overlay when the submission fails, so the visitor can try again', async () => {
+            submitRfiForm.mockImplementation(() => Promise.reject(new Error('boom')));
+            const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            await renderAndFill();
+            await submit();
+            expect(overlay()).toBeNull();
+            expect(submitButton().disabled).toBe(false);
+            errorSpy.mockRestore();
+        });
+
+        it('does not show the overlay when the form is invalid and nothing is sent', async () => {
+            await renderAndFill();
+            // The Jest stubs report every input as invalid until told otherwise, so Submit stops at validation
+            Array.from(root().querySelectorAll('lightning-button')).find((b) => b.label === 'Submit').click();
+            await flushPromises();
+            expect(submitRfiForm).not.toHaveBeenCalled();
+            expect(overlay()).toBeNull();
+        });
+
+        it('keeps the overlay up while the browser leaves for the redirect page', async () => {
+            const redirecting = { ...FORM, redirectAfterSubmission: true, redirectUrl: 'https://example.invalid/thanks' };
+            const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+            await renderAndFill(redirecting);
+            await submit();
+            expect(openSpy).toHaveBeenCalledWith('https://example.invalid/thanks', '_self');
+            expect(overlay()).not.toBeNull();
+            openSpy.mockRestore();
+        });
+    });
 });

@@ -1,6 +1,7 @@
 import { createElement } from 'lwc';
 import RfiForm from 'c/rfiForm';
 import getRFIForm from '@salesforce/apex/rfiFormController.getRFIForm';
+import { EMAIL_ERROR_MESSAGE, EMAIL_PATTERN, PHONE_ERROR_MESSAGE, PHONE_PATTERN } from 'c/rfiFormUtils';
 
 jest.mock(
     '@salesforce/apex/rfiFormController.getRFIForm',
@@ -79,5 +80,21 @@ describe('c-rfi-form help text', () => {
         await renderForm([field('Favorite Color', 'Title__c')]);
 
         expect(byLabel('lightning-input', 'Favorite Color').fieldLevelHelp).toBeUndefined();
+    });
+
+    it('gives phone and email questions a format pattern and an error message, and leaves other questions alone', async () => {
+        await renderForm([
+            field('Work Email', 'Email__c', { isEmail: true }),
+            field('Best Phone', 'Phone__c', { isTel: true }),
+            field('Favorite Color', 'Title__c')
+        ]);
+
+        const email = byLabel('lightning-input', 'Work Email');
+        const phone = byLabel('lightning-input', 'Best Phone');
+        expect(email.pattern).toBe(EMAIL_PATTERN);
+        expect(email.messageWhenPatternMismatch).toBe(EMAIL_ERROR_MESSAGE);
+        expect(phone.pattern).toBe(PHONE_PATTERN);
+        expect(phone.messageWhenPatternMismatch).toBe(PHONE_ERROR_MESSAGE);
+        expect(byLabel('lightning-input', 'Favorite Color').pattern).toBeUndefined();
     });
 });
