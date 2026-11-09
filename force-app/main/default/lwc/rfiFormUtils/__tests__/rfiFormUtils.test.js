@@ -1,4 +1,5 @@
 import {
+    answerOf,
     applyFieldAnswer,
     composeDescription,
     EMAIL_PATTERN,
@@ -8,12 +9,50 @@ import {
     isQuestionShown,
     isValidEmail,
     isValidPhone,
+    onlyDigits,
     PHONE_PATTERN,
     toSemicolonList,
     withAnswer,
     withMajorPrograms,
     withoutHiddenAnswers
 } from '../rfiFormUtils';
+
+describe('onlyDigits', () => {
+    it('keeps digits and drops everything else', () => {
+        expect(onlyDigits('2027')).toBe('2027');
+        expect(onlyDigits('20a2-7 ')).toBe('2027');
+        expect(onlyDigits('abc')).toBe('');
+        expect(onlyDigits('١٢٣')).toBe('');
+    });
+
+    it('gives an empty string for a missing value', () => {
+        expect(onlyDigits(undefined)).toBe('');
+        expect(onlyDigits(null)).toBe('');
+    });
+});
+
+describe('answerOf', () => {
+    it('gives true or false for a tick box', () => {
+        expect(answerOf({ type: 'checkbox', checked: true, value: 'x' })).toBe(true);
+        expect(answerOf({ type: 'checkbox', checked: false, value: 'x' })).toBe(false);
+    });
+
+    it('gives a number for a number box, including zero and decimals', () => {
+        expect(answerOf({ type: 'number', value: '12' })).toBe(12);
+        expect(answerOf({ type: 'number', value: '0' })).toBe(0);
+        expect(answerOf({ type: 'number', value: '-3.25' })).toBe(-3.25);
+    });
+
+    it('leaves an empty number box empty', () => {
+        expect(answerOf({ type: 'number', value: '' })).toBe('');
+        expect(answerOf({ type: 'number', value: undefined })).toBeUndefined();
+    });
+
+    it('gives the text for any other box', () => {
+        expect(answerOf({ type: 'text', value: '007' })).toBe('007');
+        expect(answerOf({ type: 'tel', value: '+1 612' })).toBe('+1 612');
+    });
+});
 
 describe('isValidPhone', () => {
     it.each([

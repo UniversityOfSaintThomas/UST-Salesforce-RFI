@@ -92,13 +92,13 @@
                                         <c-multi-select-pills-groupable label={f.fieldLabel} name={f.fieldInteractionAPIName} options={f.picklistValues} required={f.isRequired} max={f.max} onchange={handleMultiSelectChange}></c-multi-select-pills-groupable>
                                     </template>
                                     <template lwc:elseif={f.isTel}>
-                                        <lightning-input type="tel" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText} pattern={phonePattern} message-when-pattern-mismatch={phoneErrorMessage}></lightning-input>
+                                        <lightning-input type="tel" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText} maxlength={f.maxLength} pattern={phonePattern} message-when-pattern-mismatch={phoneErrorMessage}></lightning-input>
                                     </template>
                                     <template lwc:elseif={f.isEmail}>
-                                        <lightning-input type="email" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText} pattern={emailPattern} message-when-pattern-mismatch={emailErrorMessage}></lightning-input>
+                                        <lightning-input type="email" label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText} maxlength={f.maxLength} pattern={emailPattern} message-when-pattern-mismatch={emailErrorMessage}></lightning-input>
                                     </template>
                                     <template lwc:elseif={f.isTextarea}>
-                                        <lightning-textarea label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-textarea>
+                                        <lightning-textarea label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText} maxlength={f.maxLength}></lightning-textarea>
                                     </template>
                                     <template lwc:elseif={f.isCheckbox}>
                                         <lightning-input type="checkbox" label={f.fieldLabel} name={f.fieldInteractionAPIName} checked={f.value} required={f.isRequired} onchange={handleCheckboxChange} field-level-help={f.helpText}></lightning-input>
@@ -114,7 +114,7 @@
                                         </div>
                                     </template>
                                     <template lwc:else>
-                                        <lightning-input type={f.inputType} label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText}></lightning-input>
+                                        <lightning-input type={f.inputType} label={f.fieldLabel} name={f.fieldInteractionAPIName} required={f.isRequired} field-level-help={f.helpText} maxlength={f.maxLength} step={f.numberStep} min={f.numberMin} max={f.numberMax} pattern={f.inputPattern} message-when-pattern-mismatch={f.inputPatternMessage} data-digits-only={f.digitsOnly} onchange={handleDigitsOnlyChange}></lightning-input>
                                     </template>
                                 </div>
                         </template>

@@ -44,6 +44,34 @@ export function isValidEmail(value) {
 }
 
 /**
+ * Removes everything except the digits 0 to 9 from text.
+ *
+ * @param {*} value The text typed or pasted
+ * @returns {string} Only the digits, or an empty string when there are none
+ */
+export function onlyDigits(value) {
+    return value === undefined || value === null ? '' : String(value).replace(/[^0-9]/g, '');
+}
+
+/**
+ * Reads the answer out of a Lightning input. A tick box gives true or false. A number box gives a number, because the
+ * box holds its value as text and the server expects a number for a number field. Anything else gives the text.
+ *
+ * @param {{type: string, checked: boolean, value: *}} input The input to read
+ * @returns {*} The answer
+ */
+export function answerOf(input) {
+    if (input.type === 'checkbox') {
+        return input.checked;
+    }
+    if (input.type === 'number' && !isEmptyAnswer(input.value)) {
+        const number = Number(input.value);
+        return Number.isFinite(number) ? number : input.value;
+    }
+    return input.value;
+}
+
+/**
  * Tells whether an answer is empty. False and zero are real answers (a ticked or unticked box, a number),
  * so only missing values and blank text count as empty.
  *

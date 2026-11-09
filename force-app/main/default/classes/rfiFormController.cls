@@ -37,7 +37,16 @@ public with sharing class rfiFormController {
         @AuraEnabled public Boolean isEmail { get; set; }
         @AuraEnabled public Boolean isTel { get; set; }
         @AuraEnabled public Boolean isDate { get; set; }
-        @AuraEnabled public String inputType { get; set; } // 'date' for a date picker; empty means a text box
+        @AuraEnabled public String inputType { get; set; } // 'date' for a date picker, 'number' for a number box; empty means a text box
+        // Limits copied from the Interaction field the question saves to (empty when the field has no such limit)
+        @AuraEnabled public Integer maxLength { get; set; } // Most characters a text, email or phone field can hold
+        @AuraEnabled public String numberStep { get; set; } // Smallest step of a number field: 1 for whole numbers, 0.01 for two decimals
+        @AuraEnabled public String numberMin { get; set; } // Lowest number the field can hold, as text so no precision is lost
+        @AuraEnabled public String numberMax { get; set; } // Highest number the field can hold, as text so no precision is lost
+        // For a text field that holds a year: only digits can be typed, and the answer must match the pattern
+        @AuraEnabled public Boolean digitsOnly { get; set; }
+        @AuraEnabled public String inputPattern { get; set; }
+        @AuraEnabled public String inputPatternMessage { get; set; }
         @AuraEnabled public Boolean isTextarea { get; set; }
         @AuraEnabled public Boolean isMultiSelect { get; set; }
         @AuraEnabled public Boolean isPicklist { get; set; }
@@ -651,6 +660,7 @@ public with sharing class rfiFormController {
         } // End of legacy else block
 
         useDatePickerForDateFields(interactionAndRfi.rfiFieldList);
+        applyInteractionFieldLimits(interactionAndRfi.rfiFieldList);
         return interactionAndRfi;
     }
 
@@ -882,6 +892,127 @@ public with sharing class rfiFormController {
                 question.inputType = 'date';
             }
         }
+    }
+
+    /**
+     * Copies the limits of the Interaction field a question saves to onto the question, so the box on the form enforces
+     * them before the visitor submits. A field the object stores as a number gets a number box (letters cannot be typed)
+     * with the field's step and range. A text, email or phone field gets the field's maximum length. The server would
+     * otherwise reject a value that is too long or not a number, and the visitor would see only a generic error.
+     * Questions that choose from a list, tick a box, pick a date, or fill several fields are left alone.
+     *
+     * @param questions The questions of the form
+     */
+    @TestVisible
+    private static void applyInteractionFieldLimits(List<rfiField> questions) {
+        Map<String, Schema.SObjectField> interactionFieldMap = Schema.SObjectType.Interaction__c.fields.getMap();
+        for (rfiField question : questions) {
+            if (question == null || String.isBlank(question.fieldInteractionAPIName) || hasSpecialControl(question)) {
+                continue;
+            }
+            Schema.SObjectField field = interactionFieldMap.get(question.fieldInteractionAPIName.toLowerCase());
+            if (field == null) {
+                continue;
+            }
+            Schema.DescribeFieldResult described = field.getDescribe();
+            Schema.DisplayType fieldType = described.getType();
+            if (NUMBER_TYPES.contains(fieldType)) {
+                applyNumberLimits(question, described);
+            } else if (TEXT_TYPES.contains(fieldType)) {
+                // Description__c receives the "Tell us about yourself" and question boxes joined with headings, so one box
+                // cannot be held to the whole field length
+                if (described.getLength() > 0 && question.fieldInteractionAPIName != 'Description__c') {
+                    question.maxLength = described.getLength();
+                }
+                if (YEAR_TEXT_FIELDS.contains(question.fieldInteractionAPIName.toLowerCase())) {
+                    applyYearLimits(question);
+                }
+            }
+        }
+    }
+
+    /**
+     * Text fields that hold a four-digit year. The object stores them as text, so the field type alone does not say
+     * they are numbers. Lower case API names.
+     */
+    @TestVisible
+    private static final Set<String> YEAR_TEXT_FIELDS = new Set<String>{
+        'high_school_graduation_year__c', 'self_reported_undergrad_grad_year__c', 'st_thomas_alumni_class_year__c'
+    };
+
+    /**
+     * Makes a question for a year accept only four digits: digits are the only thing that can be typed, and the answer
+     * must be exactly four of them.
+     *
+     * @param question The question to change
+     */
+    private static void applyYearLimits(rfiField question) {
+        question.maxLength = 4;
+        question.digitsOnly = true;
+        question.inputPattern = '[0-9]{4}';
+        question.inputPatternMessage = 'Enter a four-digit year, such as 2027.';
+    }
+
+    private static final Set<Schema.DisplayType> NUMBER_TYPES = new Set<Schema.DisplayType>{
+        Schema.DisplayType.DOUBLE, Schema.DisplayType.INTEGER, Schema.DisplayType.LONG,
+        Schema.DisplayType.CURRENCY, Schema.DisplayType.PERCENT
+    };
+
+    private static final Set<Schema.DisplayType> TEXT_TYPES = new Set<Schema.DisplayType>{
+        Schema.DisplayType.STRING, Schema.DisplayType.TEXTAREA, Schema.DisplayType.EMAIL,
+        Schema.DisplayType.PHONE, Schema.DisplayType.URL
+    };
+
+    private static Boolean hasSpecialControl(rfiField question) {
+        return question.isCheckbox == true || question.isPicklist == true || question.isMultiSelect == true
+                || question.isAddress == true || question.isStaticContent == true || question.isSchoolLookup == true
+                || question.isProgramLookup == true || question.isProgramFilter == true || question.isDate == true;
+    }
+
+    /**
+     * Makes a question a number box that follows a number field's decimal places and range.
+     *
+     * @param question The question to change
+     * @param described The description of the number field it saves to
+     */
+    private static void applyNumberLimits(rfiField question, Schema.DescribeFieldResult described) {
+        question.inputType = 'number';
+        question.numberStep = numberStepFor(described.getScale());
+        String largest = largestNumberFor(described.getPrecision(), described.getScale());
+        if (largest != null) {
+            question.numberMax = largest;
+            question.numberMin = '-' + largest;
+        }
+    }
+
+    /**
+     * The smallest step a number box should move by, so it accepts only as many decimal places as the field stores.
+     *
+     * @param scale The number of decimal places of the field
+     * @return 1 for whole numbers, otherwise 0.1, 0.01 and so on
+     */
+    @TestVisible
+    private static String numberStepFor(Integer scale) {
+        Integer places = scale == null ? 0 : Math.max(scale, 0);
+        return places == 0 ? '1' : '0.' + '0'.repeat(places - 1) + '1';
+    }
+
+    /**
+     * The largest number a field can hold, written out so no digits are lost.
+     *
+     * @param precision The total number of digits of the field
+     * @param scale The number of decimal places of the field
+     * @return Nines that fill the field (for example 999.99), or null when the range is unknown or too wide for a
+     * browser number to hold exactly (more than 15 whole digits)
+     */
+    @TestVisible
+    private static String largestNumberFor(Integer precision, Integer scale) {
+        Integer places = scale == null ? 0 : Math.max(scale, 0);
+        Integer wholeDigits = (precision == null ? 0 : precision) - places;
+        if (wholeDigits <= 0 || wholeDigits > 15) {
+            return null;
+        }
+        return '9'.repeat(wholeDigits) + (places > 0 ? '.' + '9'.repeat(places) : '');
     }
 
     private static final Map<String, Integer> countryIndexCache = new Map<String, Integer>();

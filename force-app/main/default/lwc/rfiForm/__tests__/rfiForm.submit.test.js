@@ -352,6 +352,79 @@ describe('c-rfi-form submit', () => {
         expect(captured.interaction.Employer__c).toBe('No Company');
     });
 
+    describe('limits copied from the Interaction field', () => {
+        async function renderWithLimits() {
+            const limited = JSON.parse(JSON.stringify(FORM));
+            limited.rfiFieldList.push(
+                field('Years Since Graduation', 'Years_Since__c', {
+                    inputType: 'number', numberStep: '1', numberMin: '-999', numberMax: '999'
+                }),
+                field('Score', 'Score__c', { inputType: 'number', numberStep: '0.01' }),
+                field('High School Graduation (YYYY)', 'High_School_Graduation_Year__c', {
+                    maxLength: 4, digitsOnly: true, inputPattern: '[0-9]{4}', inputPatternMessage: 'Enter a four-digit year, such as 2027.'
+                })
+            );
+            limited.rfiFieldList.find((f) => f.fieldLabel === 'First Name').maxLength = 40;
+            limited.rfiFieldList.find((f) => f.fieldLabel === 'Phone').maxLength = 40;
+            element = createElement('c-rfi-form', { is: RfiForm });
+            element.rfiControllerName = CONTROLLER_NAME;
+            document.body.appendChild(element);
+            getRFIForm.emit(limited);
+            await flushPromises();
+            await type(inputByLabel('First Name'), 'Ada');
+            await type(inputByLabel('Last Name'), 'Lovelace');
+        }
+
+        it('draws a number question as a number box with the step and range of the field', async () => {
+            await renderWithLimits();
+            const years = inputByLabel('Years Since Graduation');
+            expect(years.type).toBe('number');
+            expect(years.step).toBe('1');
+            expect(years.min).toBe('-999');
+            expect(years.max).toBe('999');
+            expect(inputByLabel('Score').step).toBe('0.01');
+        });
+
+        it('limits text and phone boxes to the length of the field, and leaves other boxes unlimited', async () => {
+            await renderWithLimits();
+            expect(inputByLabel('First Name').maxLength).toBe(40);
+            expect(inputByLabel('Phone').maxLength).toBe(40);
+            expect(inputByLabel('Last Name').maxLength).toBeUndefined();
+        });
+
+        it('lets a year box take only digits, however they got there, and leaves other boxes alone', async () => {
+            await renderWithLimits();
+            const year = inputByLabel('High School Graduation (YYYY)');
+            expect(year.pattern).toBe('[0-9]{4}');
+            expect(year.messageWhenPatternMismatch).toBe('Enter a four-digit year, such as 2027.');
+            expect(year.maxLength).toBe(4);
+            await type(year, 'ab20x2');
+            expect(year.value).toBe('202');
+            await type(year, '2027');
+            await type(inputByLabel('First Name'), 'Ada 2nd');
+            expect(inputByLabel('First Name').value).toBe('Ada 2nd');
+            await submit();
+            expect(captured.interaction.High_School_Graduation_Year__c).toBe('2027');
+        });
+
+        it('sends a number box answer as a number, and nothing for an empty one', async () => {
+            await renderWithLimits();
+            await type(inputByLabel('Years Since Graduation'), '12');
+            await submit();
+            expect(captured.interaction.Years_Since__c).toBe(12);
+            expect(captured.interaction.Score__c).toBeUndefined();
+        });
+
+        it('keeps a decimal answer and a zero answer', async () => {
+            await renderWithLimits();
+            await type(inputByLabel('Years Since Graduation'), '0');
+            await type(inputByLabel('Score'), '3.25');
+            await submit();
+            expect(captured.interaction.Years_Since__c).toBe(0);
+            expect(captured.interaction.Score__c).toBe(3.25);
+        });
+    });
+
     describe('while a submission is in progress', () => {
         const overlay = () => root().querySelector('[data-id="submit-overlay"]');
         const submitButton = () => Array.from(root().querySelectorAll('lightning-button')).find((b) => b.label === 'Submit');

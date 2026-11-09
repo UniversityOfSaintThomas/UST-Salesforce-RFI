@@ -17,8 +17,8 @@ import RFI_CONTROLLER_ACADEMIC_INTERESTS from '@salesforce/schema/RFI_Controller
 import RFI_CONTROLLER_UNIFIED_QUESTIONS from '@salesforce/schema/RFI_Controller__c.Unified_Questions__c';
 import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
 import {
-    applyFieldAnswer, composeDescription, EMAIL_ERROR_MESSAGE, EMAIL_PATTERN, hiddenQuestions, isEmptyAnswer,
-    isQuestionShown, PHONE_ERROR_MESSAGE, PHONE_PATTERN, toSemicolonList, withAnswer, withMajorPrograms,
+    answerOf, applyFieldAnswer, composeDescription, EMAIL_ERROR_MESSAGE, EMAIL_PATTERN, hiddenQuestions, isEmptyAnswer,
+    isQuestionShown, onlyDigits, PHONE_ERROR_MESSAGE, PHONE_PATTERN, toSemicolonList, withAnswer, withMajorPrograms,
     withoutHiddenAnswers
 } from 'c/rfiFormUtils';
 
@@ -515,6 +515,22 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
         this.interaction = withMajorPrograms(this.interaction, value);
     }
 
+    /**
+     * Drops anything that is not a digit from a box that holds a year, whether it was typed or pasted.
+     * Other boxes are left alone.
+     *
+     * @param {Event} event The change event of the box
+     */
+    handleDigitsOnlyChange(event) {
+        const input = event.target;
+        if (input.dataset && input.dataset.digitsOnly === 'true') {
+            const digits = onlyDigits(input.value);
+            if (digits !== input.value) {
+                input.value = digits;
+            }
+        }
+    }
+
     handleCheckboxChange = (event) => {
         const name = event.target.name;
         const checked = event.target.checked;
@@ -726,7 +742,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
             this.template.querySelectorAll('lightning-input').forEach(input => {
                 if (input.name) {
-                    applyFieldAnswer(answers, defaults, answered, input.name, input.type === 'checkbox' ? input.checked : input.value);
+                    applyFieldAnswer(answers, defaults, answered, input.name, answerOf(input));
                 }
             });
 

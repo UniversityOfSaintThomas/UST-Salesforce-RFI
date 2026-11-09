@@ -346,6 +346,112 @@ private class rfiQuestionCatalog_TEST {
         System.assertEquals(null, noTarget.inputType);
     }
 
+    // ---------- limits copied from the Interaction field ----------
+
+    private static rfiFormController.rfiField questionOn(String apiName) {
+        rfiFormController.rfiField question = new rfiFormController.rfiField();
+        question.fieldInteractionAPIName = apiName;
+        return question;
+    }
+
+    @IsTest
+    static void applyInteractionFieldLimits_makesANumberFieldANumberBox_TEST() {
+        rfiFormController.rfiField years = questionOn('Years_Since_Self_Reported_UG_Grad__c');
+        rfiFormController.applyInteractionFieldLimits(new List<rfiFormController.rfiField>{ years });
+        System.assertEquals('number', years.inputType, 'A Number field must not accept letters');
+        System.assertEquals('1', years.numberStep, 'The field has no decimal places');
+        System.assertEquals(null, years.numberMax, '18 whole digits are more than a browser number can hold exactly, so no range is set');
+        System.assertEquals(null, years.maxLength);
+    }
+
+    @IsTest
+    static void applyInteractionFieldLimits_limitsATextFieldToItsLength_TEST() {
+        rfiFormController.rfiField first = questionOn('First_Name__c');
+        rfiFormController.rfiField email = questionOn('Email__c');
+        rfiFormController.rfiField description = questionOn('Description__c');
+        rfiFormController.applyInteractionFieldLimits(new List<rfiFormController.rfiField>{ first, email, description });
+        System.assertEquals(Schema.SObjectType.Interaction__c.fields.First_Name__c.getLength(), first.maxLength);
+        System.assertEquals(null, first.inputType, 'A text field stays a text box');
+        System.assertEquals(Schema.SObjectType.Interaction__c.fields.Email__c.getLength(), email.maxLength);
+        System.assertEquals(null, description.maxLength, 'Two boxes are joined into Description, so one box is not held to its whole length');
+    }
+
+    @IsTest
+    static void applyInteractionFieldLimits_makesAYearFieldTakeOnlyFourDigits_TEST() {
+        List<rfiFormController.rfiField> years = new List<rfiFormController.rfiField>();
+        for (String apiName : rfiFormController.YEAR_TEXT_FIELDS) {
+            years.add(questionOn(apiName));
+        }
+        rfiFormController.applyInteractionFieldLimits(years);
+        System.assertEquals(3, years.size());
+        for (rfiFormController.rfiField year : years) {
+            System.assertEquals(true, year.digitsOnly, year.fieldInteractionAPIName + ' holds a year and must take only digits');
+            System.assertEquals(4, year.maxLength, 'The field is longer than a year, but a year is four digits');
+            System.assertEquals('[0-9]{4}', year.inputPattern);
+            System.assertEquals(null, year.inputType, 'A year stays a text box so the server gets text, not a number');
+        }
+    }
+
+    @IsTest
+    static void everyYearFieldTheFormCanSaveTo_exists_andIsAText_TEST() {
+        for (String apiName : rfiFormController.YEAR_TEXT_FIELDS) {
+            Schema.SObjectField field = interactionFields().get(apiName);
+            System.assertNotEquals(null, field, apiName + ' is listed as a year field but is not on the Interaction object');
+            System.assertEquals(Schema.DisplayType.STRING, field.getDescribe().getType(), apiName + ' must be a text field');
+        }
+    }
+
+    @IsTest
+    static void aGraduationYearQuestion_isAYearBox_onBothForms_TEST() {
+        Integer found = 0;
+        for (rfiFormController.interactionRFIFields form : new List<rfiFormController.interactionRFIFields>{
+                legacyForm(offeredNamesAsSaved()), unifiedForm(usableOfferedQuestionNames()) }) {
+            for (rfiFormController.rfiField question : form.rfiFieldList) {
+                if (question.fieldInteractionAPIName == 'High_School_Graduation_Year__c') {
+                    System.assertEquals(true, question.digitsOnly, 'The graduation year question must take only digits');
+                    found++;
+                }
+            }
+        }
+        System.assertEquals(2, found, 'The question is on both forms');
+    }
+
+    @IsTest
+    static void applyInteractionFieldLimits_leavesQuestionsWithTheirOwnControlsAlone_TEST() {
+        rfiFormController.rfiField birthday = questionOn('Birthdate__c');
+        birthday.isDate = true;
+        birthday.inputType = 'date';
+        rfiFormController.rfiField school = questionOn('First_Name__c');
+        school.isSchoolLookup = true;
+        rfiFormController.rfiField noTarget = new rfiFormController.rfiField();
+        rfiFormController.rfiField unknown = questionOn('Not_A_Field__c');
+        rfiFormController.applyInteractionFieldLimits(new List<rfiFormController.rfiField>{ birthday, school, noTarget, unknown, null });
+        System.assertEquals('date', birthday.inputType);
+        System.assertEquals(null, school.maxLength);
+        System.assertEquals(null, noTarget.inputType);
+        System.assertEquals(null, unknown.inputType);
+    }
+
+    @IsTest
+    static void numberStepFor_matchesTheDecimalPlacesOfTheField_TEST() {
+        System.assertEquals('1', rfiFormController.numberStepFor(0));
+        System.assertEquals('1', rfiFormController.numberStepFor(null));
+        System.assertEquals('0.1', rfiFormController.numberStepFor(1));
+        System.assertEquals('0.01', rfiFormController.numberStepFor(2));
+        System.assertEquals('0.0001', rfiFormController.numberStepFor(4));
+    }
+
+    @IsTest
+    static void largestNumberFor_fillsTheFieldWithNines_TEST() {
+        System.assertEquals('999', rfiFormController.largestNumberFor(3, 0));
+        System.assertEquals('999.99', rfiFormController.largestNumberFor(5, 2));
+        System.assertEquals('999999999999999', rfiFormController.largestNumberFor(15, 0));
+        System.assertEquals(null, rfiFormController.largestNumberFor(18, 0), 'Too wide for a browser number');
+        System.assertEquals(null, rfiFormController.largestNumberFor(2, 2), 'No whole digits');
+        System.assertEquals(null, rfiFormController.largestNumberFor(0, 0), 'Unknown precision');
+        System.assertEquals(null, rfiFormController.largestNumberFor(null, null));
+    }
+
     // ---------- the fields the object requires ----------
 
     @IsTest
