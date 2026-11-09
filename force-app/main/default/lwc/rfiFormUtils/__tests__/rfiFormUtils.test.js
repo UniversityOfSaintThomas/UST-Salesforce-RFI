@@ -1,15 +1,102 @@
 import {
     applyFieldAnswer,
     composeDescription,
+    EMAIL_PATTERN,
     fieldsWrittenBy,
     hiddenQuestions,
     isEmptyAnswer,
     isQuestionShown,
+    isValidEmail,
+    isValidPhone,
+    PHONE_PATTERN,
     toSemicolonList,
     withAnswer,
     withMajorPrograms,
     withoutHiddenAnswers
 } from '../rfiFormUtils';
+
+describe('isValidPhone', () => {
+    it.each([
+        '612-555-0100',
+        '(612) 555-0100',
+        '612.555.0100',
+        '6125550100',
+        '+1 612 555 0100',
+        '+44 20 7946 0958',
+        '+61 (0)2 9876 5432',
+        '612-555-0100 x123',
+        '612-555-0100 ext. 45',
+        '612-555-0100 EXT45'
+    ])('accepts %s', (value) => {
+        expect(isValidPhone(value)).toBe(true);
+    });
+
+    it.each([
+        '1-800-FLOWERS',
+        'abc',
+        '612-555-0100 please call',
+        '555-01',
+        '+1 612 555 0100 1234 5678 9',
+        '612#555#0100',
+        '612-555-0100 x',
+        '612-555-0100 x1234567',
+        '++16125550100',
+        '()-. ',
+        '16125550100@'
+    ])('rejects %s', (value) => {
+        expect(isValidPhone(value)).toBe(false);
+    });
+
+    it('lets a blank answer through, because required is checked separately', () => {
+        expect(isValidPhone('')).toBe(true);
+        expect(isValidPhone(undefined)).toBe(true);
+    });
+
+    it('is a pattern the browser accepts with the unicode sets flag', () => {
+        // The input's pattern attribute is compiled by the browser with the "v" flag.
+        expect(() => new RegExp('^(?:' + PHONE_PATTERN + ')$', 'v')).not.toThrow();
+        expect(new RegExp('^(?:' + PHONE_PATTERN + ')$', 'v').test('+1 (612) 555-0100 x12')).toBe(true);
+        expect(new RegExp('^(?:' + PHONE_PATTERN + ')$', 'v').test('1-800-FLOWERS')).toBe(false);
+    });
+});
+
+describe('isValidEmail', () => {
+    it.each([
+        'name@domain.com',
+        'first.last@sub.domain.edu',
+        'first+tag@stthomas.edu',
+        "o'brien@domain.org",
+        'a_b-c@my-domain.co.uk'
+    ])('accepts %s', (value) => {
+        expect(isValidEmail(value)).toBe(true);
+    });
+
+    it.each([
+        'name@domain',
+        'name@domain.',
+        'name@.com',
+        'name@domain.c',
+        'name@domain.123',
+        'name domain@domain.com',
+        '@domain.com',
+        'name@-domain.com',
+        'name@@domain.com',
+        'name'
+    ])('rejects %s', (value) => {
+        expect(isValidEmail(value)).toBe(false);
+    });
+
+    it('lets a blank answer through, because required is checked separately', () => {
+        expect(isValidEmail('')).toBe(true);
+        expect(isValidEmail(null)).toBe(true);
+    });
+
+    it('is a pattern the browser accepts with the unicode sets flag', () => {
+        expect(() => new RegExp('^(?:' + EMAIL_PATTERN + ')$', 'v')).not.toThrow();
+        expect(new RegExp('^(?:' + EMAIL_PATTERN + ')$', 'v').test('name@domain.com')).toBe(true);
+        expect(new RegExp('^(?:' + EMAIL_PATTERN + ')$', 'v').test('name@domain')).toBe(false);
+    });
+});
 
 describe('isEmptyAnswer', () => {
     it('treats missing and blank text as empty', () => {

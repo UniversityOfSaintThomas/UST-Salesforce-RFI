@@ -4,3 +4,48 @@
 :host {
     --sds-c-textarea-sizing-min-height: 200px;
 }
+
+/* Covers the whole form while a submission is in progress, so it looks and acts disabled */
+.submit-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 9000;
+    background: rgba(110, 110, 110, 0.55);
+    border-radius: 0.25rem;
+}
+
+/* Sticks near the middle of the screen, so it stays in view when the form is taller than the screen */
+.submit-overlay__message {
+    position: sticky;
+    top: 40vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 0;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.submit-overlay__spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 0.3rem solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: submit-overlay-spin 0.9s linear infinite;
+}
+
+@keyframes submit-overlay-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .submit-overlay__spinner {
+        animation-duration: 3s;
+    }
+}

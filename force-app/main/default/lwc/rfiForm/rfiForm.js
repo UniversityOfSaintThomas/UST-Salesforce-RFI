@@ -17,8 +17,9 @@ import RFI_CONTROLLER_ACADEMIC_INTERESTS from '@salesforce/schema/RFI_Controller
 import RFI_CONTROLLER_UNIFIED_QUESTIONS from '@salesforce/schema/RFI_Controller__c.Unified_Questions__c';
 import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
 import {
-    applyFieldAnswer, composeDescription, hiddenQuestions, isEmptyAnswer, isQuestionShown, toSemicolonList,
-    withAnswer, withMajorPrograms, withoutHiddenAnswers
+    applyFieldAnswer, composeDescription, EMAIL_ERROR_MESSAGE, EMAIL_PATTERN, hiddenQuestions, isEmptyAnswer,
+    isQuestionShown, PHONE_ERROR_MESSAGE, PHONE_PATTERN, toSemicolonList, withAnswer, withMajorPrograms,
+    withoutHiddenAnswers
 } from 'c/rfiFormUtils';
 
 // Name of the box that opens when a visitor ticks "I have a question". It is not an Interaction field:
@@ -57,6 +58,11 @@ function debounce(func, wait) {
 }
 
 export default class RfiForm extends NavigationMixin(LightningElement) {
+    phonePattern = PHONE_PATTERN;
+    phoneErrorMessage = PHONE_ERROR_MESSAGE;
+    emailPattern = EMAIL_PATTERN;
+    emailErrorMessage = EMAIL_ERROR_MESSAGE;
+
     @api rfiControllerName;
 
     /**
@@ -786,6 +792,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
         if (isValid) {
             this.saving = true;
+            let keepBusyForRedirect = false;
 
             // Process address data before submit
             this._processAddressForSubmit();
@@ -805,6 +812,8 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
                 // Redirect if configured on the RFI Controller
                 if (this.redirectAfterSubmission && this.redirectUrl) {
+                    // Keep the form grayed out until the browser leaves the page, so it does not flash back to normal
+                    keepBusyForRedirect = true;
                     window.open(this.redirectUrl, '_self');
                 } else {
                     // No redirect - clear the form for the next request, then say it was received
@@ -815,7 +824,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
                 console.error('Error submitting Interaction:', error);
                 this._showMessage('error', 'Error', 'We could not send your request. Please try again in a few minutes.');
             } finally {
-                this.saving = false;
+                this.saving = keepBusyForRedirect;
             }
         } else {
             console.log('Form is invalid. Please correct the errors.');

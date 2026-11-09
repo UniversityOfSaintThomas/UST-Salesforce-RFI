@@ -4,6 +4,46 @@
  */
 
 /**
+ * Loose phone number pattern for the phone questions. It allows an optional leading plus (international), 7 to 15
+ * digits, and the separators people type (spaces, dots, dashes, parentheses). The only letters allowed are an
+ * extension marker at the end: "x" or "ext" followed by up to 6 digits. The browser anchors the pattern to the whole
+ * answer, so there are no ^ and $ around it here.
+ */
+export const PHONE_PATTERN = '\\+?(?=(?:[ \\(\\)\\.\\-]*[0-9]){7,15}[ \\(\\)\\.\\-]*(?:[ ]?(?:[xX]|[eE][xX][tT]\\.?)[ ]?[0-9]{1,6})?$)'
+    + '[0-9 \\(\\)\\.\\-]+(?:[ ]?(?:[xX]|[eE][xX][tT]\\.?)[ ]?[0-9]{1,6})?';
+
+/**
+ * Email pattern for the email questions. It needs name@domain.suffix: at least one dot in the domain and a letters-only
+ * suffix of 2 or more characters. This is stricter than the browser's own email check, which accepts name@domain.
+ */
+export const EMAIL_PATTERN = '[A-Za-z0-9._%+\'\\-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9\\-]*[A-Za-z0-9])?\\.)+[A-Za-z]{2,}';
+
+export const PHONE_ERROR_MESSAGE = 'Enter a phone number such as +1 612 555 0100 or (612) 555-0100. '
+    + 'Use only digits, spaces, + ( ) . - and x for an extension.';
+
+export const EMAIL_ERROR_MESSAGE = 'Enter an email address such as name@example.com.';
+
+/**
+ * Tells whether text is an acceptable phone number. A blank answer passes, because "required" is checked separately.
+ *
+ * @param {string} value What the visitor typed
+ * @returns {boolean} True when the text is blank or looks like a phone number
+ */
+export function isValidPhone(value) {
+    return isEmptyAnswer(value) || new RegExp('^(?:' + PHONE_PATTERN + ')$').test(String(value).trim());
+}
+
+/**
+ * Tells whether text is an acceptable email address. A blank answer passes, because "required" is checked separately.
+ *
+ * @param {string} value What the visitor typed
+ * @returns {boolean} True when the text is blank or looks like name@domain.suffix
+ */
+export function isValidEmail(value) {
+    return isEmptyAnswer(value) || new RegExp('^(?:' + EMAIL_PATTERN + ')$').test(String(value).trim());
+}
+
+/**
  * Tells whether an answer is empty. False and zero are real answers (a ticked or unticked box, a number),
  * so only missing values and blank text count as empty.
  *
