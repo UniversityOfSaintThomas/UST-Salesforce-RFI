@@ -661,6 +661,8 @@ and the Apex before the LWC that imports it.
 8. **Smoke test as an anonymous visitor:** the form loads, the school and start term lists have choices, a submit saves, and no
    new row appears in the Error object (`hed__Error__c`) for a normal submit. If a Term or school list is empty, see section 9 C.
 
+**Status 2026-11-09 (eda-staging).** The owner deployed the Apex, the LWC and the unit tests. The tests ran with no errors and over 75% coverage on each class. `AcademicInterestSelectorController_TEST` first failed with `STRING_TOO_LONG` on `Banner_Program_Code__c`: the test built the law program's code as `'LW_' + the picklist's banner code` (`LW_AS_AH_CER`, 12 characters) and the field holds 11 in staging. The test now cuts the code to the field's length. The owner then ran `scripts/apex/migrate_rfi_questions.apex` (14 controllers changed). Read-only checks afterwards: a repeat dry run changed nothing (`toChange=0`), and `verify_rfi_rollout.apex` reported pass=13 fail=0 info=3. Business testing follows `docs/RFI_TEST_PLAN.md`.
+
 **After you deploy, tell me and I will** run `verify_rfi_rollout.apex`, compare the saved test data with what the plan expects, and
 record any differences here. I will not write to eda-staging.
 

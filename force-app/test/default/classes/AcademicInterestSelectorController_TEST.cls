@@ -75,6 +75,11 @@ private class AcademicInterestSelectorController_TEST {
 
         Id rtId = recruitRTId();
 
+        // The law program's code is the org's code with "LW_" in front. In eda-staging the picklist code is already
+        // 9 characters and the field holds 11, so "LW_" plus the code is too long. Cut it to what the field holds.
+        Integer bannerCodeMaxLength = Program__c.Banner_Program_Code__c.getDescribe().getLength();
+        String lawBannerCode = ('LW_' + bannerCode).left(bannerCodeMaxLength);
+
         // Undergraduate program — Banner+Major produce formula = code
         insert new Program__c(
             Name               = 'AIS Test UG Program',
@@ -101,7 +106,7 @@ private class AcademicInterestSelectorController_TEST {
             Active__c          = true,
             Associated_Schools__c = 'School of Law',
             Primary_School_College_for_Assignment__c = 'School of Law',
-            Banner_Program_Code__c = 'LW_' + bannerCode,
+            Banner_Program_Code__c = lawBannerCode,
             Major_Code__c          = majorCode
         );
 
