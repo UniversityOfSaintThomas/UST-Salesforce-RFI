@@ -18,7 +18,7 @@ import RFI_CONTROLLER_UNIFIED_QUESTIONS from '@salesforce/schema/RFI_Controller_
 import getPrograms from "@salesforce/apex/rfiFormController.getPrograms";
 import {
     answerOf, applyFieldAnswer, composeDescription, EMAIL_ERROR_MESSAGE, EMAIL_PATTERN, hiddenQuestions, isEmptyAnswer,
-    isQuestionShown, onlyDigits, PHONE_ERROR_MESSAGE, PHONE_PATTERN, toSemicolonList, withAnswer, withMajorPrograms,
+    isQuestionShown, joinStreetLines, onlyDigits, PHONE_ERROR_MESSAGE, PHONE_PATTERN, toSemicolonList, withAnswer, withMajorPrograms,
     withoutHiddenAnswers
 } from 'c/rfiFormUtils';
 
@@ -676,7 +676,7 @@ export default class RfiForm extends NavigationMixin(LightningElement) {
 
         this.interaction = {
             ...this.interaction,
-            Mailing_Street__c: address.street || '',
+            Mailing_Street__c: joinStreetLines(address.street, address.subpremise),
             Mailing_City__c: address.city || '',
             Mailing_Country__c: countryLabel || '',
             Mailing_State__c: stateLabel || '',

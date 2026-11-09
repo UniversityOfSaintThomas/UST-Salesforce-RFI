@@ -45,6 +45,9 @@ public with sharing class rfiQuestionCatalog {
     public class Catalog {
         @AuraEnabled public List<Question> questions { get; set; }
         @AuraEnabled public List<Filter> filters { get; set; }
+        // Names the Fields_to_Display__c picklist still holds that the Question Manager must not offer for adding:
+        // the old split address questions (the single Address question replaces them) and retired questions
+        @AuraEnabled public List<String> notOffered { get; set; }
     }
 
     /** Names the picklist offers that are folded into the single Address question */
@@ -95,6 +98,10 @@ public with sharing class rfiQuestionCatalog {
         Catalog catalog = new Catalog();
         catalog.questions = questions();
         catalog.filters = filters();
+        Set<String> hidden = new Set<String>(splitAddressQuestions);
+        hidden.addAll(retiredQuestions);
+        catalog.notOffered = new List<String>(hidden);
+        catalog.notOffered.sort();
         return catalog;
     }
 

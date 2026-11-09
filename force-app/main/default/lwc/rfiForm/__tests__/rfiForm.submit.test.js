@@ -211,6 +211,26 @@ describe('c-rfi-form submit', () => {
         expect(captured.interaction.Mailing_Country__c).toBe('United States');
     });
 
+    it('draws the street as one line with an optional apartment line, and saves both lines in the street field', async () => {
+        const withAddress = JSON.parse(JSON.stringify(FORM));
+        withAddress.rfiFieldList.push(field('Address', 'Mailing_Street__c', { isAddress: true }));
+        withAddress.countryOptions = [{ label: 'United States', value: 'US' }];
+        withAddress.stateOptions = [{ label: 'Minnesota', value: 'MN' }];
+        element = createElement('c-rfi-form', { is: RfiForm });
+        element.rfiControllerName = CONTROLLER_NAME;
+        document.body.appendChild(element);
+        getRFIForm.emit(withAddress);
+        await flushPromises();
+        await type(inputByLabel('First Name'), 'Ada');
+        await type(inputByLabel('Last Name'), 'Lovelace');
+        const address = root().querySelector('lightning-input-address');
+        expect(address.showCompactAddress).toBe(true);
+        address.dispatchEvent(new CustomEvent('change', { detail: { street: '1 Main St', subpremise: 'Apt 4', city: 'Saint Paul', province: 'MN', postalCode: '55105', country: 'US' } }));
+        await flushPromises();
+        await submit();
+        expect(captured.interaction.Mailing_Street__c).toBe('1 Main St\nApt 4');
+    });
+
     async function renderWithProgramLookup() {
         const withPrograms = JSON.parse(JSON.stringify(FORM));
         withPrograms.rfiFieldList.push(field('Academic Interest', 'Major_Program_1__c', { isProgramLookup: true, max: 4 }));

@@ -77,6 +77,9 @@ function newQuestionKey(taken) {
     return key;
 }
 
+// The old split address questions that the single Address question replaced. Saved forms may still hold them.
+const ADDRESS_SUB_FIELDS = new Set(['Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country']);
+
 export default class RfiUnifiedQuestionManager extends LightningElement {
     @api recordId;
     @track questions = [];
@@ -425,7 +428,6 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
 
         // Collapse any legacy address sub-fields (Address 1/2/3, City, State, Zipcode, Country)
         // into a single 'Address' entry for controllers that were saved before the simplification
-        const ADDRESS_SUB_FIELDS = new Set(['Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country']);
         let addressAdded = false;
         let orderedFields = [];
         for (const fieldName of rawFields) {
@@ -1180,12 +1182,26 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         return this.questions && this.questions.length > 0;
     }
 
+    /**
+     * The pre-configured questions an admin can add. The picklist behind them still holds the old split address
+     * questions (Address 1 to 3, City, State, Zipcode, Country) and retired questions. They are hidden, and the single
+     * Address question is offered in their place, because the form draws one address block.
+     */
+    get offeredPreconfiguredOptions() {
+        const hidden = new Set([...ADDRESS_SUB_FIELDS, ...((this._catalog && this._catalog.notOffered) || [])]);
+        const offered = this.allPreconfiguredOptions.filter(option => !hidden.has(option.value));
+        if (!offered.some(option => option.value === 'Address')) {
+            offered.push({ label: 'Address', value: 'Address' });
+        }
+        return offered.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
     get availablePreconfiguredOptions() {
         const currentFields = this.questions
             .filter(q => q.type === 'preconfigured')
             .map(q => q.fieldName);
 
-        const available = this.allPreconfiguredOptions.filter(
+        const available = this.offeredPreconfiguredOptions.filter(
             option => !currentFields.includes(option.value)
         );
 

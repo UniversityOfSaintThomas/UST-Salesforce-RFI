@@ -9,6 +9,7 @@ import {
     isQuestionShown,
     isValidEmail,
     isValidPhone,
+    joinStreetLines,
     onlyDigits,
     PHONE_PATTERN,
     toSemicolonList,
@@ -16,6 +17,24 @@ import {
     withMajorPrograms,
     withoutHiddenAnswers
 } from '../rfiFormUtils';
+
+describe('joinStreetLines', () => {
+    it('puts the apartment line under the street line', () => {
+        expect(joinStreetLines('1 Main St', 'Apt 4')).toBe('1 Main St\nApt 4');
+    });
+
+    it('leaves out a blank line', () => {
+        expect(joinStreetLines('1 Main St', '')).toBe('1 Main St');
+        expect(joinStreetLines('1 Main St', undefined)).toBe('1 Main St');
+        expect(joinStreetLines('', 'Apt 4')).toBe('Apt 4');
+        expect(joinStreetLines('', '')).toBe('');
+        expect(joinStreetLines(undefined, null)).toBe('');
+    });
+
+    it('trims stray spaces', () => {
+        expect(joinStreetLines(' 1 Main St ', ' Apt 4 ')).toBe('1 Main St\nApt 4');
+    });
+});
 
 describe('onlyDigits', () => {
     it('keeps digits and drops everything else', () => {

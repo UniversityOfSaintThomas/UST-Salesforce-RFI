@@ -433,6 +433,16 @@ private class rfiQuestionCatalog_TEST {
     }
 
     @IsTest
+    static void catalog_listsTheSplitAddressAndRetiredQuestionsAsNotOffered_TEST() {
+        List<String> notOffered = rfiQuestionCatalog.getCatalog().notOffered;
+        for (String name : new List<String>{ 'Address 1', 'Address 2', 'Address 3', 'City', 'State', 'Zipcode', 'Country', 'When do you plan to start school' }) {
+            System.assert(notOffered.contains(name), name + ' must not be offered by the Question Manager');
+        }
+        System.assert(!notOffered.contains('Address'), 'The single Address question is the one that is offered');
+        System.assertEquals(8, notOffered.size());
+    }
+
+    @IsTest
     static void numberStepFor_matchesTheDecimalPlacesOfTheField_TEST() {
         System.assertEquals('1', rfiFormController.numberStepFor(0));
         System.assertEquals('1', rfiFormController.numberStepFor(null));

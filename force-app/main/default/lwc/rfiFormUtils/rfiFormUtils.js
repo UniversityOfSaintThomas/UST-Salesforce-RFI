@@ -44,6 +44,21 @@ export function isValidEmail(value) {
 }
 
 /**
+ * Joins the street line and the apartment, suite or unit line of an address into the one street value the Interaction
+ * stores (a text area, so the two stay on separate lines). A blank line is left out.
+ *
+ * @param {string} street The street line
+ * @param {string} subpremise The apartment, suite or unit line
+ * @returns {string} The lines joined with a line break, or an empty string when both are blank
+ */
+export function joinStreetLines(street, subpremise) {
+    return [street, subpremise]
+        .filter((line) => !isEmptyAnswer(line))
+        .map((line) => String(line).trim())
+        .join('\n');
+}
+
+/**
  * Removes everything except the digits 0 to 9 from text.
  *
  * @param {*} value The text typed or pasted

@@ -42,7 +42,7 @@
                                     </template>
                                     <template lwc:elseif={f.isAddress}>
                                         <div class="slds-m-bottom_x-small slds-form-element">
-                                            <lightning-input-address address-label={f.fieldLabel} street-label="Street" city-label="City" province-label="State/Province" postal-code-label="Zip/Postal Code" country-label="Country" country="US" hide-province="true" required={f.isRequired} data-field-name={f.name} country-options={countryOptions} province-options={stateOptions} onchange={handleAddressChange} field-level-help={f.helpText}></lightning-input-address>
+                                            <lightning-input-address address-label={f.fieldLabel} show-compact-address street-label="Street address" subpremise-label="Apartment, suite, unit (optional)" city-label="City" province-label="State/Province" postal-code-label="Zip/Postal Code" country-label="Country" country="US" hide-province="true" required={f.isRequired} data-field-name={f.name} country-options={countryOptions} province-options={stateOptions} onchange={handleAddressChange} field-level-help={f.helpText}></lightning-input-address>
                                         </div>
                                     </template>
                                     <template lwc:elseif={f.isSchoolLookup}>
