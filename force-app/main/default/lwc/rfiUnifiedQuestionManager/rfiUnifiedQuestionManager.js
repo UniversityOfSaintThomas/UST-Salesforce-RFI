@@ -1355,4 +1355,3 @@ export default class RfiUnifiedQuestionManager extends LightningElement {
         return this.needsMigration;
     }
 }
-

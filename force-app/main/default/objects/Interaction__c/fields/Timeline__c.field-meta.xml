@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Timeline__c</fullName>
-    <deprecated>false</deprecated>
     <description>Estimated timeline to enrollment, captured by the RFI form. Same values as Lead.Timeline__c.</description>
     <inlineHelpText>Estimated timeline to enrollment, captured by the RFI form.</inlineHelpText>
     <label>Timeline</label>
     <required>false</required>
-    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>
