@@ -28,6 +28,13 @@
     background-color: #e8f4ff;
 }
 
+/* SLDS sets white-space: nowrap on table cells. Without this, a "Show only when" sentence with many answers
+   widens the whole table and pushes the Actions column off the edge. */
+.question-label-cell {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
 .drag-handle {
     cursor: grab;
     margin-right: 0.5rem;
